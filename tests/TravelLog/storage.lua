@@ -1,7 +1,6 @@
 -- Where TravelLog keeps its data: per-character files, the account-wide
 -- file, and rotation of old history into the archive addons.
 local DAY = 86400
-local ARCHIVES = { "TravelLog_Archive1", "TravelLog_Archive2", "TravelLog_Archive3", "TravelLog_Archive4" }
 
 local function said(pattern)
 	for _, line in ipairs(M.out) do
@@ -89,11 +88,11 @@ check(ns.stats.jumps == 42 and ns.settings.interval == 3, "stats and settings ke
 M.Logout()
 
 --------------------------------------------------------------------------------
--- Rotation into the archive addons
+-- Rotation into the archive addon
 --------------------------------------------------------------------------------
 
 M.saved, M.savedChar = {}, {}
-for _, name in ipairs(ARCHIVES) do M.installed[#M.installed + 1] = name end
+M.installed = { "TravelLog", "TravelLog_Archive" }
 
 ns = M.Login()
 AddOldHistory(4, 20, 30) -- 4 MB of history from 50 to 20 days ago
@@ -104,28 +103,31 @@ check(before > 3 * 1048576, ("main file is big before rotating: %.1f MB"):format
 
 M.out = {}
 ns = M.Login()
-check(C_AddOns.IsAddOnLoaded("TravelLog_Archive1"), "archive slot 1 loaded for rotation")
-check(said("moved 30 sessions and 30 log entries older than 10 days to TravelLog_Archive1"), "rotation reported")
+check(C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "archive loaded for rotation")
+check(said("moved 30 sessions and 30 log entries older than 10 days to TravelLog_Archive"), "rotation reported")
 local recent = true
 for _, s in ipairs(TravelLogCharDB.sessions) do recent = recent and s.start >= M.now - 10 * DAY end
 for _, e in ipairs(TravelLogCharDB.log) do recent = recent and e.time >= M.now - 10 * DAY end
 check(recent and #TravelLogCharDB.sessions == 2, "only recent history (last and current session) stays in the main file")
-check(#TravelLogArchive1.chars["Rasmus-Forever"].sessions == 30, "old sessions are in the archive")
+check(#TravelLogArchiveDB.chars["Rasmus-Forever"].sessions == 30, "old sessions are in the archive")
 M.Logout()
 check(M.savedSize("TravelLog", true) < 100 * 1024, ("main file is small after rotating: %d bytes"):format(M.savedSize("TravelLog", true)))
-check(M.savedSize("TravelLog_Archive1") > 3 * 1048576, "archive file holds the old history")
+check(M.savedSize("TravelLog_Archive") > 3 * 1048576, "archive file holds the old history")
 
 ns = M.Login()
-check(not C_AddOns.IsAddOnLoaded("TravelLog_Archive1"), "archive not loaded at a normal login")
+check(not C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "archive not loaded at a normal login")
+M.out = {}
+SlashCmdList.TRAVELLOG("archive")
+check(said("Archived so far: about [34]%.%d MB") and not C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "/tl archive reports the size without loading it")
 M.Logout()
-check(M.savedSize("TravelLog_Archive1") > 3 * 1048576, "an unloaded archive's file is left alone")
+check(M.savedSize("TravelLog_Archive") > 3 * 1048576, "an unloaded archive's file is left alone")
 
 -- The map's "all" range reads the archive
 ns = M.Login()
 SlashCmdList.TRAVELLOG("trail all")
 M.viewMap = 1429
 M.frame()
-check(C_AddOns.IsAddOnLoaded("TravelLog_Archive1"), "trail all loads the archive")
+check(C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "trail all loads the archive")
 local overlay = M.mapOverlay()
 local purple = 0
 for _, t in ipairs(M.shown(overlay.textures)) do if t.color[1] == 0.75 then purple = purple + 1 end end
@@ -133,54 +135,61 @@ check(purple >= 1, "archived loot markers drawn")
 SlashCmdList.TRAVELLOG("trail today")
 M.Logout()
 
--- A full slot sends new history to the next one
+-- A second rotation adds to the same archive
 ns = M.Login()
-TravelLogDB.archive.sizes[1] = 9 * 1048576
 AddOldHistory(4, 20, 10)
 M.Logout()
 ns = M.Login()
-check(C_AddOns.IsAddOnLoaded("TravelLog_Archive2") and TravelLogDB.archive.slot == 2, "rotation moved on to slot 2")
-check(#TravelLogArchive2.chars["Rasmus-Forever"].sessions == 10, "new old history in slot 2")
-M.out = {}
-SlashCmdList.TRAVELLOG("archive")
-check(said("TravelLog_Archive1: about 9.0 MB") and said("TravelLog_Archive2: about .+ %(in use%)"), "/tl archive lists both slots")
+check(#TravelLogArchiveDB.chars["Rasmus-Forever"].sessions == 40, "second rotation appended to the archive")
 M.Logout()
 
--- Without the archive addons installed, history stays put and you're told
+-- Without the archive addon installed, history stays put and you're told
 M.installed = { "TravelLog" }
 ns = M.Login()
 AddOldHistory(4, 20, 5)
 M.Logout()
 M.out = {}
 ns = M.Login()
-check(said("can't open TravelLog_Archive2 %(MISSING%)"), "missing archive addon reported")
+check(said("can't open TravelLog_Archive %(MISSING%)"), "missing archive addon reported")
 check(#TravelLogCharDB.sessions > 5, "history kept in the main file")
+M.out = {}
+SlashCmdList.TRAVELLOG("archive")
+check(said("TravelLog_Archive isn't installed"), "/tl archive says it isn't installed")
 M.Logout()
-for _, name in ipairs(ARCHIVES) do M.installed[#M.installed + 1] = name end
+M.installed = { "TravelLog", "TravelLog_Archive" }
 
--- Once the archive addons are back, the next login catches up
+-- Once the archive addon is back, the next login catches up
 M.out = {}
 ns = M.Login()
-check(said("moved 5 sessions") and C_AddOns.IsAddOnLoaded("TravelLog_Archive2"), "rotation catches up once the archives are installed")
+check(said("moved 5 sessions") and #TravelLogArchiveDB.chars["Rasmus-Forever"].sessions == 45, "rotation catches up once the archive is installed")
 M.Logout()
 
 -- "/tl archive now" moves old history right away, even if the file is small
 ns = M.Login()
-check(not C_AddOns.IsAddOnLoaded("TravelLog_Archive2"), "small main file: no rotation at login")
+check(not C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "small main file: no rotation at login")
 TravelLogCharDB.log[#TravelLogCharDB.log + 1] = { type = "level", time = M.now - 12 * DAY, level = 7 }
 M.out = {}
 SlashCmdList.TRAVELLOG("archive now")
-check(said("moved %d+ sessions and %d+ log entries"), "forced rotation")
+check(said("moved %d+ sessions and 1 log entries"), "forced rotation")
 M.Logout()
 
--- Wiping a character removes it everywhere, the archives included
+-- An alt's archived history is kept apart and survives the main being wiped
+M.player = { name = "Altie", realm = "Forever" }
+ns = M.Login()
+AddOldHistory(0.1, 20, 2)
+SlashCmdList.TRAVELLOG("archive now")
+M.Logout()
+M.player = { name = "Rasmus", realm = "Forever" }
+
+-- Wiping a character removes it everywhere, the archive included
 ns = M.Login()
 SlashCmdList.TRAVELLOG("wipe confirm")
 check(M.reloadRequested, "wipe reloads the UI")
 ns = M.Reload()
 check(#TravelLogCharDB.sessions == 1 and #TravelLogCharDB.log <= 1, "character history wiped")
 check(ns.stats.jumps == nil, "character stats wiped")
-check(TravelLogArchive1 == nil or TravelLogArchive1.chars["Rasmus-Forever"] == nil, "archive slot 1 wiped")
 ns.ArchivedHistory()
-check(TravelLogArchive1.chars["Rasmus-Forever"] == nil and TravelLogArchive2.chars["Rasmus-Forever"] == nil, "archives no longer hold the character")
+check(TravelLogArchiveDB.chars["Rasmus-Forever"] == nil, "archive no longer holds the character")
+check(#TravelLogArchiveDB.chars["Altie-Forever"].sessions == 2, "the alt's archive is untouched")
+check(TravelLogDB.archive.size < 1048576, "archive size estimate shrinks after the wipe")
 M.Logout()

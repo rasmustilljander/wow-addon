@@ -2,7 +2,7 @@
 
 Records your travels in WoW: Forever so you can retrace them later. It draws your trail on the world map, along with every chest, herb and ore you've looted and when you last looted it.
 
-Install the `TravelLog_Archive1`–`4` folders along with it (see [Where the data is](#where-the-data-is)).
+Install the `TravelLog_Archive` folder along with it (see [Where the data is](#where-the-data-is)).
 
 ## What it records
 
@@ -57,11 +57,11 @@ WoW gives each addon one file per account plus one per character, and only write
 | --- | --- |
 | `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog.lua` | Settings, and each character's profile and totals. Small. |
 | `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's history: log, path, jumps, quests, chests and nodes. Loaded only when you play that character. |
-| `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Archive1.lua`, `2`, ... | Older history, all characters. Loaded only when needed. |
+| `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Archive.lua` | Older history, all characters. Loaded only when needed. |
 
-Recording grows a character's file by roughly 100 KB per hour of non-stop movement. To keep it small, history is **rotated**: when the file passes about 3 MB, the next login moves everything older than 10 days into the current archive (chests, nodes and totals stay). Each archive is its own load-on-demand addon, so it's not loaded at login. It's only read for `/tl trail all`, `/tl archive now` and the next rotation. When an archive passes about 8 MB, rotation moves on to the next one.
+Recording grows a character's file by roughly 100 KB per hour of non-stop movement. To keep it small, history is **rotated**: when the file passes about 3 MB, the next login moves everything older than 10 days into the archive (chests, nodes and totals stay). The archive is its own addon, because WoW gives each addon one account-wide file, and it loads on demand: it isn't read at login, only for `/tl trail all`, `/tl archive now` and the next rotation. `/tl archive` shows how big it has grown without loading it.
 
-The four archives hold roughly 32 MB, a few hundred hours of play. When the last one is full, TravelLog says so. To add another, copy `TravelLog_Archive4` to `TravelLog_Archive5`, rename the `.toc` to `TravelLog_Archive5.toc`, and in it change `Archive 4` to `Archive 5` and `TravelLogArchive4` to `TravelLogArchive5`. If the archive folders aren't installed, nothing is lost: history just stays in the character file, and TravelLog tells you at login.
+The archive file keeps growing, but since it's left alone at a normal login, its size doesn't slow anything down until you look at all of your history. If the archive folder isn't installed, nothing is lost: history just stays in the character file, and TravelLog tells you at login.
 
 What a character file holds:
 
@@ -85,7 +85,7 @@ TravelLogCharDB = {
 }
 ```
 
-An archive holds `TravelLogArchive1 = { chars = { ["Name-Realm"] = { sessions = { ... }, log = { ... } } } }`.
+The archive holds `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = { ... }, log = { ... } } } }`.
 
 Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`.
 

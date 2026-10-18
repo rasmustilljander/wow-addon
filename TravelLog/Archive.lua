@@ -1,18 +1,14 @@
 -- Archive: keeps the file loaded at every login small by moving old history
--- into load-on-demand archive addons (TravelLog_Archive1, 2, ...). WoW gives
--- each addon one SavedVariables file, so each archive slot is its own addon
--- and its own file. A slot is only read when old data is asked for, like
+-- into TravelLog_Archive, a load-on-demand addon. WoW gives each addon one
+-- SavedVariables file, so the archive has to be an addon of its own to get a
+-- file of its own. It's only loaded when old data is asked for, like
 -- "/tl trail all".
 local _, ns = ...
 
+local ARCHIVE = "TravelLog_Archive"
 local ROTATE_AT = 3 * 1024 * 1024 -- estimated bytes of history before rotating
 local KEEP_DAYS = 10              -- recent history that always stays in the main file
-local MIN_MOVE = 256 * 1024       -- not worth loading an archive for less than this
-local SLOT_FULL = 8 * 1024 * 1024 -- estimated bytes per archive file
-
-local function SlotName(n)
-	return "TravelLog_Archive" .. n
-end
+local MIN_MOVE = 256 * 1024       -- not worth loading the archive for less than this
 
 -- About how many bytes a value takes in a SavedVariables file.
 local function Size(v)
@@ -30,28 +26,28 @@ local function Size(v)
 end
 ns.Size = Size
 
--- Loads archive slot n and returns its table, or nil and the reason.
-local function Open(n)
-	local name = SlotName(n)
-	if not C_AddOns.IsAddOnLoaded(name) then
-		local loaded, reason = C_AddOns.LoadAddOn(name)
+-- Loads the archive and returns its table, or nil and the reason.
+local function Open()
+	if not C_AddOns.IsAddOnLoaded(ARCHIVE) then
+		local loaded, reason = C_AddOns.LoadAddOn(ARCHIVE)
 		if not loaded then
 			return nil, reason
 		end
 	end
-	local var = "TravelLogArchive" .. n
-	_G[var] = _G[var] or { chars = {} }
-	return _G[var]
+	TravelLogArchiveDB = TravelLogArchiveDB or { chars = {} }
+	return TravelLogArchiveDB
 end
 
+-- What's been archived, kept in the account-wide file so the archive itself
+-- doesn't have to be loaded to know. size is nil while nothing is archived.
 local function State()
-	ns.db.archive = ns.db.archive or { slot = 1, sizes = {} }
+	ns.db.archive = ns.db.archive or {}
 	return ns.db.archive
 end
 
--- Moves this character's history older than KEEP_DAYS into the current
--- archive slot. Unless forced, only when the main file has grown past
--- ROTATE_AT. Returns how many sessions and log entries moved.
+-- Moves this character's history older than KEEP_DAYS into the archive.
+-- Unless forced, only when the main file has grown past ROTATE_AT. Returns
+-- how many sessions and log entries moved.
 function ns.Rotate(force)
 	local char = ns.char
 	if not force and Size(char.sessions) + Size(char.log) < ROTATE_AT then
@@ -80,18 +76,12 @@ function ns.Rotate(force)
 		return 0, 0
 	end
 
-	local state = State()
-	local n = state.slot
-	while (state.sizes[n] or 0) >= SLOT_FULL and C_AddOns.DoesAddOnExist(SlotName(n + 1)) do
-		n = n + 1
-	end
-	local archive, reason = Open(n)
+	local archive, reason = Open()
 	if not archive then
-		ns.Print("can't open %s (%s), so old history stays in the main file. Install the TravelLog_Archive folders to keep it small.",
-			SlotName(n), reason or "unknown")
+		ns.Print("can't open %s (%s), so old history stays in this character's file. Install the %s folder to keep it small.",
+			ARCHIVE, reason or "unknown", ARCHIVE)
 		return 0, 0
 	end
-	state.slot = n
 
 	local mine = archive.chars[ns.charKey] or { sessions = {}, log = {} }
 	archive.chars[ns.charKey] = mine
@@ -102,14 +92,11 @@ function ns.Rotate(force)
 		mine.log[#mine.log + 1] = e
 	end
 	char.sessions, char.log = keepSessions, keepLog
-	state.sizes[n] = (state.sizes[n] or 0) + moving
+	local state = State()
+	state.size = (state.size or 0) + moving
 
 	ns.Print("moved %d sessions and %d log entries older than %d days to %s.",
-		#oldSessions, #oldLog, KEEP_DAYS, SlotName(n))
-	if state.sizes[n] >= SLOT_FULL and not C_AddOns.DoesAddOnExist(SlotName(n + 1)) then
-		ns.Print("%s is full. Add %s to keep archive files small (see the TravelLog README).",
-			SlotName(n), SlotName(n + 1))
-	end
+		#oldSessions, #oldLog, KEEP_DAYS, ARCHIVE)
 	return #oldSessions, #oldLog
 end
 
@@ -117,45 +104,30 @@ ns.On("PLAYER_LOGIN", function()
 	ns.Rotate(false)
 end)
 
--- This character's archived history, oldest slot first, loading slots as
--- needed. Each entry has .sessions and .log like ns.char.
+-- This character's archived history ({ sessions, log } like ns.char) in a
+-- list, loading the archive if needed. Empty when nothing is archived.
 function ns.ArchivedHistory()
-	local list = {}
-	local state = State()
-	for n = 1, state.slot do
-		if state.sizes[n] then
-			local archive = Open(n)
-			local mine = archive and archive.chars[ns.charKey]
-			if mine then
-				list[#list + 1] = mine
-			end
-		end
+	if not State().size then
+		return {}
 	end
-	return list
+	local archive = Open()
+	local mine = archive and archive.chars[ns.charKey]
+	return mine and { mine } or {}
 end
 
--- Removes a character from every archive slot.
-function ns.WipeArchives(key)
+-- Removes a character from the archive.
+function ns.WipeArchive(key)
 	local state = State()
-	for n = 1, state.slot do
-		if state.sizes[n] then
-			local archive = Open(n)
-			if archive then
-				archive.chars[key] = nil
-			end
-		end
+	local archive = state.size and Open()
+	if archive then
+		archive.chars[key] = nil
+		state.size = next(archive.chars) and Size(archive) or nil
 	end
 end
 
--- One line per used slot, for "/tl archive".
+-- For "/tl archive": estimated archive size in bytes (nil when empty),
+-- whether the archive addon is installed, and how many days stay in the
+-- character file.
 function ns.ArchiveStatus()
-	local state, lines = State(), {}
-	for n = 1, state.slot do
-		if state.sizes[n] then
-			local installed = C_AddOns.DoesAddOnExist(SlotName(n))
-			lines[#lines + 1] = ("%s: about %.1f MB%s%s"):format(SlotName(n), state.sizes[n] / 1048576,
-				n == state.slot and " (in use)" or "", installed and "" or ", NOT INSTALLED")
-		end
-	end
-	return lines, KEEP_DAYS
+	return State().size, C_AddOns.DoesAddOnExist(ARCHIVE), KEEP_DAYS
 end

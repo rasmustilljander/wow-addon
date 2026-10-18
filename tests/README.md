@@ -20,7 +20,7 @@ tests/TravelLog/adventure.lua
 tests/TravelLog/loot.lua
   32 passed, 0 failed
 ...
-149 passed, 0 failed
+150 passed, 0 failed
 ```
 
 ## What's here
@@ -31,7 +31,7 @@ tests/TravelLog/loot.lua
 | `wowmock.lua` | The fake client: frames and events, the player's position and state, loot windows, merchants, flights, the world map, SavedVariables and load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail and a reload. |
 | `TravelLog/loot.lua` | Loot sources, remembered chests and gathering nodes, their map pins and tooltips, roll wins. |
-| `TravelLog/storage.lua` | Per-character files, migration from the first version, rotation into the archive addons. |
+| `TravelLog/storage.lua` | Per-character files, migration from the first version, rotation into the archive addon. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 
 ## Writing a test

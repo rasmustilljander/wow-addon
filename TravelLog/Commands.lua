@@ -75,7 +75,7 @@ local function ShowStats()
 	end
 	ns.Print("In this character's file: %s sessions, %s path points, %s log entries%s",
 		Count(#char.sessions), Count(points), Count(#char.log),
-		#ns.ArchiveStatus() > 0 and " (older history: /tl archive)" or "")
+		ns.ArchiveStatus() and " (older history: /tl archive)" or "")
 end
 
 local function ShowArchive(arg)
@@ -86,13 +86,15 @@ local function ShowArchive(arg)
 		end
 		ns.RefreshTrail()
 	end
-	local lines, keepDays = ns.ArchiveStatus()
-	ns.Print("history older than %d days moves to the archive addons when the main file gets big.", keepDays)
-	if #lines == 0 then
+	local size, installed, keepDays = ns.ArchiveStatus()
+	ns.Print("history older than %d days moves to TravelLog_Archive when this character's file gets big.", keepDays)
+	if size then
+		print(("  Archived so far: about %.1f MB (all characters)"):format(size / 1048576))
+	else
 		print("  Nothing archived yet.")
 	end
-	for _, line in ipairs(lines) do
-		print("  " .. line)
+	if not installed then
+		print("  TravelLog_Archive isn't installed, so old history stays in the character file.")
 	end
 end
 
@@ -224,7 +226,7 @@ SlashCmdList.TRAVELLOG = function(msg)
 		ns.settings.interval = tonumber(arg)
 		ns.Print("recording a path point every %s seconds while moving", arg)
 	elseif command == "wipe" and arg == "confirm" then
-		ns.WipeArchives(ns.charKey)
+		ns.WipeArchive(ns.charKey)
 		ns.db.chars[ns.charKey] = nil
 		TravelLogCharDB = nil
 		ReloadUI()

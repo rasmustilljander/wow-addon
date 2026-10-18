@@ -5,7 +5,7 @@ My personal addons for **World of Warcraft: Forever**. Each addon lives in its o
 | Addon | What it does |
 | --- | --- |
 | [TravelLog](TravelLog/) | Records your travels: your path, every jump, loot, vendor trades, deaths, quests and more. It draws your trail on the world map and shows when you last looted each chest, herb and ore. |
-| `TravelLog_Archive1` – `4` | Storage for TravelLog's older history, so the file loaded at every login stays small. Install them with TravelLog. |
+| `TravelLog_Archive` | Storage for TravelLog's older history, so the file loaded at every login stays small. Install it with TravelLog. |
 
 ## Installing
 
@@ -13,8 +13,7 @@ Copy (or link) the addon folders into the `Interface/AddOns` folder of your Fore
 
 ```
 World of Warcraft/<forever folder>/Interface/AddOns/TravelLog/TravelLog.toc
-World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Archive1/TravelLog_Archive1.toc
-...
+World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Archive/TravelLog_Archive.toc
 ```
 
 Linking means a `git pull` updates the addons in place. On Windows, this links every `TravelLog*` folder at once (run it in a command prompt, with your own paths):
