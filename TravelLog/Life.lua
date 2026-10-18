@@ -47,7 +47,7 @@ end)
 --------------------------------------------------------------------------------
 
 ns.On("PLAYER_LEVEL_UP", function(level)
-	ns.char.level = level
+	ns.profile.level = level
 	ns.Log("level", { level = level })
 end)
 

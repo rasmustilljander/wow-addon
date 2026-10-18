@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: TravelLog Archive 2
+## Notes: Older TravelLog history. TravelLog loads this only when it needs it.
+## Author: rasmustilljander
+## Dependencies: TravelLog
+## LoadOnDemand: 1
+## SavedVariables: TravelLogArchive2
+
+Archive.lua

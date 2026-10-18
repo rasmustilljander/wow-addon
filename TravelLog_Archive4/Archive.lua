@@ -1,0 +1,1 @@
+-- Storage only: TravelLog moves old history into this addon's SavedVariables.

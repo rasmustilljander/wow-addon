@@ -4,24 +4,38 @@ My personal addons for **World of Warcraft: Forever**. Each addon lives in its o
 
 | Addon | What it does |
 | --- | --- |
-| [TravelLog](TravelLog/) | Records your travels: your path, every jump, loot, vendor trades, deaths, quests and more, and draws your trail on the world map. |
+| [TravelLog](TravelLog/) | Records your travels: your path, every jump, loot, vendor trades, deaths, quests and more. It draws your trail on the world map and shows when you last looted each chest, herb and ore. |
+| `TravelLog_Archive1` – `4` | Storage for TravelLog's older history, so the file loaded at every login stays small. Install them with TravelLog. |
 
 ## Installing
 
-Copy (or link) an addon's folder into the `Interface/AddOns` folder of your Forever client. Inside your World of Warcraft directory the Forever client has its own folder next to `_retail_` and `_classic_era_` (check the name your launcher created; during the beta it was `_forever_beta_`):
+Copy (or link) the addon folders into the `Interface/AddOns` folder of your Forever client. Inside your World of Warcraft directory the Forever client has its own folder next to `_retail_` and `_classic_era_` (check the name your launcher created; during the beta it was `_forever_beta_`):
 
 ```
 World of Warcraft/<forever folder>/Interface/AddOns/TravelLog/TravelLog.toc
+World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Archive1/TravelLog_Archive1.toc
+...
 ```
 
-Linking means a `git pull` updates the addon in place. On Windows, from a command prompt:
+Linking means a `git pull` updates the addons in place. On Windows, this links every `TravelLog*` folder at once (run it in a command prompt, with your own paths):
 
 ```
-mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\TravelLog" "C:\path\to\wow-addon\TravelLog"
+for /d %d in ("C:\path\to\wow-addon\TravelLog*") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
 ```
 
-Then `/reload` in game, or restart, and make sure the addon is enabled under AddOns on the character select screen.
+Then `/reload` in game, or restart, and make sure the addons are enabled under AddOns on the character select screen.
 
 ## Game version
 
-The `.toc` files target Forever patch 1.60.1 (`## Interface: 16001`). If a later patch marks an addon as out of date, check the current number in game with `/dump select(4, GetBuildInfo())` and update the `## Interface` line.
+The `.toc` files target Forever patch 1.60.1 (`## Interface: 16001`). If a later patch marks the addons as out of date, check the current number in game with `/dump select(4, GetBuildInfo())` and update the `## Interface` lines.
+
+## Tests
+
+The addons can be run outside the game against a fake of the game's API:
+
+```
+pip install lupa
+python tests/run.py
+```
+
+See [tests/README.md](tests/README.md) for what's covered and how to write tests.

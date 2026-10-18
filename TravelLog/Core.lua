@@ -3,10 +3,12 @@ local _, ns = ...
 
 -- Bumped whenever something is recorded, so the map knows when to redraw.
 ns.version = 0
+ns.nodesVersion = 0
 
 local DEFAULTS = {
 	interval = 2,     -- seconds between recorded path points while moving (1-5)
 	trail = "today",  -- what the world map overlay shows: session/today/week/all/off
+	nodes = true,     -- show looted chests, herbs and ore on the world map
 }
 
 -- Path points and jumps are packed this many records per string, which keeps
@@ -51,6 +53,21 @@ function ns.MoneyText(copper)
 		return ("%s%ds %dc"):format(sign, s, c)
 	end
 	return ("%s%dc"):format(sign, c)
+end
+
+-- "3d 4h", "2h 13m", "5m": how long before `now` (default: the current
+-- time) an epoch time was.
+function ns.Ago(t, now)
+	local s = math.max((now or time()) - t, 0)
+	local d, h, m = math.floor(s / 86400), math.floor(s / 3600) % 24, math.floor(s / 60) % 60
+	if d > 0 then
+		return ("%dd %dh"):format(d, h)
+	elseif h > 0 then
+		return ("%dh %dm"):format(h, m)
+	elseif m > 0 then
+		return ("%dm"):format(m)
+	end
+	return "under a minute"
 end
 
 -- Splits a GUID like "Creature-0-1-2-3-299-4" into its type and entry ID.
@@ -364,7 +381,6 @@ end
 local function Init()
 	TravelLogDB = TravelLogDB or {}
 	local db = TravelLogDB
-	db.version = db.version or 1
 	db.settings = db.settings or {}
 	for key, value in pairs(DEFAULTS) do
 		if db.settings[key] == nil then
@@ -373,30 +389,46 @@ local function Init()
 	end
 	db.chars = db.chars or {}
 
+	-- Who each character is and their totals live in the account-wide file.
 	local name, realm = UnitName("player"), GetRealmName()
 	local key = name .. "-" .. realm
-	local char = db.chars[key] or {}
-	db.chars[key] = char
-	char.name, char.realm = name, realm
-	char.class = select(2, UnitClass("player"))
-	char.race = select(2, UnitRace("player"))
-	char.faction = UnitFactionGroup("player")
-	char.level = UnitLevel("player")
-	char.stats = char.stats or {}
+	local profile = db.chars[key] or {}
+	db.chars[key] = profile
+	profile.name, profile.realm = name, realm
+	profile.class = select(2, UnitClass("player"))
+	profile.race = select(2, UnitRace("player"))
+	profile.faction = UnitFactionGroup("player")
+	profile.level = UnitLevel("player")
+	profile.stats = profile.stats or {}
+
+	-- Everything the character recorded lives in its own per-character file,
+	-- so playing one character never loads another's history. Version 1 kept
+	-- it in the account-wide file.
+	TravelLogCharDB = TravelLogCharDB or {}
+	local char = TravelLogCharDB
+	for _, field in ipairs({ "log", "sessions", "quests" }) do
+		if profile[field] then
+			char[field] = char[field] or profile[field]
+			profile[field] = nil
+		end
+	end
+	db.version = 2
 	char.log = char.log or {}
 	char.sessions = char.sessions or {}
 	char.quests = char.quests or {}
+	char.nodes = char.nodes or {}
 
 	local session = {
 		start = time(),
-		level = char.level,
+		level = profile.level,
 		money = GetMoney(),
 		track = {},
 		jumps = {},
 	}
 	char.sessions[#char.sessions + 1] = session
 
-	ns.db, ns.settings, ns.charKey, ns.char, ns.stats = db, db.settings, key, char, char.stats
+	ns.db, ns.settings, ns.charKey = db, db.settings, key
+	ns.profile, ns.stats, ns.char = profile, profile.stats, char
 	ns.session = session
 	ns.track = ns.NewStream(session.track)
 	ns.jumps = ns.NewStream(session.jumps)

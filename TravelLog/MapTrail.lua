@@ -1,5 +1,6 @@
 -- Draws your recorded path on the world map, with markers for jumps, loot,
--- deaths and level-ups. "/tl trail" picks how far back it shows.
+-- deaths and level-ups, and pins for looted chests and gathering nodes that
+-- say when you last looted them. "/tl trail" picks how far back it shows.
 local _, ns = ...
 
 local MAX_LINES = 5000
@@ -210,7 +211,7 @@ end
 
 -- Drawing state for the map being shown. A full redraw happens when the map,
 -- zoom or setting changes; otherwise only newly recorded points are added.
-local view = { progress = {}, cells = {} }
+local view = { progress = {}, cells = {}, sources = {}, logNext = {} }
 
 local function Dot(x, y, kind)
 	if view.dots >= MAX_DOTS then
@@ -265,39 +266,130 @@ local function DrawSession(s, data, progress)
 	progress.jumps = #j + 1
 end
 
+-- Where history comes from: this character's file, plus every archive slot
+-- when the whole history is asked for. Oldest first.
+local function Sources()
+	local list = {}
+	if ns.settings.trail == "all" then
+		for _, history in ipairs(ns.ArchivedHistory()) do
+			list[#list + 1] = history
+		end
+	end
+	list[#list + 1] = ns.char
+	return list
+end
+
+--------------------------------------------------------------------------------
+-- Chests and gathering nodes, with a tooltip saying when you last looted them
+--------------------------------------------------------------------------------
+
+local NODE_SIZE = 8 -- screen pixels
+local NODE_COLORS = {
+	herb = { 0.35, 0.95, 0.35 },
+	ore = { 0.95, 0.6, 0.3 },
+	chest = { 1, 0.85, 0.2 },
+	object = { 0.8, 0.8, 0.8 },
+}
+local NODE_LABELS = { herb = "Herb", ore = "Ore", chest = "Chest", object = "Object" }
+local pins = {}
+
+local function NodeTooltip(pin)
+	local node = pin.node
+	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
+	GameTooltip:AddLine(node.name or NODE_LABELS[node.kind])
+	GameTooltip:AddLine(("Last looted %s (%s ago)"):format(date("%Y-%m-%d %H:%M", node.last), ns.Ago(node.last)), 1, 1, 1)
+	if node.count > 1 then
+		GameTooltip:AddLine(("Looted %d times. Before that:"):format(node.count), 0.8, 0.8, 0.8)
+		for i = 2, #node.times do
+			GameTooltip:AddLine("  " .. date("%Y-%m-%d %H:%M", node.times[i]), 0.8, 0.8, 0.8)
+		end
+	end
+	GameTooltip:Show()
+end
+
+local function HideTooltip()
+	GameTooltip:Hide()
+end
+
+local function SetPin(i, node, x, y, size)
+	local pin = pins[i]
+	if not pin then
+		pin = CreateFrame("Frame", nil, overlay)
+		pin:EnableMouse(true)
+		pin:SetMouseClickEnabled(false) -- clicks still reach the map
+		pin:SetScript("OnEnter", NodeTooltip)
+		pin:SetScript("OnLeave", HideTooltip)
+		pin.icon = pin:CreateTexture(nil, "OVERLAY")
+		pin.icon:SetAllPoints()
+		pins[i] = pin
+	end
+	pin.node = node
+	local color = NODE_COLORS[node.kind] or NODE_COLORS.object
+	pin.icon:SetColorTexture(color[1], color[2], color[3], 1)
+	pin:SetSize(size, size)
+	pin:ClearAllPoints()
+	pin:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)
+	pin:Show()
+end
+
+-- Nodes are only drawn on their own zone's map; continent maps would be a
+-- carpet of them.
+local function DrawNodes()
+	view.nodesVersion = ns.nodesVersion
+	local n = 0
+	local list = ns.settings.nodes and view.map and ns.char.nodes[view.map]
+	if list then
+		local size = NODE_SIZE / view.scale
+		for _, node in ipairs(list) do
+			n = n + 1
+			SetPin(n, node, node.x / 100 * view.w, node.y / 100 * view.h, size)
+		end
+	end
+	HideFrom(pins, n + 1)
+end
+
+--------------------------------------------------------------------------------
+-- Redrawing
+--------------------------------------------------------------------------------
+
 -- Draws whatever was recorded since the last call.
 local function DrawNew()
 	drawnVersion = ns.version
 	drawnAt = GetTime()
+	if view.nodesVersion ~= ns.nodesVersion then
+		DrawNodes()
+	end
 	if not view.since or not view.map then
 		return
 	end
 	local now = time()
-	for _, s in ipairs(ns.char.sessions) do
-		if (s.stop or now) >= view.since then
-			local data = SessionData(s)
-			if ShowsOn(data.maps, view.map) then
-				local progress = view.progress[s]
-				if not progress then
-					progress = { path = 1, jumps = 1 }
-					view.progress[s] = progress
+	for _, history in ipairs(view.sources) do
+		for _, s in ipairs(history.sessions) do
+			if (s.stop or now) >= view.since then
+				local data = SessionData(s)
+				if ShowsOn(data.maps, view.map) then
+					local progress = view.progress[s]
+					if not progress then
+						progress = { path = 1, jumps = 1 }
+						view.progress[s] = progress
+					end
+					DrawSession(s, data, progress)
 				end
-				DrawSession(s, data, progress)
 			end
 		end
-	end
 
-	local log = ns.char.log
-	for i = view.logNext, #log do
-		local e = log[i]
-		if MARKERS[e.type] and e.map and e.x then
-			local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
-			if x then
-				Dot(x * view.w, y * view.h, e.type)
+		local log = history.log
+		for i = view.logNext[log] or 1, #log do
+			local e = log[i]
+			if MARKERS[e.type] and e.map and e.x then
+				local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
+				if x then
+					Dot(x * view.w, y * view.h, e.type)
+				end
 			end
 		end
+		view.logNext[log] = #log + 1
 	end
-	view.logNext = #log + 1
 end
 
 local function Redraw()
@@ -310,14 +402,19 @@ local function Redraw()
 	view.thickness = LINE_WIDTH / view.scale
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
 	view.lines, view.dots = 0, 0
+	view.sources = view.since and Sources() or {}
+	view.logNext = {}
+	view.nodesVersion = nil
 	wipe(view.progress)
 	wipe(view.cells)
 
-	-- The log is in time order: find the first event inside the range.
-	local log = ns.char.log
-	view.logNext = #log + 1
-	while view.since and view.logNext > 1 and log[view.logNext - 1].time >= view.since do
-		view.logNext = view.logNext - 1
+	-- Logs are in time order: start each at its first event inside the range.
+	for _, history in ipairs(view.sources) do
+		local log, i = history.log, #history.log + 1
+		while i > 1 and log[i - 1].time >= view.since do
+			i = i - 1
+		end
+		view.logNext[log] = i
 	end
 
 	DrawNew()
@@ -335,6 +432,10 @@ local function OnUpdate()
 	end
 end
 
+local function Shown()
+	return ns.settings.trail ~= "off" or ns.settings.nodes
+end
+
 local function Create()
 	if overlay or not WorldMapFrame or not WorldMapFrame.GetCanvas then
 		return
@@ -348,15 +449,15 @@ local function Create()
 	local level = manager and manager:GetValidFrameLevel("PIN_FRAME_LEVEL_MAP_HIGHLIGHT")
 	overlay:SetFrameLevel(level and level + 1 or canvas:GetFrameLevel() + 1)
 	overlay:SetScript("OnUpdate", OnUpdate)
-	overlay:SetShown(ns.settings.trail ~= "off")
+	overlay:SetShown(Shown())
 end
 
--- Applies a changed "/tl trail" setting.
+-- Applies changed "/tl trail" and "/tl nodes" settings, or moved history.
 function ns.RefreshTrail()
 	if not overlay then
 		return
 	end
-	overlay:SetShown(ns.settings.trail ~= "off")
+	overlay:SetShown(Shown())
 	drawnMap = nil
 end
 

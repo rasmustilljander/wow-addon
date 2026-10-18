@@ -1,19 +1,35 @@
 -- Loot: what you took from corpses, chests, herbs, ore, fishing and
 -- containers (with the source), plus items that arrive without a loot window:
--- quest rewards, crafts, roll wins and other pickups.
+-- quest rewards, crafts, roll wins and other pickups. Chests and gathering
+-- nodes are also remembered by place, so the map can show when you last
+-- emptied each one.
 local _, ns = ...
 
 local MONEY_SLOT = Enum and Enum.LootSlotType and Enum.LootSlotType.Money or 2
+local CAST_WINDOW = 2   -- seconds between a cast finishing and the loot it opened
+local NODE_RADIUS = 10  -- yards; loot spots closer than this are the same node
+local NODE_TIMES = 5    -- loot times kept per node
 
 local current    -- the loot window being looted: { event, slots, guid }
 local lastLoot   -- the last saved loot event, for coins that arrive late
-local lastCast   -- last spell the player started casting, with its target name
+local sent       -- the player's last UNIT_SPELLCAST_SENT, which names the target
+local lastCast   -- the player's last finished cast: { target, spellID, at }
 local lastUsed   -- last bag item the player used (clams, lockboxes, ...)
+local looted, lootedCount = {}, 0 -- creature GUIDs looted lately, to spot skinning
 
-ns.On("UNIT_SPELLCAST_SENT", function(unit, target, _, spellID)
+ns.On("UNIT_SPELLCAST_SENT", function(unit, target, castGUID, spellID)
 	if unit == "player" then
-		lastCast = { target = ns.Clean(target), spellID = ns.Clean(spellID), at = GetTime() }
+		sent = { target = ns.Clean(target), castGUID = ns.Clean(castGUID), spellID = ns.Clean(spellID) }
 	end
+end)
+
+ns.On("UNIT_SPELLCAST_SUCCEEDED", function(unit, castGUID, spellID)
+	if unit ~= "player" then
+		return
+	end
+	castGUID, spellID = ns.Clean(castGUID), ns.Clean(spellID)
+	local target = sent and (sent.castGUID == castGUID or sent.spellID == spellID) and sent.target
+	lastCast = { target = target ~= "" and target or nil, spellID = spellID, at = GetTime() }
 end)
 
 hooksecurefunc(C_Container, "UseContainerItem", function(bag, slot)
@@ -33,13 +49,15 @@ local function NameOfUnitWithGUID(guid)
 end
 
 -- Works out what is being looted. Called when the window opens, while the
--- target and recent cast still describe the source.
+-- target and the cast that opened it still describe the source.
 local function Describe(e, guid, fromItem)
 	local kind, id = ns.ParseGUID(guid)
 	e.sourceType, e.sourceID = kind, id
 	e.source = guid and NameOfUnitWithGUID(guid)
 
-	local cast = lastCast and GetTime() - lastCast.at < 30 and lastCast
+	-- Herb Gathering, Mining, Opening, Skinning... finish right before the
+	-- loot window opens. Combat spells usually finish well before.
+	local cast = lastCast and GetTime() - lastCast.at <= CAST_WINDOW and lastCast
 	if IsFishingLoot() then
 		e.sourceType = "Fishing"
 	elseif fromItem or kind == "Item" then
@@ -48,9 +66,18 @@ local function Describe(e, guid, fromItem)
 			e.source = lastUsed.item
 		end
 	elseif kind == "GameObject" and cast then
-		-- Herbs, ore, chests: the cast that opened it names the object.
 		e.source = e.source or cast.target
 		e.via = SpellName(cast.spellID)
+	elseif kind == "Creature" and guid then
+		-- Looting a corpse a second time means skinning (or mining, herbing) it.
+		if cast and looted[guid] then
+			e.via = SpellName(cast.spellID)
+		elseif not looted[guid] then
+			if lootedCount >= 500 then
+				looted, lootedCount = {}, 0
+			end
+			looted[guid], lootedCount = true, lootedCount + 1
+		end
 	end
 end
 
@@ -96,6 +123,69 @@ ns.On("LOOT_SLOT_CLEARED", function(slot)
 	end
 end)
 
+--------------------------------------------------------------------------------
+-- Chests and gathering nodes
+--------------------------------------------------------------------------------
+
+local kindBySpell
+
+local function NodeKind(via)
+	if not kindBySpell then
+		kindBySpell = {}
+		local herb, mining = SpellName(2366), SpellName(2575)
+		if herb then kindBySpell[herb] = "herb" end
+		if mining then kindBySpell[mining] = "ore" end
+	end
+	if not via then
+		return "object"
+	end
+	return kindBySpell[via] or "chest"
+end
+
+local function IsNear(node, e, inst, a, b)
+	if a and node.a and node.inst == inst then
+		return (node.a - a) ^ 2 + (node.b - b) ^ 2 <= NODE_RADIUS ^ 2
+	end
+	return math.abs(node.x - e.x) + math.abs(node.y - e.y) <= 0.5
+end
+
+-- Finds or adds the node at this spot and notes the loot. Spawn points are
+-- matched by kind and place rather than by object, because the same spot can
+-- grow different herbs.
+local function RememberNode(e)
+	if not (e.map and e.x) then
+		return
+	end
+	local kind = NodeKind(e.via)
+	local inst, a, b = ns.WorldPosition()
+	local nodes = ns.char.nodes
+	nodes[e.map] = nodes[e.map] or {}
+	local list = nodes[e.map]
+	local node
+	for _, n in ipairs(list) do
+		if n.kind == kind and IsNear(n, e, inst, a, b) then
+			node = n
+			break
+		end
+	end
+	if not node then
+		node = { kind = kind, x = e.x, y = e.y, count = 0, times = {} }
+		if a then
+			node.inst, node.a, node.b = inst, ns.Round(a, 1), ns.Round(b, 1)
+		end
+		list[#list + 1] = node
+		ns.Add(1, "nodes", kind)
+	end
+	e.lastHere = node.last
+	node.name = e.source or node.name
+	node.id = e.sourceID or node.id
+	node.last = e.time
+	node.count = node.count + 1
+	table.insert(node.times, 1, e.time)
+	node.times[NODE_TIMES + 1] = nil
+	ns.nodesVersion = ns.nodesVersion + 1
+end
+
 ns.On("LOOT_CLOSED", function()
 	ns.Mark("loot")
 	if not current then
@@ -117,6 +207,9 @@ ns.On("LOOT_CLOSED", function()
 		return
 	end
 	e.items = #items > 0 and items or nil
+	if e.sourceType == "GameObject" then
+		RememberNode(e)
+	end
 	ns.Add(1, "loot", "opened")
 	ns.Add(1, "loot", "bySource", e.sourceType or "Unknown")
 	lastLoot = ns.Save(e)
@@ -173,6 +266,31 @@ local function ReceivedHow(how)
 	return how
 end
 
+-- A won roll can be reported twice: by LOOT_ITEM_ROLL_WON (which also works
+-- in dungeons, where loot chat is hidden from addons) and by the "You receive
+-- loot" chat line. Whichever comes second is folded into the first.
+local ROLL_DEDUPE = 10
+local rollWon = {}     -- item link -> when LOOT_ITEM_ROLL_WON logged it
+local chatLooted = {}  -- item link -> { event, at } logged from chat
+
+ns.On("LOOT_ITEM_ROLL_WON", function(item, count, _, roll)
+	item = ns.Clean(item)
+	if not item then
+		return
+	end
+	count = ns.Clean(count) or 1
+	local seen = chatLooted[item]
+	if seen and GetTime() - seen.at <= ROLL_DEDUPE then
+		seen.event.how, seen.event.roll = "roll", ns.Clean(roll)
+		chatLooted[item] = nil
+		ns.Add(-count, "received", "loot")
+	else
+		rollWon[item] = GetTime()
+		ns.Log("receive", { item = item, count = count, how = "roll", roll = ns.Clean(roll) })
+	end
+	ns.Add(count, "received", "roll")
+end)
+
 ns.On("CHAT_MSG_LOOT", function(text)
 	text = ns.Clean(text)
 	if not text then
@@ -187,9 +305,16 @@ ns.On("CHAT_MSG_LOOT", function(text)
 				or (p.how == "received" and ns.open.merchant) then
 				return
 			end
+			if p.how == "loot" and rollWon[item] and GetTime() - rollWon[item] <= ROLL_DEDUPE then
+				rollWon[item] = nil
+				return
+			end
 			count = tonumber(count) or 1
 			local how = ReceivedHow(p.how)
-			ns.Log("receive", { item = item, count = count, how = how })
+			local e = ns.Log("receive", { item = item, count = count, how = how })
+			if how == "loot" then
+				chatLooted[item] = { event = e, at = GetTime() }
+			end
 			ns.Add(count, "received", how)
 			return
 		end

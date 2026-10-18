@@ -34,7 +34,7 @@ end
 
 local function ShowStats()
 	local char, st = ns.char, ns.stats
-	ns.Print("%s, level %d %s %s", ns.charKey, char.level or 0, UnitRace("player"), UnitClass("player"))
+	ns.Print("%s, level %d %s %s", ns.charKey, ns.profile.level or 0, UnitRace("player"), UnitClass("player"))
 
 	local zone, zoneJumps = Top(st.jumpsByZone)
 	ns.Print("Jumps: %s (%s this session)%s", Count(st.jumps), Count(ns.session.jumpCount),
@@ -65,12 +65,35 @@ local function ShowStats()
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
 		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(places))
 
+	local nodes = st.nodes or {}
+	ns.Print("Nodes remembered: %s herbs, %s ore, %s chests, %s other",
+		Count(nodes.herb), Count(nodes.ore), Count(nodes.chest), Count(nodes.object))
+
 	local points = 0
 	for _, s in ipairs(char.sessions) do
 		points = points + ns.CountRecords(s.track, s == ns.session and ns.track.buffer)
 	end
-	ns.Print("Recorded: %s sessions, %s path points, %s log entries",
-		Count(#char.sessions), Count(points), Count(#char.log))
+	ns.Print("In this character's file: %s sessions, %s path points, %s log entries%s",
+		Count(#char.sessions), Count(points), Count(#char.log),
+		#ns.ArchiveStatus() > 0 and " (older history: /tl archive)" or "")
+end
+
+local function ShowArchive(arg)
+	if arg == "now" then
+		local sessions, entries = ns.Rotate(true)
+		if sessions + entries == 0 then
+			ns.Print("nothing old enough to archive.")
+		end
+		ns.RefreshTrail()
+	end
+	local lines, keepDays = ns.ArchiveStatus()
+	ns.Print("history older than %d days moves to the archive addons when the main file gets big.", keepDays)
+	if #lines == 0 then
+		print("  Nothing archived yet.")
+	end
+	for _, line in ipairs(lines) do
+		print("  " .. line)
+	end
 end
 
 local function ShowJumps()
@@ -113,16 +136,23 @@ local DESCRIBE = {
 		if e.money then
 			what = what == "" and ns.MoneyText(e.money) or what .. ", " .. ns.MoneyText(e.money)
 		end
-		return ("Looted %s from %s"):format(what, e.source or e.sourceType or "?")
+		local text = ("Looted %s from %s"):format(what, e.source or e.sourceType or "?")
+		if e.lastHere then
+			text = text .. (" (looted here %s before)"):format(ns.Ago(e.lastHere, e.time))
+		end
+		return text
 	end,
-	receive = function(e) return ("Received %s (%s)"):format(Item(e.item, e.count), e.how or "?") end,
+	receive = function(e)
+		local how = e.roll and ("won with a roll of %d"):format(e.roll) or e.how or "?"
+		return ("Received %s (%s)"):format(Item(e.item, e.count), how)
+	end,
 	buy = function(e) return ("Bought %s for %s from %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	sell = function(e) return ("Sold %s for %s to %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	buyback = function(e) return ("Bought back %s for %s"):format(Item(e.item, e.count), ns.MoneyText(e.price)) end,
 	repair = function(e) return ("Repaired for %s"):format(ns.MoneyText(e.price)) end,
 	money = function(e) return ("%s %s (%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), e.reason) end,
 	flight = function(e) return ("Flew from %s to %s for %s"):format(e.from or "?", e.to or "?", ns.MoneyText(e.price)) end,
-	landed = function(e) return e.seconds and ("Landed after %d:%02d"):format(e.seconds / 60, e.seconds % 60) or "Landed" end,
+	landed = function(e) return e.seconds and ("Landed after %d:%02d"):format(math.floor(e.seconds / 60), e.seconds % 60) or "Landed" end,
 	hearth = function(e) return ("Hearthed to %s"):format(e.to or "?") end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	death = function(e) return e.target and ("Died fighting %s"):format(e.target) or "Died" end,
@@ -161,6 +191,8 @@ local function Help()
 	print("  /tl jumps - jumps per zone")
 	print("  /tl log [n] - the last n recorded events (default 15)")
 	print("  /tl trail session|today|week|all|off - what the world map shows (now: " .. ns.settings.trail .. ")")
+	print("  /tl nodes on|off - looted chests and herbs/ore on the map (now: " .. (ns.settings.nodes and "on" or "off") .. ")")
+	print("  /tl archive [now] - where older history is kept; \"now\" archives it right away")
 	print("  /tl interval 1-5 - seconds between path points (now: " .. ns.settings.interval .. ")")
 	print("  /tl wipe confirm - delete everything recorded for this character")
 end
@@ -182,11 +214,19 @@ SlashCmdList.TRAVELLOG = function(msg)
 		ns.settings.trail = arg
 		ns.RefreshTrail()
 		ns.Print("map trail: %s", arg)
+	elseif command == "nodes" and (arg == "on" or arg == "off") then
+		ns.settings.nodes = arg == "on"
+		ns.RefreshTrail()
+		ns.Print("chests and gathering nodes on the map: %s", arg)
+	elseif command == "archive" then
+		ShowArchive(arg)
 	elseif command == "interval" and tonumber(arg) and tonumber(arg) >= 1 and tonumber(arg) <= 5 then
 		ns.settings.interval = tonumber(arg)
 		ns.Print("recording a path point every %s seconds while moving", arg)
 	elseif command == "wipe" and arg == "confirm" then
+		ns.WipeArchives(ns.charKey)
 		ns.db.chars[ns.charKey] = nil
+		TravelLogCharDB = nil
 		ReloadUI()
 	else
 		Help()
