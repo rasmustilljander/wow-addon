@@ -7,4 +7,5 @@
 ## SavedVariablesPerCharacter: TravelLogKillsDB
 
 Core.lua
+Map.lua
 Commands.lua

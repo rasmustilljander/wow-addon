@@ -109,6 +109,7 @@ end)
 
 -- TravelLogKillsDB = {
 --   total = 1234,
+--   settings = { map = true, mapFilter = "Kobold Worker" },
 --   places = { "Elwynn Forest|Goldshire", "Westfall", ... },
 --   mobs = {
 --     ["Defias Thug"] = { name = "Defias Thug", ids = { 38 }, count = 54,
@@ -129,6 +130,10 @@ local function Init()
 	db.total = db.total or 0
 	db.places = db.places or {}
 	db.mobs = db.mobs or {}
+	db.settings = db.settings or {}
+	if db.settings.map == nil then
+		db.settings.map = true -- kill spots on the world map
+	end
 	ns.db = db
 	for i, place in ipairs(db.places) do
 		placeIndex[place] = i
@@ -282,6 +287,7 @@ local function Save(k)
 	mob.first = mob.first or w.time
 	mob.last = w.time
 	ns.db.total = ns.db.total + 1
+	ns.MapAdd(key, w)
 end
 
 -- Saves the kills that have both halves, or have waited long enough (all of

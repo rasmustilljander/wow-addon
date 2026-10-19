@@ -7,7 +7,7 @@ My personal addons for **World of Warcraft: Forever**. Each addon lives in its o
 | [TravelLog](TravelLog/) | Records your travels: your path, every jump, loot, vendor trades, deaths, quests and more. It draws your trail on the world map and shows when you last looted each chest, herb and ore. |
 | `TravelLog_Archive` | Storage for TravelLog's older history, so the file loaded at every login stays small. Install it with TravelLog. |
 | [KillXP](KillXP/) | Shows on a mob's tooltip how much XP a kill gives you, counting rested XP and party bonus, and how many kills you need to level up. |
-| [TravelLog_Kills](TravelLog_Kills/) | Records every mob you kill: how many times, when and where. Shows your kill count on mob tooltips. Works with or without TravelLog. |
+| [TravelLog_Kills](TravelLog_Kills/) | Records every mob you kill: how many times, when and where. Pins kill spots on the world map and shows your kill count on mob tooltips. Works with or without TravelLog. |
 
 ## Installing
 

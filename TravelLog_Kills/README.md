@@ -18,6 +18,12 @@ Kills count when you, your pet or someone in your party lands the killing blow, 
 
 Mobs you've killed show it on their tooltip: `Killed 54 times, last 2h ago`.
 
+## World map
+
+Open a zone's map to see red pins where you've killed things. Kills close together (within about 2% of the map's width) share a pin, which grows with the count, so a grinding spot stands out. Hover a pin to see how many kills it holds, when the last one was, and the mobs killed there, most killed first.
+
+`/kills map <name>` shows only one mob's spots, handy for finding where a quest mob was, and `/kills map target` does the same for your target. `/kills map on` shows every kill again, `/kills map off` hides the pins. Pins only appear on zone maps, not continent maps, and kills inside dungeons have no coordinates, so they can't be pinned.
+
 ## Commands
 
 | Command | |
@@ -26,6 +32,8 @@ Mobs you've killed show it on their tooltip: `Killed 54 times, last 2h ago`.
 | `/kills <name>` | One mob: how many times, first and last kill, where (top places), total XP and the last 10 kills with time and coordinates. Part of a name works; if several mobs match they're listed. |
 | `/kills target` | The same for your current target |
 | `/kills recent [n]` | Your last n kills of any mob (default 15) |
+| `/kills map on\|off` | Kill spots on the world map (default on) |
+| `/kills map <name>` | Only that mob's spots on the map (`/kills map target` for your target) |
 | `/kills wipe confirm` | Delete every recorded kill for this character |
 
 `/tlk` works too.
@@ -59,6 +67,7 @@ Most kills produce both. Each one waits up to 2 seconds for the other and is sav
 ```lua
 TravelLogKillsDB = {
   total = 1234,
+  settings = { map = true, mapFilter = "Kobold Worker" },   -- /kills map
   places = { "Elwynn Forest|Goldshire", "Elwynn Forest|Fargodeep Mine", "Westfall", ... },
   mobs = {
     ["Kobold Worker"] = { name = "Kobold Worker", ids = { 257 }, count = 54,

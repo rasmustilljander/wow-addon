@@ -146,7 +146,8 @@ local function Lookup(text)
 	end
 end
 
-local function ShowTarget()
+-- The saved mob for your target, or nil after saying why there isn't one.
+local function TargetMob()
 	if not UnitExists("target") then
 		ns.Print("you have no target.")
 		return
@@ -154,11 +155,55 @@ local function ShowTarget()
 	local name = ns.Clean(UnitName("target"))
 	local _, id = ns.ParseGUID(UnitGUID("target"))
 	local mob = ns.Mob(name, id)
-	if mob then
-		ShowMob(mob)
-	else
+	if not mob then
 		ns.Print("you haven't killed %s yet.", name or "your target")
 	end
+	return mob
+end
+
+local function ShowTarget()
+	local mob = TargetMob()
+	if mob then
+		ShowMob(mob)
+	end
+end
+
+--------------------------------------------------------------------------------
+-- /kills map
+--------------------------------------------------------------------------------
+
+local function MapStatus()
+	local s = ns.db.settings
+	if not s.map then
+		return "off"
+	end
+	return s.mapFilter and ("only %s"):format(s.mapFilter) or "all kills"
+end
+
+local function SetMap(arg)
+	local s, word = ns.db.settings, arg:lower()
+	if word == "on" or word == "all" then
+		s.map, s.mapFilter = true, nil
+	elseif word == "off" then
+		s.map = false
+	elseif word ~= "" then
+		local mob
+		if word == "target" then
+			mob = TargetMob()
+		else
+			local matches = Find(arg)
+			mob = #matches == 1 and matches[1]
+			if not mob then
+				Lookup(arg) -- says there's no match, or lists them
+			end
+		end
+		if not mob then
+			return
+		end
+		s.map, s.mapFilter = true, mob.name
+	end
+	ns.RefreshMap()
+	ns.Print("kill spots on the world map: %s", MapStatus())
 end
 
 --------------------------------------------------------------------------------
@@ -171,6 +216,7 @@ local function Help()
 	print("  /kills <name> - how often, when and where you killed a mob")
 	print("  /kills target - the same for your target")
 	print("  /kills recent [n] - your last n kills (default 15)")
+	print("  /kills map on|off|<name>|target - kill spots on the world map, or one mob's (now: " .. MapStatus() .. ")")
 	print("  /kills wipe confirm - delete every recorded kill for this character")
 end
 
@@ -188,6 +234,8 @@ SlashCmdList.TRAVELLOGKILLS = function(msg)
 		ShowRecent(tonumber(arg) or 15)
 	elseif command == "target" and arg == "" then
 		ShowTarget()
+	elseif command == "map" then
+		SetMap(msg:match("^%S+%s*(.-)$"))
 	elseif command == "wipe" and arg == "confirm" then
 		TravelLogKillsDB = nil
 		ReloadUI()

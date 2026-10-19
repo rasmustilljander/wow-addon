@@ -34,7 +34,7 @@ tests/TravelLog/loot.lua
 | `TravelLog/storage.lua` | Per-character files, migration from the first version, rotation into the archive addon. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `KillXP/tooltip.lua` | The XP formula, rested and party bonuses, kills to level, the tooltip lines, and learning real XP from kills. |
-| `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, commands, a reload. |
+| `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, a reload. |
 
 ## Writing a test
 

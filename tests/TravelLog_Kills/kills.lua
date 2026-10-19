@@ -116,18 +116,73 @@ M.units.target = { name = "Diseased Young Wolf", guid = "Creature-0-1-2-3-299-77
 check(Run("target"):find("Diseased Young Wolf: killed 2 times"), "/kills target")
 check(Run("nothing like it"):find("no kills"), "/kills with no match")
 
+-- Map pins: one per spot on the zone map, sized by the count, with a tooltip.
+local function Pins()
+	M.frame()
+	return M.shown(ns.mapOverlay.children)
+end
+local function PinAt(x, y)
+	for _, pin in ipairs(Pins()) do
+		if math.abs(pin.point[4] - x * 10) < 0.5 and math.abs(pin.point[5] + y * 6.67) < 0.5 then return pin end
+	end
+end
+check(#Pins() == 2, "a pin per kill spot: " .. #Pins())
+local mine = PinAt(40, 70)
+check(mine and mine.count == 6, "Fargodeep spot has 6 kills")
+check(mine and mine.mouse and mine.mouseClicks == false, "pins take hover but let clicks through")
+local single = PinAt(42, 65)
+check(single and single.count == 1 and single.w < mine.w, "pins grow with the count")
+local before = mine.w
+WorldMapFrame.scale = 2
+M.advance(1)
+check(math.abs(PinAt(40, 70).w - before / 2) < 0.01, "pins keep their screen size when zoomed")
+WorldMapFrame.scale = 1
+M.advance(1)
+M.frame()
+mine.scripts.OnEnter(mine)
+local tip = table.concat(GameTooltip.lines, "\n")
+check(tip:find("6 kills here") and tip:find("Kobold Worker  4") and tip:find("Diseased Young Wolf  2"), "pin tooltip: " .. tip)
+check(tip:find("Kobold Worker") < tip:find("Diseased Young Wolf"), "most killed first")
+mine.scripts.OnLeave(mine)
+check(not GameTooltip.shown, "tooltip hides")
+
+-- A new kill shows up on the open map.
+M.x, M.y = 0.55, 0.30
+M.guidNames[Kobold(50)] = "Kobold Worker"
+M.fire("PARTY_KILL", ME, Kobold(50))
+M.tick(3)
+check(#Pins() == 3, "new kill spot appears on the open map")
+M.x, M.y = 0.42, 0.65
+
+-- Only on the zone's own map.
+M.viewMap = 1415
+check(#Pins() == 0, "no pins on the continent map")
+M.viewMap = 1429
+
+-- One mob only, then off, then all again.
+check(Run("map wolf"):find("only Diseased Young Wolf"), "/kills map <name>")
+check(#Pins() == 1 and Pins()[1].count == 2, "only the wolf's spot, with its count")
+Pins()[1].scripts.OnEnter(Pins()[1])
+check(not table.concat(GameTooltip.lines, "\n"):find("Kobold"), "filtered tooltip lists only that mob")
+check(Run("map o"):find("3 mobs match") and TravelLogKillsDB.settings.mapFilter == "Diseased Young Wolf", "ambiguous name keeps the filter")
+M.units.target = { name = "Kobold Worker", guid = Kobold(60), hostile = true }
+check(Run("map target"):find("only Kobold Worker") and #Pins() == 3, "/kills map target")
+check(Run("map off"):find("off") and #Pins() == 0, "/kills map off")
+check(Run("map on"):find("all kills") and #Pins() == 3, "/kills map on")
+
 -- Kills waiting at logout are saved, and everything survives a reload.
 M.guidNames["Creature-0-1-2-3-299-11"] = "Diseased Young Wolf"
 M.fire("PARTY_KILL", ME, "Creature-0-1-2-3-299-11")
 M.Reload()
 ns = M.ns("TravelLog_Kills")
-check(TravelLogKillsDB.total == 9 and TravelLogKillsDB.mobs["Diseased Young Wolf"].count == 3, "saved over a reload")
+check(TravelLogKillsDB.total == 10 and TravelLogKillsDB.mobs["Diseased Young Wolf"].count == 3, "saved over a reload")
 check(ns.Mob(nil, 257) and ns.Mob(nil, 257).name == "Kobold Worker", "NPC ID index rebuilt")
 check(#M.tooltipPostCalls[Enum.TooltipDataType.Unit] == 1, "tooltip hook registered once after reload")
+check(#Pins() == 3, "pins rebuilt from the saved kills")
 M.guidNames[Kobold(6)] = "Kobold Worker"
 M.fire("PARTY_KILL", ME, Kobold(6))
 XP("Kobold Worker", 40)
-check(TravelLogKillsDB.mobs["Kobold Worker"].count == 6 and #TravelLogKillsDB.places == 2, "keeps recording after reload")
+check(TravelLogKillsDB.mobs["Kobold Worker"].count == 7 and #TravelLogKillsDB.places == 2, "keeps recording after reload")
 
 -- Wipe.
 SlashCmdList.TRAVELLOGKILLS("wipe confirm")
