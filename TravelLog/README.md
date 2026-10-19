@@ -1,8 +1,17 @@
 # TravelLog
 
-Records your travels in WoW: Forever so you can retrace them later. It draws your trail on the world map, along with every chest, herb and ore you've looted and when you last looted it.
+Records your travels in WoW: Forever so you can retrace them later: what you looted and bought, where your money went, flights, deaths, quests and more.
 
-Install the `TravelLog_Archive` folder along with it (see [Where the data is](#where-the-data-is)).
+It comes in parts, each its own addon folder. Install the ones you want:
+
+| Addon | |
+| --- | --- |
+| `TravelLog` | This one. Everything below. The others need it. |
+| [TravelLog_Path](../TravelLog_Path/) | Your path and every jump, drawn as a trail on the world map. |
+| [TravelLog_Nodes](../TravelLog_Nodes/) | Every chest, herb and ore spot you've looted, pinned on the world map with when you last looted it. |
+| `TravelLog_Archive` | Storage for older history (see [Where the data is](#where-the-data-is)). Install it along with the others. |
+
+[TravelLog_Kills](../TravelLog_Kills/) is a relative that works on its own.
 
 ## What it records
 
@@ -10,14 +19,11 @@ Every log entry is stamped with the character, time, zone, subzone, map ID and m
 
 | | |
 | --- | --- |
-| **Path** | Your position every 2 seconds while you move (1–5 s, see `/tl interval`), with map coordinates, world coordinates and how you were moving: on foot, mounted, on a flight, swimming or as a ghost. Nothing is recorded while you stand still. |
-| **Jumps** | Every jump, with time, zone, subzone and coordinates. Totals per zone. |
 | **Loot** | Every corpse, chest, herb, ore vein, fishing catch or container you loot: what you took, the coins, and the source. The source is a name and NPC/object ID, plus the spell that opened it for herbs, ore, chests and skinning. |
-| **Chests and nodes** | Every chest, herb and ore spot you've looted, remembered by place: when you last looted it, how many times, and the five most recent times. |
 | **Other items** | Quest rewards, crafted items, won rolls (with your roll) and other pickups that arrive without a loot window. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every change to your gold with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
-| **Travel** | Zone and subzone changes (first visits are marked), flights (from, to, cost, how long), hearthstone uses, where you set your hearthstone, and distance travelled per movement type. |
+| **Travel** | Zone and subzone changes (first visits are marked), flights (from, to, cost, how long), hearthstone uses and where you set your hearthstone. |
 | **Life** | Deaths (and what you were fighting), releasing your spirit and coming back to life, level-ups, quests accepted and completed, kills that gave XP, and newly discovered places. |
 
 ## Commands
@@ -25,29 +31,11 @@ Every log entry is stamped with the character, time, zone, subzone, map ID and m
 | Command | |
 | --- | --- |
 | `/tl` or `/tl stats` | Totals for this character |
-| `/tl jumps` | Jumps per zone |
 | `/tl log [n]` | The last n recorded events (default 15) |
-| `/tl trail session\|today\|week\|all\|off` | How far back the world map trail goes (default `today`). `all` also reads the archives. |
-| `/tl nodes on\|off` | Show looted chests, herbs and ore on the world map (default on) |
-| `/tl interval 1-5` | Seconds between path points while moving (default 2) |
 | `/tl archive [now]` | Where older history is kept. `now` archives it right away. |
-| `/tl wipe confirm` | Delete everything recorded for this character, archives included |
+| `/tl wipe confirm` | Delete everything recorded for this character, archives and the other TravelLog addons' files included |
 
-`/travellog` works too.
-
-## World map
-
-Open the world map to see where you've been, on zone maps and continent maps. The trail breaks at teleports (hearthstone, portals, releasing to a graveyard).
-
-| Trail color | | Marker | |
-| --- | --- | --- | --- |
-| yellow | on foot | small white dot | jump |
-| orange | mounted | purple dot | loot |
-| light blue | flight path | red dot | death |
-| blue | swimming | green dot | level-up |
-| grey | ghost | | |
-
-On zone maps, square pins mark the chests and gathering nodes you've looted: green for herbs, orange for ore, gold for chests and grey for other objects. Hover a pin to see when you last looted it, how long ago that was, how many times you've looted it and the times before. `/tl log` shows the same thing for each loot, e.g. `Looted [Peacebloom]x2 from Peacebloom (looted here 30m before)`.
+`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, and TravelLog_Nodes adds `/tl nodes`. Both add their totals to `/tl stats`.
 
 ## Where the data is
 
@@ -55,13 +43,17 @@ WoW gives each addon one file per account plus one per character, and only write
 
 | File | What's in it |
 | --- | --- |
-| `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog.lua` | Settings, and each character's profile and totals. Small. |
-| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's history: log, path, jumps, quests, chests and nodes. Loaded only when you play that character. |
+| `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog.lua` | Settings (the other TravelLog addons' too), and each character's profile and totals. Small. |
+| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's history: log, sessions and quests. Loaded only when you play that character. |
+| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Path.lua` | That character's path and jumps (see [TravelLog_Path](../TravelLog_Path/)). |
+| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Nodes.lua` | That character's chests and gathering nodes (see [TravelLog_Nodes](../TravelLog_Nodes/)). |
 | `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Archive.lua` | Older history, all characters. Loaded only when needed. |
 
-Recording grows a character's file by roughly 100 KB per hour of non-stop movement. To keep it small, history is **rotated**: when the file passes about 3 MB, the next login moves everything older than 10 days into the archive (chests, nodes and totals stay). The archive is its own addon, because WoW gives each addon one account-wide file, and it loads on demand: it isn't read at login, only for `/tl trail all`, `/tl archive now` and the next rotation. `/tl archive` shows how big it has grown without loading it.
+The path is what grows: roughly 100 KB per hour of non-stop movement. To keep the character files small, history is **rotated**: when this character's log, sessions and path together pass about 3 MB, the next login moves everything older than 10 days into the archive (chests, nodes and totals stay). The archive is its own addon, because WoW gives each addon one account-wide file, and it loads on demand: it isn't read at login, only for `/tl trail all`, `/tl archive now` and the next rotation. `/tl archive` shows how big it has grown without loading it.
 
-The archive file keeps growing, but since it's left alone at a normal login, its size doesn't slow anything down until you look at all of your history. If the archive folder isn't installed, nothing is lost: history just stays in the character file, and TravelLog tells you at login.
+The archive file keeps growing, but since it's left alone at a normal login, its size doesn't slow anything down until you look at all of your history. If the archive folder isn't installed, nothing is lost: history just stays in the character files, and TravelLog tells you at login.
+
+Before version 0.3 the path and the nodes were in TravelLog's own character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file. Until then they stay where they were.
 
 What a character file holds:
 
@@ -75,30 +67,15 @@ TravelLogCharDB = {
     ...
   },
   sessions = {   -- one per login or reload
-    { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, track = { "..." }, jumps = { "..." } },
-  },
-  nodes = {   -- per uiMapID
-    [1429] = { { kind = "herb", name = "Peacebloom", x = 42.1, y = 65.3, last = 1760000000,
-                 count = 8, times = { 1760000000, 1759998200, ... } } },
+    { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500 },
   },
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ... } },
 }
 ```
 
-The archive holds `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = { ... }, log = { ... } } } }`.
+The archive holds `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = { ... }, log = { ... }, path = { ... } } } }`. `path` holds TravelLog_Path's sessions. Sessions archived before TravelLog_Path existed have their path inside them instead (`track` and `jumps`), and TravelLog_Path reads both.
 
 Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`.
-
-`track` (path) and `jumps` are packed to keep the file small: each string holds up to 200 records separated by `;`, and each record is
-
-```
-seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
-```
-
-- `x`, `y`: map coordinates 0–100, like the ones you see in game.
-- `instanceID`, `world 1`, `world 2`: continent and the two values `UnitPosition("player")` returns, in yards. Handy for drawing one continuous path across zones.
-- `flags`: 1 mounted, 2 on a flight, 4 swimming, 8 dead or ghost, 16 in combat, 32 indoors (added together).
-- Jump records add `,zone,subzone` at the end.
 
 Fields the game doesn't reveal (coordinates inside dungeons) are left empty.
 
@@ -111,11 +88,10 @@ Loot windows:
 - Items you win by rolling arrive later, outside the loot window, and are recorded as received items, with your roll.
 - A loot window that combines several corpses is credited to the first one.
 - Chests and herbs are named by the spell that opened them. An object that opens without a cast (some quest crates) is recorded with its object ID but no name.
-- Inside dungeons there are no coordinates, so chests looted there aren't remembered on the map. The loot itself is still recorded.
 
 Everything else:
 
-- The game doesn't give addons your position inside dungeons and raids, so there's no path in there. Jumps and loot are still recorded, without coordinates.
+- The game doesn't give addons your position inside dungeons and raids, so loot and other events there have no coordinates.
 - Forever runs on the Midnight-era client, which hides some data from addons inside instances. Things read from chat (crafted items, quest rewards, kills, discoveries) may be missing there. Loot windows and roll wins still work.
 - Kills are only counted when they give XP, since addons can't read the combat log on this client. [TravelLog_Kills](../TravelLog_Kills/) records every kill per mob, XP or not.
 - Sales are read from the buyback list. If one click sells more than 12 items (Sell All Junk), only the last 12 may show up individually. The money ledger total is always right.

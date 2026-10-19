@@ -1,56 +1,15 @@
--- Path recording: where you walk, ride, swim and fly, plus zone changes,
--- flights, hearthstones and distance travelled.
+-- Travel: zone and subzone changes, flights (and landing), hearthstones and
+-- where you set your hearthstone. Your path itself is TravelLog_Path's.
 local _, ns = ...
 
 local HEARTHSTONE = 8690
-local MAX_SPEED = 60   -- yards/second; anything faster is a teleport, not travel
-local MIN_MOVE = 1     -- yards moved before a new point is worth recording
 
-local last     -- last recorded path point
-local prev     -- previous sample, for distance
 local wasTaxi
 local flight   -- the flight we're on, if any
 
-local function Mode(h)
-	if h.taxi then return "flight" end
-	if h.dead then return "ghost" end
-	if h.swimming then return "swim" end
-	if h.mounted then return "mount" end
-	return "foot"
-end
-
-local function WorldDistance(a, b)
-	if a.inst and a.inst == b.inst and a.wx and b.wx then
-		return math.sqrt((a.wx - b.wx) ^ 2 + (a.wy - b.wy) ^ 2)
-	end
-end
-
-local function Moved(a, b)
-	local d = WorldDistance(a, b)
-	if d then
-		return d >= MIN_MOVE
-	end
-	return a.map ~= b.map or math.abs(a.x - b.x) + math.abs(a.y - b.y) > 0.0002
-end
-
-local function Record(h)
-	ns.track:Add(ns.Pack(h))
-	last = h
-end
-
-local function Tick()
-	local h = ns.Here()
-
-	if prev then
-		local d = WorldDistance(prev, h)
-		local seconds = math.max(h.now - prev.now, 1)
-		if d and d > 0 and d / seconds <= MAX_SPEED then
-			ns.Add(d, "distance", Mode(h))
-		end
-	end
-	prev = h
-
-	if wasTaxi ~= nil and h.taxi ~= wasTaxi and not h.taxi then
+local function CheckLanded()
+	local taxi = UnitOnTaxi("player") and true or false
+	if wasTaxi and not taxi then
 		local e = ns.Log("landed")
 		if flight then
 			e.from, e.to, e.seconds = flight.from, flight.to, e.time - flight.time
@@ -58,21 +17,12 @@ local function Tick()
 			flight = nil
 		end
 	end
-	wasTaxi = h.taxi
-
-	if not h.x then
-		return
-	end
-	if not last or last.map ~= h.map or last.flags ~= h.flags then
-		Record(h)
-	elseif h.t - last.t >= ns.settings.interval and Moved(last, h) then
-		Record(h)
-	end
+	wasTaxi = taxi
 end
 
 ns.On("PLAYER_LOGIN", function()
 	C_Timer.NewTicker(1, function()
-		local ok, err = pcall(Tick)
+		local ok, err = pcall(CheckLanded)
 		if not ok then
 			geterrorhandler()(err)
 		end

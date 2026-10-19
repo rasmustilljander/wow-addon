@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: TravelLog Path
+## Notes: Records the path you walk, ride, swim and fly, and every jump, and draws it on the world map.
+## Author: rasmustilljander
+## Version: 0.1.0
+## Dependencies: TravelLog
+## SavedVariablesPerCharacter: TravelLogPathDB
+
+Core.lua
+Track.lua
+Jumps.lua
+Map.lua
+Commands.lua

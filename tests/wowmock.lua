@@ -22,7 +22,7 @@ M = {
 	combat = false, indoors = false, secrets = {}, viewMap = 1429,
 	loot = {}, buyback = {}, merchantItems = {}, units = {}, taxiNodes = {},
 	quests = {}, bind = "Goldshire", bags = {}, repairCost = 0,
-	installed = { "TravelLog" },   -- addon folders the fake client knows about
+	installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }, -- addon folders the fake client knows about
 	disabled = {},                 -- addon name -> true
 }
 
@@ -444,11 +444,12 @@ function WorldMapFrame:GetPinFrameLevelsManager()
 end
 local blizzardFrames = { M.canvas, WorldMapFrame }
 
--- The newest addon frame drawn on the map canvas.
-function M.mapOverlay()
+-- The newest addon frame drawn on the map canvas, or the newest one at a
+-- frame level (each addon draws at its own).
+function M.mapOverlay(level)
 	local found
 	for _, f in ipairs(M.frames) do
-		if f.parent == M.canvas then found = f end
+		if f.parent == M.canvas and (not level or f.level == level) then found = f end
 	end
 	return found
 end
