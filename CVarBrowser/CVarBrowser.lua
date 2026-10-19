@@ -192,6 +192,8 @@ frame:SetScript("OnEvent", function(_, event, arg)
 	if event == "ADDON_LOADED" and arg == "CVarBrowser" then
 		CVarBrowserDB = CVarBrowserDB or {}
 		CVarBrowserDB.bookmarks = CVarBrowserDB.bookmarks or {}
+		CVarBrowserDB.minimap = CVarBrowserDB.minimap or { angle = 225 }
+		ns.ShowMinimapButton(not CVarBrowserDB.minimap.hide)
 	elseif ns.Refresh then
 		-- A CVar changed, or combat started or ended.
 		ns.Refresh()

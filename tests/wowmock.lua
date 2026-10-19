@@ -181,12 +181,19 @@ function Region:GetPoint()
 	return p[1], p[2], p[3], p[4], p[5]
 end
 function Region:SetAllPoints(rel) self.allPoints = rel or self.parent end
+function Region:GetWidth() return (self:GetSize()) end
+function Region:GetCenter() return self.center[1], self.center[2] end
+function Region:GetEffectiveScale() return self.scale or 1 end
 function Region:GetSize()
 	if self.w then return self.w, self.h end
 	if self.allPoints then return self.allPoints:GetSize() end
 	return 0, 0
 end
 function Region:SetFrameLevel(l) self.level = l end
+function Region:RegisterForClicks(...) self.clicks = { ... } end
+function Region:SetHighlightTexture(t) self.highlightTexture = t end
+function Region:SetChecked(v) self.checked = v and true or false end
+function Region:GetChecked() return self.checked or false end
 function Region:GetFrameLevel() return self.level or 1 end
 function Region:EnableMouse(v) self.mouse = v end
 function Region:SetMouseClickEnabled(v) self.mouseClicks = v end
@@ -235,9 +242,12 @@ function Region:Disable() self.disabled = true end
 function Region:IsEnabled() return not self.disabled end
 function Region:LockHighlight() self.highlightLocked = true end
 function Region:UnlockHighlight() self.highlightLocked = false end
--- Clicking does nothing on a disabled button, like in the game.
+-- Clicking does nothing on a disabled button, like in the game. A check
+-- button flips before its OnClick runs.
 function Region:Click(button)
-	if not self.disabled then M.script(self, "OnClick", button or "LeftButton", false) end
+	if self.disabled then return end
+	if self.kind == "CheckButton" then self.checked = not self.checked end
+	M.script(self, "OnClick", button or "LeftButton", false)
 end
 function Region:SetAutoFocus(v) self.autoFocus = v end
 function Region:SetFocus() M.focus = self end
@@ -268,6 +278,9 @@ M.templates = {
 		f.TitleText = f:CreateFontString()
 		f.CloseButton = CreateFrame("Button", nil, f)
 		f.CloseButton:SetScript("OnClick", function() f:Hide() end)
+	end,
+	UICheckButtonTemplate = function(f)
+		f.Text = f:CreateFontString()
 	end,
 	SearchBoxTemplate = function(f)
 		f.searchIcon = f:CreateTexture()
@@ -381,6 +394,7 @@ end
 GameTooltip = { lines = {} }
 function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit = owner, {}, nil end
 function GameTooltip:AddLine(text) self.lines[#self.lines + 1] = text end
+function GameTooltip:SetText(text) self.lines = { text } end
 function GameTooltip:AddDoubleLine(a, b) self.lines[#self.lines + 1] = a .. "  " .. b end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
@@ -606,7 +620,12 @@ function WorldMapFrame:GetPinFrameLevelsManager()
 	return { GetValidFrameLevel = function(_, kind) assert(kind == "PIN_FRAME_LEVEL_MAP_HIGHLIGHT"); return 2009 end }
 end
 UIParent = CreateFrame("Frame")
-local blizzardFrames = { M.canvas, WorldMapFrame, UIParent }
+-- The minimap: 140 wide, its center at (1800, 900) in screen coordinates.
+Minimap = CreateFrame("Frame", nil, UIParent)
+Minimap.w, Minimap.h, Minimap.center = 140, 140, { 1800, 900 }
+M.cursor = { 0, 0 }
+function GetCursorPosition() return M.cursor[1], M.cursor[2] end
+local blizzardFrames = { M.canvas, WorldMapFrame, UIParent, Minimap }
 
 -- The newest addon frame drawn on the map canvas, or the newest one at a
 -- frame level (each addon draws at its own).
@@ -765,7 +784,8 @@ function M.Logout()
 		hooks[i] = nil
 	end
 	M.loaded, M.tickers, M.timers, M.frames = {}, {}, {}, { unpack(blizzardFrames) }
-	M.canvas.children, UIParent.children = nil, nil
+	M.canvas.children, Minimap.children = nil, nil
+	UIParent.children = { Minimap }
 	for _, name in ipairs(namedFrames) do _G[name] = nil end
 	namedFrames, UISpecialFrames, M.focus = {}, {}, nil
 	SlashCmdList = {}

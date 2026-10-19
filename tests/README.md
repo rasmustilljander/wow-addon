@@ -57,6 +57,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.cvars[name] = { value, default, help, category, ... }` | CVars the client knows (also `secure`, `readOnly`, `account`, `character`, `max`, and `unlisted` to leave one out of `ConsoleGetAllCommands`). |
 | `M.script(frame, name, ...)`, `button:Click()` | Run a frame's script and its hooks (`OnEnterPressed`, `OnDragStop`, ...); click a button unless it's disabled. A scroll box gets a row in `.rows` for every element. |
 | `M.combat` | In combat (`InCombatLockdown`). |
+| `M.cursor` | Cursor position in screen coordinates (`GetCursorPosition`); `Minimap` is 140 wide with its center at (1800, 900). |
 | `M.secrets[value] = true` | Make a value secret, as the Midnight-era client does in dungeons. |
 | `M.installed`, `M.disabled` | Addon folders the client knows (default TravelLog, TravelLog_Path, TravelLog_Nodes) and which are off. |
 | `M.viewMap`, `M.mapOverlay(level)`, `M.shown(pool)` | The shown world map, an addon's overlay on it (newest, or by frame level: Path 2010, Kills 2011, Nodes 2012), and its visible lines, textures and frames. |
