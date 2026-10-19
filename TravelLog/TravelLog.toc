@@ -1,0 +1,18 @@
+## Interface: 16001
+## Title: TravelLog
+## Notes: Records your travels (path, jumps, loot, vendor trades, deaths, quests and more) so you can retrace them.
+## Author: rasmustilljander
+## Version: 0.2.0
+## SavedVariables: TravelLogDB
+## SavedVariablesPerCharacter: TravelLogCharDB
+
+Core.lua
+Archive.lua
+Track.lua
+Jumps.lua
+Loot.lua
+Vendor.lua
+Money.lua
+Life.lua
+MapTrail.lua
+Commands.lua
