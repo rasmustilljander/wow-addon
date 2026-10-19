@@ -15,7 +15,8 @@
 M = {
 	now = 1760000000, gametime = 1000.0, out = {}, errors = {},
 	player = { name = "Rasmus", realm = "Forever" },
-	money = 10000, level = 5, mapID = 1429, x = 0.42, y = 0.65,
+	money = 10000, level = 5, xp = 0, xpMax = 2800, rested = nil, maxLevel = 60, xpDisabled = false,
+	instance = nil, group = {}, raid = false, mapID = 1429, x = 0.42, y = 0.65,
 	inst = 0, wa = -9000, wb = -100, zone = "Elwynn Forest", subzone = "Goldshire",
 	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false,
 	combat = false, indoors = false, secrets = {}, viewMap = 1429,
@@ -111,12 +112,15 @@ LOOT_ITEM_PUSHED_SELF_MULTIPLE = "You receive item: %sx%d."
 LOOT_ITEM_CREATED_SELF = "You create: %s."
 LOOT_ITEM_CREATED_SELF_MULTIPLE = "You create: %sx%d."
 COMBATLOG_XPGAIN_FIRSTPERSON = "%s dies, you gain %d experience."
+COMBATLOG_XPGAIN_EXHAUSTION1 = "%s dies, you gain %d experience. (%s exp %s bonus)"
+COMBATLOG_XPGAIN_FIRSTPERSON_GROUP = "%s dies, you gain %d experience. (+%d group bonus)"
 ERR_ZONE_EXPLORED = "Discovered: %s"
 ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained"
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17, Auctioneer = 21 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
+	TooltipDataType = { Item = 0, Spell = 1, Unit = 2 },
 }
 
 --------------------------------------------------------------------------------
@@ -133,7 +137,7 @@ TRADE_SHOW TRADE_CLOSED AUCTION_HOUSE_SHOW AUCTION_HOUSE_CLOSED BANKFRAME_OPENED
 UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_OPENED LOOT_SLOT_CLEARED LOOT_CLOSED
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
-QUEST_TURNED_IN]]):gmatch("%S+") do
+QUEST_TURNED_IN PLAYER_TARGET_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -243,11 +247,39 @@ function M.tick(n)
 end
 
 GameTooltip = { lines = {} }
-function GameTooltip:SetOwner(owner) self.owner, self.lines = owner, {} end
+function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit = owner, {}, nil end
 function GameTooltip:AddLine(text) self.lines[#self.lines + 1] = text end
 function GameTooltip:AddDoubleLine(a, b) self.lines[#self.lines + 1] = a .. "  " .. b end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
+function GameTooltip:GetUnit()
+	if self.unit then return UnitName(self.unit), self.unit, UnitGUID(self.unit) end
+end
+
+-- Tooltip post-calls added by addons, by tooltip data type.
+M.tooltipPostCalls = {}
+TooltipDataProcessor = { AllTypes = "ALL" }
+function TooltipDataProcessor.AddTooltipPostCall(kind, fn)
+	M.tooltipPostCalls[kind] = M.tooltipPostCalls[kind] or {}
+	table.insert(M.tooltipPostCalls[kind], fn)
+end
+
+-- Shows the unit tooltip for a unit (like hovering it) and returns its lines
+-- without color codes.
+function M.hover(unit)
+	GameTooltip:SetOwner(UIParent)
+	GameTooltip.unit = unit
+	GameTooltip:AddLine(UnitName(unit))
+	for _, fn in ipairs(M.tooltipPostCalls[Enum.TooltipDataType.Unit] or {}) do
+		fn(GameTooltip, { type = Enum.TooltipDataType.Unit })
+	end
+	GameTooltip:Show()
+	local lines = {}
+	for i, line in ipairs(GameTooltip.lines) do
+		lines[i] = line:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+	end
+	return lines
+end
 
 --------------------------------------------------------------------------------
 -- Player and world
@@ -264,12 +296,31 @@ function UnitGUID(unit)
 	return u and u.guid
 end
 function UnitExists(unit) return unit == "player" or M.units[unit] ~= nil end
-function UnitCanAttack(_, unit) local u = M.units[unit]; return u and u.hostile end
+function UnitCanAttack(_, unit) local u = M.units[unit]; return u and u.hostile or false end
+function UnitIsUnit(a, b) return a == b or (M.units[a] ~= nil and M.units[a] == M.units[b]) end
+function UnitIsPlayer(unit) local u = M.units[unit]; return unit == "player" or (u and u.player) or false end
+function UnitPlayerControlled(unit) local u = M.units[unit]; return unit == "player" or (u and (u.player or u.pet)) or false end
+function UnitClassification(unit) local u = M.units[unit]; return u and u.classification or "normal" end
+function UnitIsTapDenied(unit) local u = M.units[unit]; return u and u.tapped or false end
+function UnitIsTrivial(unit) local u = M.units[unit]; return u and u.trivial or false end
 function GetRealmName() return M.player.realm end
 function UnitClass() return "Mage", "MAGE" end
 function UnitRace() return "Human", "Human" end
 function UnitFactionGroup() return "Alliance" end
-function UnitLevel() return M.level end
+function UnitLevel(unit)
+	if unit == "player" then return M.level end
+	local u = M.units[unit]
+	return u and u.level or 0
+end
+function UnitXP() return M.xp end
+function UnitXPMax() return M.xpMax end
+function GetXPExhaustion() return M.rested end
+function GetMaxPlayerLevel() return M.maxLevel end
+function IsXPUserDisabled() return M.xpDisabled end
+function IsInInstance() return M.instance ~= nil, M.instance or "none" end
+-- M.group lists the other members' units ("party1", ...), set in M.units.
+function GetNumGroupMembers() return #M.group > 0 and #M.group + 1 or 0 end
+function IsInRaid() return M.raid end
 function GetMoney() return M.money end
 function IsMounted() return M.mounted end
 function UnitOnTaxi() return M.taxi end
@@ -278,7 +329,11 @@ function IsFlying() return false end
 function IsFalling() return M.falling end
 function IsIndoors() return M.indoors end
 function UnitIsDeadOrGhost() return M.dead or M.ghost end
-function UnitIsDead() return M.dead end
+function UnitIsDead(unit)
+	if unit == "player" then return M.dead end
+	local u = M.units[unit]
+	return u and u.dead or false
+end
 function UnitIsGhost() return M.ghost end
 function UnitAffectingCombat() return M.combat end
 function GetRealZoneText() return M.zone end
@@ -486,7 +541,7 @@ local function Load(name)
 	return ns
 end
 
-function M.ns(name) return M.loaded[name or "TravelLog"].ns end
+function M.ns(name) return M.loaded[name or M.installed[1]].ns end
 
 C_AddOns = {}
 function C_AddOns.DoesAddOnExist(name) return Installed(name) and ReadToc(name) ~= nil end
@@ -530,6 +585,7 @@ function M.Logout()
 	M.loaded, M.tickers, M.frames = {}, {}, { unpack(blizzardFrames) }
 	M.canvas.children = nil
 	SlashCmdList = {}
+	M.tooltipPostCalls = {}
 	M.reloadRequested = nil
 end
 
