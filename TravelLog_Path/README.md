@@ -1,30 +1,30 @@
 # TravelLog Path
 
-Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, and draws it as a trail on the world map. Part of [TravelLog](../TravelLog/), which it needs.
+Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, and draws the trail on the world map. Needs [TravelLog](../TravelLog/).
 
 ## What it records
 
 | | |
 | --- | --- |
-| **Path** | Your position every 2 seconds while you move (1–5 s, see `/tl interval`), with map coordinates, world coordinates and how you were moving: on foot, mounted, on a flight, swimming or as a ghost. Nothing is recorded while you stand still. |
-| **Jumps** | Every jump, with time, zone, subzone and coordinates. Totals per zone. |
-| **Distance** | How far you've travelled on foot, mounted, on flights, swimming and as a ghost. |
+| **Path** | Your position every 2 seconds while moving (see `/tl interval`), with map and world coordinates and how you moved: on foot, mounted, flying, swimming or as a ghost. Nothing while standing still. |
+| **Jumps** | Every jump with time, zone, subzone and coordinates, and totals per zone. |
+| **Distance** | How far you've travelled by each of the ways above. |
 
 ## Commands
 
 | Command | |
 | --- | --- |
 | `/tl jumps` | Jumps per zone |
-| `/tl trail session\|today\|week\|all\|off` | How far back the world map trail goes (default `today`). `all` also reads the archive. |
-| `/tl interval 1-5` | Seconds between path points while moving (default 2) |
+| `/tl trail session\|today\|week\|all\|off` | How far back the map trail goes (default `today`). `all` reads the archive too. |
+| `/tl interval 1-5` | Seconds between path points (default 2) |
 
-`/tl stats` shows jumps, distance and how many path points are stored.
+`/tl stats` adds jumps, distance and stored path points.
 
 ## World map
 
-Open the world map to see where you've been, on zone maps and continent maps. The trail breaks at teleports (hearthstone, portals, releasing to a graveyard). TravelLog's loot, deaths and level-ups are marked on it too.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths and level-ups.
 
-| Trail color | | Marker | |
+| Trail | | Marker | |
 | --- | --- | --- | --- |
 | yellow | on foot | small white dot | jump |
 | orange | mounted | purple dot | loot |
@@ -34,7 +34,7 @@ Open the world map to see where you've been, on zone maps and continent maps. Th
 
 ## Where the data is
 
-`WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`, one file per character, written when you log out or `/reload`. It grows by roughly 100 KB per hour of non-stop movement. Sessions older than 10 days move into `TravelLog_Archive` along with TravelLog's own history; see [TravelLog](../TravelLog/README.md#where-the-data-is).
+`WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`, about 100 KB per hour of movement. Sessions older than 10 days rotate into `TravelLog_Archive` with TravelLog's history ([details](../TravelLog/README.md#where-the-data-is)). Path data TravelLog kept before this addon existed moves here at the first login.
 
 ```lua
 TravelLogPathDB = {
@@ -44,22 +44,19 @@ TravelLogPathDB = {
 }
 ```
 
-`start` is the same as the matching TravelLog session's. `track` (path) and `jumps` are packed to keep the file small: each string holds up to 200 records separated by `;`, and each record is
+`start` matches the TravelLog session's. Each string in `track` and `jumps` packs up to 200 records separated by `;`, each record being
 
 ```
 seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 ```
 
-- `x`, `y`: map coordinates 0–100, like the ones you see in game.
-- `instanceID`, `world 1`, `world 2`: continent and the two values `UnitPosition("player")` returns, in yards. Handy for drawing one continuous path across zones.
-- `flags`: 1 mounted, 2 on a flight, 4 swimming, 8 dead or ghost, 16 in combat, 32 indoors (added together).
-- Jump records add `,zone,subzone` at the end.
-
-Fields the game doesn't reveal (coordinates inside dungeons) are left empty.
-
-Before this addon existed, TravelLog kept the path inside its own sessions. The first login with TravelLog_Path installed moves it here.
+- `x`, `y`: map coordinates 0–100, as shown in game.
+- `instanceID`, `world 1`, `world 2`: continent and `UnitPosition("player")` in yards, continuous across zones.
+- `flags`: sum of 1 mounted, 2 flight, 4 swimming, 8 dead or ghost, 16 in combat, 32 indoors.
+- Jump records end with `,zone,subzone`.
+- Values the game doesn't reveal (coordinates in dungeons) are empty.
 
 ## Limits
 
-- The game doesn't give addons your position inside dungeons and raids, so there's no path in there. Jumps are still recorded, without coordinates.
-- Not yet tested in the live game. It's tested against a fake client (see [tests](../tests/README.md)).
+- No path in dungeons and raids, since addons get no position there. Jumps are still recorded, without coordinates.
+- Untested in the live game; tested against a fake client ([tests](../tests/README.md)).

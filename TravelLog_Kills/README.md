@@ -1,44 +1,38 @@
 # TravelLog Kills
 
-Records every mob you kill in WoW: Forever: how many times you've killed it, when and where. It's a companion to [TravelLog](../TravelLog/) but works on its own too.
+Records every mob you kill in WoW: Forever: how often, when and where. A companion to [TravelLog](../TravelLog/) that also works on its own.
 
 ## What it records
 
-For every kill:
+A kill counts when you, your pet or a party member lands the killing blow, XP or not (grey mobs too). For each one:
 
 | | |
 | --- | --- |
-| **Mob** | Its name and NPC ID. Kills are grouped by name, so different NPCs with the same name (most "Defias Thug"s) add up together. |
+| **Mob** | Name and NPC ID. Kills are grouped by name, so same-named NPCs (most "Defias Thug"s) add up. |
 | **When** | Date and time. |
-| **Where** | Zone, subzone, map ID and map coordinates. This is your position when it died, not the mob's. |
-| **XP** | The experience it gave, if any. |
-| **Who** | The party member's name when someone else in your group landed the killing blow. Your pet's kills count as yours. |
+| **Where** | Zone, subzone, map ID and coordinates: your position, not the mob's. |
+| **XP** | The experience gained, if any. |
+| **Who** | The party member who landed the blow, if not you. Your pet's kills are yours. |
 
-Kills count when you, your pet or someone in your party lands the killing blow, whether or not the mob gives XP (grey mobs count too).
-
-Mobs you've killed show it on their tooltip: `Killed 54 times, last 2h ago`.
+Tooltips of mobs you've killed show `Killed 54 times, last 2h ago`.
 
 ## World map
 
-Open a zone's map to see red pins where you've killed things. Kills close together (within about 2% of the map's width) share a pin, which grows with the count, so a grinding spot stands out. Hover a pin to see how many kills it holds, when the last one was, and the mobs killed there, most killed first.
-
-`/kills map <name>` shows only one mob's spots, handy for finding where a quest mob was, and `/kills map target` does the same for your target. `/kills map on` shows every kill again, `/kills map off` hides the pins. Pins only appear on zone maps, not continent maps, and kills inside dungeons have no coordinates, so they can't be pinned.
+Zone maps (not continent maps) show red pins where you've killed things. Kills within about 2% of the map's width share a pin that grows with the count. Hover a pin for its kill count, the latest kill and the mobs killed there, most first. Dungeon kills have no coordinates, so they aren't pinned.
 
 ## Commands
 
 | Command | |
 | --- | --- |
-| `/kills [n]` | Total kills and the n mobs you've killed most (default 10) |
-| `/kills <name>` | One mob: how many times, first and last kill, where (top places), total XP and the last 10 kills with time and coordinates. Part of a name works; if several mobs match they're listed. |
-| `/kills target` | The same for your current target |
-| `/kills recent [n]` | Your last n kills of any mob (default 15) |
-| `/kills map on\|off` | Kill spots on the world map (default on) |
-| `/kills map <name>` | Only that mob's spots on the map (`/kills map target` for your target) |
-| `/kills wipe confirm` | Delete every recorded kill for this character |
+| `/kills [n]` | Total kills and your n most-killed mobs (default 10) |
+| `/kills <name>` | One mob: count, first and last kill, top places, total XP and the last 10 kills. Partial names work; several matches are listed. |
+| `/kills target` | The same for your target |
+| `/kills recent [n]` | Your last n kills (default 15) |
+| `/kills map on\|off` | Pins on the world map (default on) |
+| `/kills map <name>` | Pin only that mob's kills (`/kills map target` for your target; `on` shows all again) |
+| `/kills wipe confirm` | Delete every kill for this character |
 
 `/tlk` works too.
-
-Example:
 
 ```
 /kills kobold worker
@@ -53,16 +47,16 @@ TravelLog Kills Kobold Worker: killed 54 times.
 
 ## How kills are detected
 
-The Forever client doesn't let addons read the combat log, so kills come from two other places:
+Addons can't read the combat log on this client, so kills come from:
 
-- `PARTY_KILL`: the client's event for a killing blow by you, your pet or a party member. It identifies the exact mob.
-- The chat line `X dies, you gain N experience.`: gives the name and the XP.
+- `PARTY_KILL`, fired for a killing blow by you, your pet or a party member. It identifies the exact mob.
+- The chat line `X dies, you gain N experience.`, which gives the name and XP.
 
-Most kills produce both. Each one waits up to 2 seconds for the other and is saved once.
+Most kills produce both. Each waits up to 2 seconds for the other and is saved once.
 
 ## Where the data is
 
-`WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Kills.lua`, one file per character, written when you log out or `/reload`.
+`WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Kills.lua`:
 
 ```lua
 TravelLogKillsDB = {
@@ -77,21 +71,11 @@ TravelLogKillsDB = {
 }
 ```
 
-Each kill is packed into one string to keep the file small:
-
-```
-time, uiMapID, x, y, place, xp, killed by
-```
-
-- `x`, `y`: map coordinates 0–100, like the ones you see in game.
-- `place`: index into `places` (`zone|subzone`).
-- Empty fields at the end are left out.
-
-Each kill takes about 50 bytes, so 10,000 kills make a file of about half a megabyte.
+Each kill is one string, `time, uiMapID, x, y, place, xp, killed by`, with trailing empty fields dropped. `x`, `y` are map coordinates 0–100 and `place` indexes `places` (`zone|subzone`). About 50 bytes per kill, so 10,000 kills take about half a megabyte.
 
 ## Limits
 
-- Kills by someone outside your party (another player who tagged the mob, a guard) aren't yours and aren't counted.
-- Inside dungeons and raids the client can hide mob identities and coordinates from addons. A kill there is still recorded if its XP line names it, without coordinates. A kill with neither (no name, no XP) can't be recorded.
-- If several mobs die at once and the client can't name them, their XP lines are matched to them in order.
-- Not yet tested in the live game. It's written against the Forever 1.60.1 API documentation and tested against a fake client (see [tests](../tests/README.md)).
+- Kills by anyone outside your party (another player, a guard) aren't counted.
+- In dungeons and raids the client can hide mob identities and coordinates. A kill there is recorded without coordinates if its XP line names it, and not at all if nothing names it.
+- When several unnamed mobs die at once, their XP lines are matched to them in order.
+- Untested in the live game; written against the Forever 1.60.1 API documentation and tested against a fake client ([tests](../tests/README.md)).

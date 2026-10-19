@@ -1,61 +1,54 @@
 # TravelLog
 
-Records your travels in WoW: Forever so you can retrace them later: what you looted and bought, where your money went, flights, deaths, quests and more.
+Records your travels in WoW: Forever so you can retrace them: loot, vendor trades, money, flights, deaths, quests and more.
 
-It comes in parts, each its own addon folder. Install the ones you want:
+Optional companions, each its own folder:
 
-| Addon | |
-| --- | --- |
-| `TravelLog` | This one. Everything below. The others need it. |
-| [TravelLog_Path](../TravelLog_Path/) | Your path and every jump, drawn as a trail on the world map. |
-| [TravelLog_Nodes](../TravelLog_Nodes/) | Every chest, herb and ore spot you've looted, pinned on the world map with when you last looted it. |
-| `TravelLog_Archive` | Storage for older history (see [Where the data is](#where-the-data-is)). Install it along with the others. |
-
-[TravelLog_Kills](../TravelLog_Kills/) is a relative that works on its own.
+- [TravelLog_Path](../TravelLog_Path/): your path and jumps, drawn on the world map. Needs TravelLog.
+- [TravelLog_Nodes](../TravelLog_Nodes/): looted chests, herbs and ore, pinned on the world map. Needs TravelLog.
+- `TravelLog_Archive`: storage for older history (see [Where the data is](#where-the-data-is)). Install it with TravelLog.
+- [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
 
 ## What it records
 
-Every log entry is stamped with the character, time, zone, subzone, map ID and map coordinates.
+Every entry is stamped with character, time, zone, subzone, map ID and map coordinates.
 
 | | |
 | --- | --- |
-| **Loot** | Every corpse, chest, herb, ore vein, fishing catch or container you loot: what you took, the coins, and the source. The source is a name and NPC/object ID, plus the spell that opened it for herbs, ore, chests and skinning. |
-| **Other items** | Quest rewards, crafted items, won rolls (with your roll) and other pickups that arrive without a loot window. |
+| **Loot** | Corpses, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the opening spell for herbs, ore, chests and skinning). |
+| **Other items** | Quest rewards, crafts, roll wins (with your roll) and other items that arrive without a loot window. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
-| **Money** | Every change to your gold with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
-| **Travel** | Zone and subzone changes (first visits are marked), flights (from, to, cost, how long), hearthstone uses and where you set your hearthstone. |
-| **Life** | Deaths (and what you were fighting), releasing your spirit and coming back to life, level-ups, quests accepted and completed, kills that gave XP, and newly discovered places. |
+| **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
+| **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
+| **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted and completed, kills that gave XP, discoveries. |
 
 ## Commands
 
 | Command | |
 | --- | --- |
 | `/tl` or `/tl stats` | Totals for this character |
-| `/tl log [n]` | The last n recorded events (default 15) |
-| `/tl archive [now]` | Where older history is kept. `now` archives it right away. |
-| `/tl wipe confirm` | Delete everything recorded for this character, archives and the other TravelLog addons' files included |
+| `/tl log [n]` | The last n events (default 15) |
+| `/tl archive [now]` | Archive size; `now` archives old history right away |
+| `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' files |
 
-`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, and TravelLog_Nodes adds `/tl nodes`. Both add their totals to `/tl stats`.
+`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`.
 
 ## Where the data is
 
-WoW gives each addon one file per account plus one per character, and only writes them when you log out or `/reload`. If the game crashes, everything since the last reload is lost, so `/reload` now and then on long sessions.
+WoW writes SavedVariables only on logout or `/reload`, so a crash loses everything since the last one. `/reload` now and then on long sessions.
 
-| File | What's in it |
+| File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
-| `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog.lua` | Settings (the other TravelLog addons' too), and each character's profile and totals. Small. |
-| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's history: log, sessions and quests. Loaded only when you play that character. |
-| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Path.lua` | That character's path and jumps (see [TravelLog_Path](../TravelLog_Path/)). |
-| `WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Nodes.lua` | That character's chests and gathering nodes (see [TravelLog_Nodes](../TravelLog_Nodes/)). |
-| `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Archive.lua` | Older history, all characters. Loaded only when needed. |
+| `SavedVariables/TravelLog.lua` | Settings (the companions' too), each character's profile and totals |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions and quests |
+| `<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`, `TravelLog_Nodes.lua` | The companions' data for that character |
+| `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
 
-The path is what grows: roughly 100 KB per hour of non-stop movement. To keep the character files small, history is **rotated**: when this character's log, sessions and path together pass about 3 MB, the next login moves everything older than 10 days into the archive (chests, nodes and totals stay). The archive is its own addon, because WoW gives each addon one account-wide file, and it loads on demand: it isn't read at login, only for `/tl trail all`, `/tl archive now` and the next rotation. `/tl archive` shows how big it has grown without loading it.
+**Rotation.** The path grows about 100 KB per hour of movement. When a character's log, sessions and path pass about 3 MB, the next login moves everything older than 10 days into the archive (nodes and totals stay). The archive is a separate load-on-demand addon because each addon gets only one account-wide file. It's read only for `/tl trail all`, `/tl archive now` and rotation, so its size doesn't slow down logins. Without it installed, history stays in the character files and TravelLog says so when it tries to rotate.
 
-The archive file keeps growing, but since it's left alone at a normal login, its size doesn't slow anything down until you look at all of your history. If the archive folder isn't installed, nothing is lost: history just stays in the character files, and TravelLog tells you at login.
+Before 0.3, the path and nodes lived in TravelLog's character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file.
 
-Before version 0.3 the path and the nodes were in TravelLog's own character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file. Until then they stay where they were.
-
-What a character file holds:
+The character file:
 
 ```lua
 TravelLogCharDB = {
@@ -73,26 +66,16 @@ TravelLogCharDB = {
 }
 ```
 
-The archive holds `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = { ... }, log = { ... }, path = { ... } } } }`. `path` holds TravelLog_Path's sessions. Sessions archived before TravelLog_Path existed have their path inside them instead (`track` and `jumps`), and TravelLog_Path reads both.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`.
-
-Fields the game doesn't reveal (coordinates inside dungeons) are left empty.
+The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
 ## Limits
 
-Loot windows:
-
-- An item counts as yours when the game reports its slot as emptied. Items you leave behind (full bags, or you just close the window) aren't recorded.
-- If someone else loots the same corpse while you have it open (free-for-all loot), their pick can be counted as yours.
-- Items you win by rolling arrive later, outside the loot window, and are recorded as received items, with your roll.
-- A loot window that combines several corpses is credited to the first one.
-- Chests and herbs are named by the spell that opened them. An object that opens without a cast (some quest crates) is recorded with its object ID but no name.
-
-Everything else:
-
-- The game doesn't give addons your position inside dungeons and raids, so loot and other events there have no coordinates.
-- Forever runs on the Midnight-era client, which hides some data from addons inside instances. Things read from chat (crafted items, quest rewards, kills, discoveries) may be missing there. Loot windows and roll wins still work.
-- Kills are only counted when they give XP, since addons can't read the combat log on this client. [TravelLog_Kills](../TravelLog_Kills/) records every kill per mob, XP or not.
-- Sales are read from the buyback list. If one click sells more than 12 items (Sell All Junk), only the last 12 may show up individually. The money ledger total is always right.
-- Not yet tested in the live game. It's written against the Forever 1.60.1 UI source and tested against a fake client (see [tests](../tests/README.md)). If something misbehaves, the Lua error (enable them with `/console scriptErrors 1`) is the most useful thing to look at.
+- Only items whose loot slot empties are recorded, so items left behind aren't. With free-for-all loot, another player's pick from a window you have open can count as yours.
+- A loot window combining several corpses is credited to the first one.
+- Objects are named from the cast that opened them. One that opens without a cast (some quest crates) gets its object ID but no name.
+- Addons get no coordinates in dungeons and raids. The Midnight-era client also hides some chat there, so crafted items, quest rewards, kills and discoveries may be missing. Loot windows and roll wins still work.
+- Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
+- Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
+- Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.
