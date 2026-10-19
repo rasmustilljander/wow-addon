@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: TravelLog Kills
+## Notes: Records every mob you kill: how many times, when and where.
+## Author: rasmustilljander
+## Version: 0.1.0
+## OptionalDeps: TravelLog
+## SavedVariablesPerCharacter: TravelLogKillsDB
+
+Core.lua
+Commands.lua

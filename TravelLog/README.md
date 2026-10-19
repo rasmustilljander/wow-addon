@@ -117,6 +117,6 @@ Everything else:
 
 - The game doesn't give addons your position inside dungeons and raids, so there's no path in there. Jumps and loot are still recorded, without coordinates.
 - Forever runs on the Midnight-era client, which hides some data from addons inside instances. Things read from chat (crafted items, quest rewards, kills, discoveries) may be missing there. Loot windows and roll wins still work.
-- Kills are only counted when they give XP, since addons can't read the combat log on this client.
+- Kills are only counted when they give XP, since addons can't read the combat log on this client. [TravelLog_Kills](../TravelLog_Kills/) records every kill per mob, XP or not.
 - Sales are read from the buyback list. If one click sells more than 12 items (Sell All Junk), only the last 12 may show up individually. The money ledger total is always right.
 - Not yet tested in the live game. It's written against the Forever 1.60.1 UI source and tested against a fake client (see [tests](../tests/README.md)). If something misbehaves, the Lua error (enable them with `/console scriptErrors 1`) is the most useful thing to look at.

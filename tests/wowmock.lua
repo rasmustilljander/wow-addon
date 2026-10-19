@@ -120,7 +120,7 @@ ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained"
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17, Auctioneer = 21 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
-	TooltipDataType = { Item = 0, Spell = 1, Unit = 2 },
+	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
 }
 
 --------------------------------------------------------------------------------
@@ -137,7 +137,7 @@ TRADE_SHOW TRADE_CLOSED AUCTION_HOUSE_SHOW AUCTION_HOUSE_CLOSED BANKFRAME_OPENED
 UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_OPENED LOOT_SLOT_CLEARED LOOT_CLOSED
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
-QUEST_TURNED_IN PLAYER_TARGET_CHANGED]]):gmatch("%S+") do
+QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -238,11 +238,19 @@ end
 C_Timer = {}
 M.tickers = {}
 function C_Timer.NewTicker(seconds, fn) M.tickers[#M.tickers + 1] = { seconds = seconds, fn = fn } end
+M.timers = {}
+function C_Timer.After(seconds, fn) M.timers[#M.timers + 1] = { at = M.gametime + seconds, fn = fn } end
 
 function M.tick(n)
 	for _ = 1, n or 1 do
 		M.advance(1)
 		for _, t in ipairs(M.tickers) do t.fn() end
+		local due, keep = {}, {}
+		for _, t in ipairs(M.timers) do
+			if t.at <= M.gametime then due[#due + 1] = t else keep[#keep + 1] = t end
+		end
+		M.timers = keep
+		for _, t in ipairs(due) do t.fn() end
 	end
 end
 
@@ -271,7 +279,7 @@ function M.hover(unit)
 	GameTooltip.unit = unit
 	GameTooltip:AddLine(UnitName(unit))
 	for _, fn in ipairs(M.tooltipPostCalls[Enum.TooltipDataType.Unit] or {}) do
-		fn(GameTooltip, { type = Enum.TooltipDataType.Unit })
+		fn(GameTooltip, { type = Enum.TooltipDataType.Unit, guid = UnitGUID(unit) })
 	end
 	GameTooltip:Show()
 	local lines = {}
@@ -294,6 +302,15 @@ function UnitGUID(unit)
 	if unit == "player" then return "Player-1-" .. M.player.name end
 	local u = M.units[unit]
 	return u and u.guid
+end
+-- Units around the player: M.units, or names the client still knows by GUID
+-- (M.guidNames) after the unit is gone.
+M.guidNames = {}
+function UnitNameFromGUID(guid)
+	for _, u in pairs(M.units) do
+		if u.guid == guid then return u.name end
+	end
+	return M.guidNames[guid]
 end
 function UnitExists(unit) return unit == "player" or M.units[unit] ~= nil end
 function UnitCanAttack(_, unit) local u = M.units[unit]; return u and u.hostile or false end
@@ -582,7 +599,7 @@ function M.Logout()
 		hooks[i].tbl[hooks[i].name] = hooks[i].orig
 		hooks[i] = nil
 	end
-	M.loaded, M.tickers, M.frames = {}, {}, { unpack(blizzardFrames) }
+	M.loaded, M.tickers, M.timers, M.frames = {}, {}, {}, { unpack(blizzardFrames) }
 	M.canvas.children = nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
