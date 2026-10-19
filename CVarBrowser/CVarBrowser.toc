@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: CVarBrowser
+## Notes: Browse, search, bookmark and change CVars in a window, with descriptions of well-known ones.
+## Author: rasmustilljander
+## Version: 0.1.0
+## SavedVariables: CVarBrowserDB
+
+Known.lua
+CVarBrowser.lua
+UI.lua
+Minimap.lua

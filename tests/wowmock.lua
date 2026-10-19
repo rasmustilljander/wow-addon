@@ -121,6 +121,8 @@ Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17, Auctioneer = 21 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
 	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
+	ConsoleCommandType = { Cvar = 0, Command = 1, Macro = 2, Script = 3 },
+	ConsoleCategory = { Debug = 0, Graphics = 1, Console = 2, Combat = 3, Game = 4, Default = 5, Net = 6, Sound = 7, Gm = 8, Reveal = 9, None = 10 },
 }
 
 --------------------------------------------------------------------------------
@@ -137,7 +139,8 @@ TRADE_SHOW TRADE_CLOSED AUCTION_HOUSE_SHOW AUCTION_HOUSE_CLOSED BANKFRAME_OPENED
 UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_OPENED LOOT_SLOT_CLEARED LOOT_CLOSED
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
-QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT]]):gmatch("%S+") do
+QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
+PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -148,10 +151,17 @@ local function NewRegion(kind, parent)
 	return setmetatable({ kind = kind, parent = parent, shown = true }, Region)
 end
 
-function Region:Show() self.shown = true end
-function Region:Hide() self.shown = false end
-function Region:SetShown(v) self.shown = v and true or false end
+-- Runs a frame's script handler and the handlers hooked onto it.
+function M.script(f, name, ...)
+	if f.scripts and f.scripts[name] then f.scripts[name](f, ...) end
+	for _, fn in ipairs(f.hooked and f.hooked[name] or {}) do fn(f, ...) end
+end
+
+function Region:Show() if not self.shown then self.shown = true; M.script(self, "OnShow") end end
+function Region:Hide() if self.shown then self.shown = false; M.script(self, "OnHide") end end
+function Region:SetShown(v) if v then self:Show() else self:Hide() end end
 function Region:IsShown() return self.shown end
+function Region:GetName() return self.name end
 function Region:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
 function Region:SetVertexColor(r, g, b, a) self.color = { r, g, b, a } end
 function Region:SetTexture(t) self.texture = t end
@@ -159,15 +169,31 @@ function Region:SetThickness(t) self.thickness = t end
 function Region:SetStartPoint(p, rel, x, y) assert(type(p) == "string" and rel); self.start = { x, y } end
 function Region:SetEndPoint(p, rel, x, y) assert(type(p) == "string" and rel); self.stop = { x, y } end
 function Region:SetSize(w, h) self.w, self.h = w, h end
+function Region:SetWidth(w) self.w = w end
+function Region:SetHeight(h) self.h = h end
 function Region:ClearAllPoints() self.point = nil end
 function Region:SetPoint(p, rel, rp, x, y) self.point = { p, rel, rp, x, y } end
+-- The first point as the client reports it, relative frame included.
+function Region:GetPoint()
+	local p = self.point
+	if not p then return nil end
+	if type(p[2]) ~= "table" then return p[1], self.parent, p[1], p[2], p[3] end
+	return p[1], p[2], p[3], p[4], p[5]
+end
 function Region:SetAllPoints(rel) self.allPoints = rel or self.parent end
+function Region:GetWidth() return (self:GetSize()) end
+function Region:GetCenter() return self.center[1], self.center[2] end
+function Region:GetEffectiveScale() return self.scale or 1 end
 function Region:GetSize()
 	if self.w then return self.w, self.h end
 	if self.allPoints then return self.allPoints:GetSize() end
 	return 0, 0
 end
 function Region:SetFrameLevel(l) self.level = l end
+function Region:RegisterForClicks(...) self.clicks = { ... } end
+function Region:SetHighlightTexture(t) self.highlightTexture = t end
+function Region:SetChecked(v) self.checked = v and true or false end
+function Region:GetChecked() return self.checked or false end
 function Region:GetFrameLevel() return self.level or 1 end
 function Region:EnableMouse(v) self.mouse = v end
 function Region:SetMouseClickEnabled(v) self.mouseClicks = v end
@@ -176,7 +202,63 @@ function Region:RegisterEvent(e)
 	self.events = self.events or {}
 	self.events[e] = true
 end
-function Region:SetScript(k, fn) self.scripts = self.scripts or {}; self.scripts[k] = fn end
+function Region:SetScript(k, fn)
+	self.scripts = self.scripts or {}
+	self.scripts[k] = fn
+	if self.hooked then self.hooked[k] = nil end
+end
+function Region:HookScript(k, fn)
+	self.hooked = self.hooked or {}
+	self.hooked[k] = self.hooked[k] or {}
+	table.insert(self.hooked[k], fn)
+end
+function Region:GetScript(k) return self.scripts and self.scripts[k] end
+
+-- Windows and their widgets: buttons, edit boxes, font strings.
+function Region:SetText(t)
+	local old = self.text
+	self.text = t ~= nil and tostring(t) or ""
+	if self.kind == "EditBox" and self.text ~= old then M.script(self, "OnTextChanged", false) end
+end
+function Region:GetText() return self.text or "" end
+function Region:SetAtlas(a) self.atlas = a end
+function Region:SetAlpha(a) self.alpha = a end
+function Region:SetTexCoord() end
+function Region:SetJustifyH(j) self.justifyH = j end
+function Region:SetJustifyV(j) self.justifyV = j end
+function Region:SetWordWrap(v) self.wordWrap = v end
+function Region:SetTextColor(r, g, b, a) self.textColor = { r, g, b, a } end
+function Region:SetFrameStrata(s) self.strata = s end
+function Region:SetToplevel(v) self.toplevel = v end
+function Region:SetClampedToScreen(v) self.clamped = v end
+function Region:SetMovable(v) self.movable = v end
+function Region:RegisterForDrag(...) self.drag = { ... } end
+function Region:StartMoving() assert(self.movable, "StartMoving on a frame that isn't movable"); self.moving = true end
+function Region:StopMovingOrSizing() self.moving = nil end
+function Region:SetUserPlaced(v) self.userPlaced = v end
+function Region:SetEnabled(v) self.disabled = not v end
+function Region:Enable() self.disabled = false end
+function Region:Disable() self.disabled = true end
+function Region:IsEnabled() return not self.disabled end
+function Region:LockHighlight() self.highlightLocked = true end
+function Region:UnlockHighlight() self.highlightLocked = false end
+-- Clicking does nothing on a disabled button, like in the game. A check
+-- button flips before its OnClick runs.
+function Region:Click(button)
+	if self.disabled then return end
+	if self.kind == "CheckButton" then self.checked = not self.checked end
+	M.script(self, "OnClick", button or "LeftButton", false)
+end
+function Region:SetAutoFocus(v) self.autoFocus = v end
+function Region:SetFocus() M.focus = self end
+function Region:ClearFocus() if M.focus == self then M.focus = nil end end
+function Region:HasFocus() return M.focus == self end
+function Region:CreateFontString()
+	local fs = NewRegion("FontString", self)
+	self.fontStrings = self.fontStrings or {}
+	self.fontStrings[#self.fontStrings + 1] = fs
+	return fs
+end
 function Region:CreateLine()
 	local l = NewRegion("Line", self)
 	self.lines = self.lines or {}
@@ -190,16 +272,71 @@ function Region:CreateTexture()
 	return t
 end
 
+-- What the Blizzard templates addons use add to a frame.
+M.templates = {
+	BasicFrameTemplateWithInset = function(f)
+		f.TitleText = f:CreateFontString()
+		f.CloseButton = CreateFrame("Button", nil, f)
+		f.CloseButton:SetScript("OnClick", function() f:Hide() end)
+	end,
+	UICheckButtonTemplate = function(f)
+		f.Text = f:CreateFontString()
+	end,
+	SearchBoxTemplate = function(f)
+		f.searchIcon = f:CreateTexture()
+		f.clearButton = CreateFrame("Button", nil, f)
+		f.clearButton:SetScript("OnClick", function() f:SetText("") end)
+	end,
+	WowScrollBoxList = function(f)
+		f.rows = {}
+		-- Unlike the game, every element gets a row, so tests can reach them.
+		function f:SetDataProvider(provider, retainScrollPosition)
+			assert(self.view, "A view is required before assigning the data provider.")
+			self.provider, self.retained = provider, retainScrollPosition
+			for i, data in ipairs(provider.items) do
+				self.rows[i] = self.rows[i] or CreateFrame(self.view.kind, nil, self)
+				self.rows[i]:Show()
+				self.view.init(self.rows[i], data)
+			end
+			for i = #provider.items + 1, #self.rows do self.rows[i]:Hide() end
+		end
+	end,
+}
+
+-- Named frames become globals; addon ones are removed on logout.
+local namedFrames = {}
 M.frames = {}
-function CreateFrame(kind, name, parent)
-	local f = NewRegion("Frame", parent)
+function CreateFrame(kind, name, parent, template)
+	local f = NewRegion(kind, parent)
 	M.frames[#M.frames + 1] = f
 	if parent then
 		parent.children = parent.children or {}
 		parent.children[#parent.children + 1] = f
 	end
+	if name then
+		f.name = name
+		_G[name] = f
+		namedFrames[#namedFrames + 1] = name
+	end
+	for t in (template or ""):gmatch("[^,%s]+") do
+		if M.templates[t] then M.templates[t](f) end
+	end
 	return f
 end
+
+-- Scroll boxes: data providers, views and scroll bars.
+function CreateDataProvider(items) return { items = items or {} } end
+function CreateScrollBoxListLinearView()
+	local view = {}
+	function view:SetElementExtent(extent) self.extent = extent end
+	function view:SetElementInitializer(kind, init) self.kind, self.init = kind, init end
+	return view
+end
+ScrollUtil = {}
+function ScrollUtil.InitScrollBoxListWithScrollBar(box, bar, view) box.view, box.scrollBar = view, bar end
+ScrollBoxConstants = { RetainScrollPosition = true }
+UISpecialFrames = {}
+function InCombatLockdown() return M.combat end
 
 function M.fire(event, ...)
 	assert(M.KNOWN_EVENTS[event], "unknown event " .. event)
@@ -257,6 +394,7 @@ end
 GameTooltip = { lines = {} }
 function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit = owner, {}, nil end
 function GameTooltip:AddLine(text) self.lines[#self.lines + 1] = text end
+function GameTooltip:SetText(text) self.lines = { text } end
 function GameTooltip:AddDoubleLine(a, b) self.lines[#self.lines + 1] = a .. "  " .. b end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
@@ -374,6 +512,45 @@ function C_Map.GetMapRectOnMap(map, top)
 	if r then return r[1], r[2], r[3], r[4] end
 end
 
+-- CVars: M.cvars[name] = { value, default, help, category, secure, readOnly,
+-- account, character, unlisted, max }. Names are case-insensitive, as in the
+-- game. Unlisted ones are left out of ConsoleGetAllCommands, but still work.
+M.cvars = {}
+local function CVar(name)
+	if name == nil then return nil end
+	for n, c in pairs(M.cvars) do
+		if n:lower() == name:lower() then return c, n end
+	end
+end
+function ConsoleGetAllCommands()
+	local list = { { command = "reloadui", help = "Reloads the UI", category = 2, commandType = 1, scriptContents = "", scriptParameters = "" } }
+	for name, c in pairs(M.cvars) do
+		if not c.unlisted then
+			list[#list + 1] = { command = name, help = c.help or "", category = c.category or 5, commandType = 0, scriptContents = "", scriptParameters = "" }
+		end
+	end
+	return list
+end
+C_CVar = {}
+function C_CVar.GetCVar(name) local c = CVar(name); return c and c.value end
+function C_CVar.GetCVarDefault(name) local c = CVar(name); return c and c.default end
+function C_CVar.GetCVarInfo(name)
+	local c = CVar(name)
+	if not c then return nil end
+	return c.value, c.default, c.account or false, c.character or false, false, c.secure or false, c.readOnly or false
+end
+-- Secure and read-only CVars return nothing, as in the game; values over
+-- `max` are clamped.
+function C_CVar.SetCVar(name, value)
+	local c, n = CVar(name)
+	if not c or c.secure or c.readOnly then return end
+	value = tostring(value)
+	if c.max and tonumber(value) and tonumber(value) > c.max then value = tostring(c.max) end
+	c.value = value
+	M.fire("CVAR_UPDATE", n, value)
+	return true
+end
+
 C_QuestLog = {}
 function C_QuestLog.GetTitleForQuestID(id) return M.quests[id] end
 C_Spell = {}
@@ -442,7 +619,13 @@ function WorldMapFrame:GetCanvasScale() return self.scale end
 function WorldMapFrame:GetPinFrameLevelsManager()
 	return { GetValidFrameLevel = function(_, kind) assert(kind == "PIN_FRAME_LEVEL_MAP_HIGHLIGHT"); return 2009 end }
 end
-local blizzardFrames = { M.canvas, WorldMapFrame }
+UIParent = CreateFrame("Frame")
+-- The minimap: 140 wide, its center at (1800, 900) in screen coordinates.
+Minimap = CreateFrame("Frame", nil, UIParent)
+Minimap.w, Minimap.h, Minimap.center = 140, 140, { 1800, 900 }
+M.cursor = { 0, 0 }
+function GetCursorPosition() return M.cursor[1], M.cursor[2] end
+local blizzardFrames = { M.canvas, WorldMapFrame, UIParent, Minimap }
 
 -- The newest addon frame drawn on the map canvas, or the newest one at a
 -- frame level (each addon draws at its own).
@@ -601,7 +784,10 @@ function M.Logout()
 		hooks[i] = nil
 	end
 	M.loaded, M.tickers, M.timers, M.frames = {}, {}, {}, { unpack(blizzardFrames) }
-	M.canvas.children = nil
+	M.canvas.children, Minimap.children = nil, nil
+	UIParent.children = { Minimap }
+	for _, name in ipairs(namedFrames) do _G[name] = nil end
+	namedFrames, UISpecialFrames, M.focus = {}, {}, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
 	M.reloadRequested = nil
