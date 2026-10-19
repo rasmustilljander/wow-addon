@@ -1,0 +1,141 @@
+-- KillXP: the tooltip's XP and kills-to-level lines, rested and party
+-- bonuses, and learning the real XP from kills.
+M.installed = { "KillXP" }
+M.level, M.xp, M.xpMax = 10, 7000, 7600   -- 600 XP to level 11
+local ns = M.Login()
+
+local function Line(lines, label)
+	for _, line in ipairs(lines) do
+		if line:find("^" .. label .. "  ") then
+			return line:sub(#label + 3)
+		end
+	end
+end
+
+local function Mob(level, extra)
+	local u = { name = "Kobold Vermin", guid = "Creature-0-1-2-3-6-1", hostile = true, level = level }
+	for k, v in pairs(extra or {}) do u[k] = v end
+	M.units.mouseover = u
+	return M.hover("mouseover")
+end
+
+-- The Classic formula at level 10: 95 XP for an even-level mob.
+check(ns.ClassicXP(10, 10) == 95, "even level")
+check(ns.ClassicXP(10, 12) == 105, "two levels above")
+check(ns.ClassicXP(10, 20) == ns.ClassicXP(10, 14), "more than 4 levels above counts as +4")
+check(ns.ClassicXP(10, 8) == 67, "two levels below")
+check(ns.ClassicXP(10, 4) == 0, "gray")
+check(ns.ClassicXP(10, 10, true) == 190 and ns.ClassicXP(10, 10, true, true) == 237, "elites, in and out of dungeons")
+check(ns.GrayLevel(5) == 0 and ns.GrayLevel(25) == 18 and ns.GrayLevel(50) == 39 and ns.GrayLevel(60) == 51, "gray levels")
+
+-- Kills to level with rested: two doubled kills, one partly rested, then plain.
+check(ns.KillsToLevel(600, 95, 0) == 7, "no rest")
+check(ns.KillsToLevel(600, 95, 200) == 5, "partly rested")
+check(ns.KillsToLevel(600, 95, 10000) == 4, "fully rested")
+check(ns.KillsToLevel(600, 0, 0) == nil, "no XP, no count")
+
+-- Solo, not rested: an estimate, so marked with ~.
+local lines = Mob(10)
+check(Line(lines, "Kill XP") == "~95", "solo estimate: " .. tostring(Line(lines, "Kill XP")))
+check(Line(lines, "Kills to level") == "~7", "kills to level")
+
+-- Rested.
+M.rested = 200
+lines = Mob(10)
+check(Line(lines, "Kill XP") == "~190 (+95 rested)", "rested: " .. tostring(Line(lines, "Kill XP")))
+check(Line(lines, "Kills to level") == "~5", "rested kills: " .. tostring(Line(lines, "Kills to level")))
+M.rested = nil
+
+-- Elite and dungeon elite.
+check(Line(Mob(10, { classification = "elite" }), "Kill XP") == "~190", "elite")
+M.instance = "party"
+check(Line(Mob(10, { classification = "rareelite" }), "Kill XP") == "~237", "dungeon elite")
+M.instance = nil
+
+-- Mobs that give nothing.
+check(Line(Mob(4, { trivial = true }), "Kill XP") == "none (too low)", "gray mob")
+check(Line(Mob(4), "Kill XP") == "none (too low)", "gray by formula")
+check(Line(Mob(10, { tapped = true }), "Kill XP") == "none (tapped by others)", "tapped")
+check(Line(Mob(-1), "Kill XP") == "unknown (level ??)", "skull level")
+check(Line(Mob(-1), "Kills to level") == nil, "no kill count for ??")
+check(#Mob(10, { hostile = false }) == 1, "friendly NPC: no lines")
+check(#Mob(10, { player = true }) == 1, "enemy player: no lines")
+check(#Mob(10, { pet = true }) == 1, "enemy pet: no lines")
+check(#Mob(10, { dead = true }) == 1, "corpse: no lines")
+M.level = 60
+check(#Mob(60) == 1, "max level: no lines")
+M.level = 10
+M.xpDisabled = true
+check(#Mob(10) == 1, "XP turned off: no lines")
+M.xpDisabled = false
+
+-- A party of three (levels 10, 10, 12): the 1.166 bonus, split by level.
+M.units.party1 = { name = "Anna", level = 10, player = true }
+M.units.party2 = { name = "Bo", level = 12, player = true }
+M.group = { "party1", "party2" }
+lines = Mob(10)
+check(Line(lines, "Kill XP") == "~34 (3 in group, ~95 solo)", "party: " .. tostring(Line(lines, "Kill XP")))
+check(Line(lines, "Kills to level") == "~18", "party kills: " .. tostring(Line(lines, "Kills to level")))
+M.rested = 1000
+check(Line(Mob(10), "Kill XP") == "~68 (+34 rested, 3 in group, ~95 solo)", "party, rested")
+M.rested = nil
+-- A much higher member makes the mob gray for everyone.
+M.units.party2.level = 30
+check(Line(Mob(10), "Kill XP") == "none (too low for your group)", "high-level party member")
+-- Party kills don't teach the solo value.
+Mob(8)
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 40 experience. (+5 group bonus)")
+check(next(KillXPDB.seen) == nil, "party kill not learned")
+M.group = {}
+
+-- Solo kills teach the real value (Forever gives less than Classic below
+-- your level), which then replaces the estimate.
+check(Line(Mob(8), "Kill XP") == "~67", "estimate before the kill")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 60 experience.")
+lines = Mob(8)
+check(Line(lines, "Kill XP") == "60", "learned: " .. tostring(Line(lines, "Kill XP")))
+check(Line(lines, "Kills to level") == "10", "learned kills to level")
+-- The rested bonus is taken out of what's learned.
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 116 experience. (+58 exp Rested bonus)")
+check(Line(Mob(8), "Kill XP") == "58", "learned from a rested kill")
+-- Only for that mob level and your level.
+check(Line(Mob(9), "Kill XP"):sub(1, 1) == "~", "other mob levels still estimated")
+-- A mob targeted rather than hovered is matched too.
+M.units.target = { name = "Kobold Worker", hostile = true, level = 9 }
+M.fire("PLAYER_TARGET_CHANGED")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 70 experience.")
+check(Line(Mob(9), "Kill XP") == "70", "learned from a targeted mob")
+-- A kill of a mob we never saw teaches nothing.
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Stranger dies, you gain 999 experience.")
+check(Line(Mob(10), "Kill XP") == "~95", "unknown mob not learned")
+-- The same name at another level: the targeted corpse decides which level
+-- the kill was.
+Mob(8)
+M.units.target = { name = "Kobold Vermin", hostile = true, level = 7, dead = true }
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 50 experience.")
+check(Line(Mob(7), "Kill XP") == "50", "learned for the targeted corpse's level")
+check(Line(Mob(8), "Kill XP") == "58", "not for the level last hovered")
+M.units.target = nil
+-- Secret names and messages (in dungeons) are ignored rather than erroring.
+local secretText = "Kobold Vermin dies, you gain 1 experience."
+M.secrets["Kobold Vermin"], M.secrets[secretText] = true, true
+check(#Mob(6) == 3, "secret name: lines still shown")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", secretText)
+check(Line(Mob(6), "Kill XP"):sub(1, 1) == "~", "secret message: nothing learned")
+M.secrets = {}
+
+-- What's learned survives a reload, and /killxp reset forgets it.
+M.Reload()
+check(Line(Mob(8), "Kill XP") == "58", "learned value kept over a reload")
+check(#M.tooltipPostCalls[Enum.TooltipDataType.Unit] == 1, "tooltip hook not stacked by reload")
+SlashCmdList.KILLXP("")
+check(M.out[#M.out]:find("3 mob levels"), "status: " .. M.out[#M.out])
+SlashCmdList.KILLXP("reset")
+check(Line(Mob(8), "Kill XP") == "~67", "reset back to estimates")
+
+-- Bigger numbers get thousands separators.
+M.level, M.xp, M.xpMax = 55, 0, 300000
+check(Line(Mob(55, { classification = "elite" }), "Kill XP") == "~640", "level 55 elite")
+check(Line(Mob(55, { classification = "elite" }), "Kills to level") == "~469", "kills at 55")
+M.xpMax = 3000000
+check(Line(Mob(55, { classification = "elite" }), "Kills to level") == "~4,688", "thousands separator")

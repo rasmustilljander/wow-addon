@@ -33,6 +33,7 @@ tests/TravelLog/loot.lua
 | `TravelLog/loot.lua` | Loot sources, remembered chests and gathering nodes, their map pins and tooltips, roll wins. |
 | `TravelLog/storage.lua` | Per-character files, migration from the first version, rotation into the archive addon. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
+| `KillXP/tooltip.lua` | The XP formula, rested and party bonuses, kills to level, the tooltip lines, and learning real XP from kills. |
 
 ## Writing a test
 
@@ -57,7 +58,9 @@ Useful parts of `M`:
 | `M.tick(n)`, `M.advance(s)`, `M.frame()` | Run `C_Timer` tickers for n seconds, move the clock, run one `OnUpdate` frame. |
 | `M.cast(spellID, target)`, `M.lootAll(take)` | Cast a spell (SENT, then SUCCEEDED) and loot a window from `M.loot`. |
 | `M.x`, `M.y`, `M.wa`, `M.wb`, `M.mapID`, `M.zone`, `M.subzone`, `M.mounted`, `M.taxi`, `M.money`, ... | The player's state, read by the fake API. Set `M.x = nil` for "inside a dungeon". |
-| `M.units.target = { name, guid, hostile }` | Other units. |
+| `M.units.target = { name, guid, hostile, level, ... }` | Other units (`classification`, `dead`, `tapped`, `trivial`, `player`, `pet`). |
+| `M.hover(unit)` | Show a unit's tooltip, running addons' tooltip post-calls; returns its lines without color codes. |
+| `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, the other group members' units and the instance type. |
 | `M.secrets[value] = true` | Make a value "secret", like the Midnight-era client does in dungeons. |
 | `M.installed`, `M.disabled` | Which addon folders the client knows about, and which are switched off. |
 | `M.viewMap`, `M.mapOverlay()`, `M.shown(pool)` | What the world map shows, the addon's frame on it, and the visible lines/textures/frames. |
