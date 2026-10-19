@@ -19,13 +19,14 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | File | |
 | --- | --- |
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
-| `wowmock.lua` | The fake client: frames, events, player position and state, loot windows, merchants, flights, the world map, SavedVariables, load-on-demand addons. |
+| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, loot windows, merchants, flights, the world map, CVars, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources and roll wins. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their pins and tooltips, migration from TravelLog, wiping. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
+| `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, and a reload. |
 | `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, a reload. |
 
 ## Writing a test
@@ -53,6 +54,9 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.hover(unit)` | Show a unit's tooltip, running addons' post-calls; returns its lines without color codes. |
 | `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, other group members' units, instance type. |
 | `M.guidNames[guid] = name` | Units the client still knows by GUID (`UnitNameFromGUID`) after they're gone. |
+| `M.cvars[name] = { value, default, help, category, ... }` | CVars the client knows (also `secure`, `readOnly`, `account`, `character`, `max`, and `unlisted` to leave one out of `ConsoleGetAllCommands`). |
+| `M.script(frame, name, ...)`, `button:Click()` | Run a frame's script and its hooks (`OnEnterPressed`, `OnDragStop`, ...); click a button unless it's disabled. A scroll box gets a row in `.rows` for every element. |
+| `M.combat` | In combat (`InCombatLockdown`). |
 | `M.secrets[value] = true` | Make a value secret, as the Midnight-era client does in dungeons. |
 | `M.installed`, `M.disabled` | Addon folders the client knows (default TravelLog, TravelLog_Path, TravelLog_Nodes) and which are off. |
 | `M.viewMap`, `M.mapOverlay(level)`, `M.shown(pool)` | The shown world map, an addon's overlay on it (newest, or by frame level: Path 2010, Kills 2011, Nodes 2012), and its visible lines, textures and frames. |
