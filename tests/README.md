@@ -29,10 +29,11 @@ tests/TravelLog/loot.lua
 | --- | --- |
 | `run.py` | Finds and runs the tests (`tests/<Addon>/*.lua`). |
 | `wowmock.lua` | The fake client: frames and events, the player's position and state, loot windows, merchants, flights, the world map, SavedVariables and load-on-demand addons. |
-| `TravelLog/adventure.lua` | A short adventure: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail and a reload. |
-| `TravelLog/loot.lua` | Loot sources, remembered chests and gathering nodes, their map pins and tooltips, roll wins. |
-| `TravelLog/storage.lua` | Per-character files, migration from the first version, rotation into the archive addon. |
+| `TravelLog/adventure.lua` | A short adventure with TravelLog, TravelLog_Path and TravelLog_Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, the companions' commands and a reload. |
+| `TravelLog/loot.lua` | Loot sources and roll wins. |
+| `TravelLog/storage.lua` | Per-character files, migration from earlier versions, rotation (TravelLog_Path's too) into the archive addon, TravelLog on its own and moving its old path and nodes out when the companions are installed. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
+| `TravelLog_Nodes/nodes.lua` | Remembered chests and gathering nodes, their map pins and tooltips, moving old nodes out of TravelLog's file, wiping. |
 | `KillXP/tooltip.lua` | The XP formula, rested and party bonuses, kills to level, the tooltip lines, and learning real XP from kills. |
 | `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, a reload. |
 
@@ -64,8 +65,8 @@ Useful parts of `M`:
 | `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, the other group members' units and the instance type. |
 | `M.guidNames[guid] = name` | Units the client still knows by GUID (`UnitNameFromGUID`) after they're gone. |
 | `M.secrets[value] = true` | Make a value "secret", like the Midnight-era client does in dungeons. |
-| `M.installed`, `M.disabled` | Which addon folders the client knows about, and which are switched off. |
-| `M.viewMap`, `M.mapOverlay()`, `M.shown(pool)` | What the world map shows, the addon's frame on it, and the visible lines/textures/frames. |
+| `M.installed`, `M.disabled` | Which addon folders the client knows about (TravelLog, TravelLog_Path and TravelLog_Nodes unless a test changes it), and which are switched off. |
+| `M.viewMap`, `M.mapOverlay(level)`, `M.shown(pool)` | What the world map shows, an addon's frame on it (the newest, or the one at a frame level: TravelLog_Path 2010, TravelLog_Kills 2011, TravelLog_Nodes 2012), and the visible lines/textures/frames. |
 | `M.out`, `M.errors` | Everything printed to chat, and Lua errors reported through `geterrorhandler`. Errors count as failures. |
 | `M.saved`, `M.savedSize(addon, perCharacter)` | The saved files' text and size. |
 

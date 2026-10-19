@@ -4,8 +4,10 @@ My personal addons for **World of Warcraft: Forever**. Each addon lives in its o
 
 | Addon | What it does |
 | --- | --- |
-| [TravelLog](TravelLog/) | Records your travels: your path, every jump, loot, vendor trades, deaths, quests and more. It draws your trail on the world map and shows when you last looted each chest, herb and ore. |
-| `TravelLog_Archive` | Storage for TravelLog's older history, so the file loaded at every login stays small. Install it with TravelLog. |
+| [TravelLog](TravelLog/) | Records your travels: loot, vendor trades, money, flights, deaths, quests and more. |
+| [TravelLog_Path](TravelLog_Path/) | Records your path and every jump, and draws your trail on the world map. Needs TravelLog. |
+| [TravelLog_Nodes](TravelLog_Nodes/) | Remembers every chest, herb and ore you've looted and shows on the world map when you last looted each one. Needs TravelLog. |
+| `TravelLog_Archive` | Storage for TravelLog's older history (TravelLog_Path's too), so the files loaded at every login stay small. Install it with TravelLog. |
 | [KillXP](KillXP/) | Shows on a mob's tooltip how much XP a kill gives you, counting rested XP and party bonus, and how many kills you need to level up. |
 | [TravelLog_Kills](TravelLog_Kills/) | Records every mob you kill: how many times, when and where. Pins kill spots on the world map and shows your kill count on mob tooltips. Works with or without TravelLog. |
 
@@ -15,6 +17,8 @@ Copy (or link) the addon folders into the `Interface/AddOns` folder of your Fore
 
 ```
 World of Warcraft/<forever folder>/Interface/AddOns/TravelLog/TravelLog.toc
+World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Path/TravelLog_Path.toc
+World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Nodes/TravelLog_Nodes.toc
 World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Archive/TravelLog_Archive.toc
 World of Warcraft/<forever folder>/Interface/AddOns/KillXP/KillXP.toc
 World of Warcraft/<forever folder>/Interface/AddOns/TravelLog_Kills/TravelLog_Kills.toc

@@ -1,31 +1,24 @@
 -- Slash commands: /tl (or /travellog).
 local _, ns = ...
 
-local YARDS_PER_MILE = 1760
-local TRAIL_RANGES = { session = true, today = true, week = true, all = true, off = true }
-
-local function Count(n)
+function ns.Count(n)
 	local s = tostring(math.floor((n or 0) + 0.5))
 	local formatted = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
 	return (formatted:gsub("^(-?),", "%1"))
 end
+local Count = ns.Count
 
-local function Sum(t)
-	local total = 0
-	for _, v in pairs(t or {}) do
-		total = total + v
-	end
-	return total
-end
+-- Subcommands added with ns.Command, in the order they were added.
+local commands, order = {}, {}
 
-local function Top(t)
-	local best, bestCount
-	for key, count in pairs(t or {}) do
-		if not bestCount or count > bestCount then
-			best, bestCount = key, count
-		end
+-- Adds "/tl <name> ...". run(arg) does it, and returns false when arg isn't
+-- valid, which shows the help. help is its line there, after "/tl ", or a
+-- function returning that line.
+function ns.Command(name, help, run)
+	if not commands[name] then
+		order[#order + 1] = name
 	end
-	return best, bestCount
+	commands[name] = { help = help, run = run }
 end
 
 --------------------------------------------------------------------------------
@@ -35,16 +28,6 @@ end
 local function ShowStats()
 	local char, st = ns.char, ns.stats
 	ns.Print("%s, level %d %s %s", ns.charKey, ns.profile.level or 0, UnitRace("player"), UnitClass("player"))
-
-	local zone, zoneJumps = Top(st.jumpsByZone)
-	ns.Print("Jumps: %s (%s this session)%s", Count(st.jumps), Count(ns.session.jumpCount),
-		zone and (", most in %s (%s)"):format(zone, Count(zoneJumps)) or "")
-
-	local d = st.distance or {}
-	local total = Sum(d)
-	ns.Print("Distance: %s yd (%.1f miles): foot %s, mount %s, flight %s, swim %s, ghost %s",
-		Count(total), total / YARDS_PER_MILE, Count(d.foot), Count(d.mount), Count(d.flight),
-		Count(d.swim), Count(d.ghost))
 
 	local loot = st.loot or {}
 	ns.Print("Loot: %s items from %s corpses/chests/nodes, plus %s in coins",
@@ -65,26 +48,19 @@ local function ShowStats()
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
 		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(places))
 
-	local nodes = st.nodes or {}
-	ns.Print("Nodes remembered: %s herbs, %s ore, %s chests, %s other",
-		Count(nodes.herb), Count(nodes.ore), Count(nodes.chest), Count(nodes.object))
+	-- Companion addons add their own lines here.
+	ns.Fire("TL_STATS")
 
-	local points = 0
-	for _, s in ipairs(char.sessions) do
-		points = points + ns.CountRecords(s.track, s == ns.session and ns.track.buffer)
-	end
-	ns.Print("In this character's file: %s sessions, %s path points, %s log entries%s",
-		Count(#char.sessions), Count(points), Count(#char.log),
+	ns.Print("In this character's file: %s sessions, %s log entries%s",
+		Count(#char.sessions), Count(#char.log),
 		ns.ArchiveStatus() and " (older history: /tl archive)" or "")
 end
 
 local function ShowArchive(arg)
 	if arg == "now" then
-		local sessions, entries = ns.Rotate(true)
-		if sessions + entries == 0 then
+		if ns.Rotate(true) == 0 then
 			ns.Print("nothing old enough to archive.")
 		end
-		ns.RefreshTrail()
 	end
 	local size, installed, keepDays = ns.ArchiveStatus()
 	ns.Print("history older than %d days moves to TravelLog_Archive when this character's file gets big.", keepDays)
@@ -95,18 +71,6 @@ local function ShowArchive(arg)
 	end
 	if not installed then
 		print("  TravelLog_Archive isn't installed, so old history stays in the character file.")
-	end
-end
-
-local function ShowJumps()
-	local list = {}
-	for zone, n in pairs(ns.stats.jumpsByZone or {}) do
-		list[#list + 1] = { zone = zone, n = n }
-	end
-	table.sort(list, function(a, b) return a.n > b.n end)
-	ns.Print("Jumps: %s in total, %s this session", Count(ns.stats.jumps), Count(ns.session.jumpCount))
-	for i = 1, math.min(10, #list) do
-		ns.Print("  %s: %s", list[i].zone, Count(list[i].n))
 	end
 end
 
@@ -190,12 +154,12 @@ end
 local function Help()
 	ns.Print("commands:")
 	print("  /tl stats - totals for this character")
-	print("  /tl jumps - jumps per zone")
 	print("  /tl log [n] - the last n recorded events (default 15)")
-	print("  /tl trail session|today|week|all|off - what the world map shows (now: " .. ns.settings.trail .. ")")
-	print("  /tl nodes on|off - looted chests and herbs/ore on the map (now: " .. (ns.settings.nodes and "on" or "off") .. ")")
+	for _, name in ipairs(order) do
+		local help = commands[name].help
+		print("  /tl " .. (type(help) == "function" and help() or help))
+	end
 	print("  /tl archive [now] - where older history is kept; \"now\" archives it right away")
-	print("  /tl interval 1-5 - seconds between path points (now: " .. ns.settings.interval .. ")")
 	print("  /tl wipe confirm - delete everything recorded for this character")
 end
 
@@ -208,29 +172,17 @@ SlashCmdList.TRAVELLOG = function(msg)
 	local command, arg = msg:lower():match("^%s*(%S*)%s*(.-)%s*$")
 	if command == "" or command == "stats" then
 		ShowStats()
-	elseif command == "jumps" then
-		ShowJumps()
 	elseif command == "log" then
 		ShowLog(tonumber(arg) or 15)
-	elseif command == "trail" and TRAIL_RANGES[arg] then
-		ns.settings.trail = arg
-		ns.RefreshTrail()
-		ns.Print("map trail: %s", arg)
-	elseif command == "nodes" and (arg == "on" or arg == "off") then
-		ns.settings.nodes = arg == "on"
-		ns.RefreshTrail()
-		ns.Print("chests and gathering nodes on the map: %s", arg)
 	elseif command == "archive" then
 		ShowArchive(arg)
-	elseif command == "interval" and tonumber(arg) and tonumber(arg) >= 1 and tonumber(arg) <= 5 then
-		ns.settings.interval = tonumber(arg)
-		ns.Print("recording a path point every %s seconds while moving", arg)
 	elseif command == "wipe" and arg == "confirm" then
 		ns.WipeArchive(ns.charKey)
 		ns.db.chars[ns.charKey] = nil
 		TravelLogCharDB = nil
+		ns.Fire("TL_WIPE") -- companion addons drop their files too
 		ReloadUI()
-	else
+	elseif not (commands[command] and commands[command].run(arg) ~= false) then
 		Help()
 	end
 end

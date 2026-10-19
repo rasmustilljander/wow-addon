@@ -1,6 +1,8 @@
--- Plays through a short adventure and checks what TravelLog recorded:
--- path, jumps, loot, vendors, money, quests, a flight, a death and the map.
+-- Plays through a short adventure and checks what TravelLog and
+-- TravelLog_Path recorded: path, jumps, loot, vendors, money, quests, a
+-- flight, a death and the map.
 local ns = M.Login()
+local path = M.ns("TravelLog_Path")
 local KEY = "Rasmus-Forever"
 
 local function last(kind)
@@ -26,18 +28,18 @@ for _ = 1, 10 do
 	M.x = M.x + 0.001; M.wb = M.wb - 4
 	M.tick(1)
 end
-check(#ns.track.buffer >= 5 and #ns.track.buffer <= 7, "a path point every 2 s while moving: " .. #ns.track.buffer)
-local before = #ns.track.buffer
+check(#path.track.buffer >= 5 and #path.track.buffer <= 7, "a path point every 2 s while moving: " .. #path.track.buffer)
+local before = #path.track.buffer
 M.tick(20)
-check(#ns.track.buffer == before, "no points while standing still")
+check(#path.track.buffer == before, "no points while standing still")
 check(math.abs(ns.stats.distance.foot - 40) < 0.01, "distance on foot = 40 yd: " .. tostring(ns.stats.distance.foot))
 
 -- Mounting up records a point right away
 M.mounted = true
 M.tick(1)
-check(#ns.track.buffer == before + 1, "flag change records a point")
-local _, map, x, _, inst, _, _, flags = ns.Unpack(ns.track.buffer[#ns.track.buffer])
-check(map == 1429 and math.abs(x - 0.43) < 1e-6 and inst == 0 and flags == 1, "packed point round-trips: " .. ns.track.buffer[#ns.track.buffer])
+check(#path.track.buffer == before + 1, "flag change records a point")
+local _, map, x, _, inst, _, _, flags = path.Unpack(path.track.buffer[#path.track.buffer])
+check(map == 1429 and math.abs(x - 0.43) < 1e-6 and inst == 0 and flags == 1, "packed point round-trips: " .. path.track.buffer[#path.track.buffer])
 
 -- Jumps
 JumpOrAscendStart()
@@ -55,7 +57,7 @@ JumpOrAscendStart()
 check(ns.stats.jumps == 2, "swimming up not counted")
 M.swimming = false; M.frame()
 check(ns.stats.jumpsByZone["Elwynn Forest"] == 2, "jumps by zone")
-check(ns.jumps.buffer[1]:match(",Elwynn Forest,Goldshire$"), "jump record has zone and subzone: " .. ns.jumps.buffer[1])
+check(path.jumps.buffer[1]:match(",Elwynn Forest,Goldshire$"), "jump record has zone and subzone: " .. path.jumps.buffer[1])
 M.mounted = false
 
 -- Loot a corpse with autoloot: an item, coins, and one item left behind
@@ -209,18 +211,18 @@ M.tick(1)
 -- Dungeon: no coordinates, but jumps still count
 M.x, M.wa = nil, nil
 M.zone, M.subzone = "The Deadmines", ""
-local nPoints = #ns.track.buffer
+local nPoints = #path.track.buffer
 M.tick(5)
-check(#ns.track.buffer == nPoints, "no path points without coordinates")
+check(#path.track.buffer == nPoints, "no path points without coordinates")
 M.frame(); JumpOrAscendStart()
-local dungeonJump = ns.jumps.buffer[#ns.jumps.buffer]
+local dungeonJump = path.jumps.buffer[#path.jumps.buffer]
 check(ns.stats.jumps == 3 and dungeonJump:match("^%d+,1429,,,,,,%d+,The Deadmines,$"), "dungeon jump recorded: " .. dungeonJump)
 M.x, M.y, M.wa, M.wb = 0.42, 0.65, -9000, -100
 
 -- World map, zone view
 M.viewMap = 1429
 M.frame()
-local overlay = M.mapOverlay()
+local overlay = M.mapOverlay(2010)
 check(overlay and overlay.level == 2010, "overlay above the map art")
 check(#M.shown(overlay.lines) >= 4, "trail lines drawn: " .. #M.shown(overlay.lines))
 check(#M.shown(overlay.textures) == 2, "overlapping markers merged: one jump and one loot dot in Goldshire: " .. #M.shown(overlay.textures))
@@ -245,7 +247,16 @@ M.frame()
 check(#M.shown(overlay.lines) == 0, "nothing drawn on an unrelated map")
 
 -- Slash commands
+M.out = {}
 SlashCmdList.TRAVELLOG("")
+local stats = table.concat(M.out, "\n")
+check(stats:find("Jumps: 3 ") and stats:find("Distance: ") and stats:find("Path: %d+ points in 1 sessions")
+	and stats:find("Nodes remembered: 1 herbs"), "companion addons add their lines to /tl stats: " .. stats)
+M.out = {}
+SlashCmdList.TRAVELLOG("help")
+local help = table.concat(M.out, "\n")
+check(help:find("/tl trail session") and help:find("/tl interval 1%-5") and help:find("/tl nodes on|off", 1, true)
+	and help:find("/tl jumps"), "help lists the companion addons' commands: " .. help)
 SlashCmdList.TRAVELLOG("jumps")
 SlashCmdList.TRAVELLOG("log 40")
 SlashCmdList.TRAVELLOG("interval 4")
@@ -255,27 +266,26 @@ check(ns.settings.interval == 4, "bad interval rejected")
 M.viewMap = 1429
 SlashCmdList.TRAVELLOG("trail off")
 M.frame()
-check(overlay.shown and #M.shown(overlay.lines) == 0, "trail off hides the trail but keeps node pins")
-SlashCmdList.TRAVELLOG("nodes off")
-check(not overlay.shown, "trail and nodes off hides the overlay")
-SlashCmdList.TRAVELLOG("nodes on")
+check(not overlay.shown, "trail off hides the trail")
 SlashCmdList.TRAVELLOG("trail week")
 check(overlay.shown and ns.settings.trail == "week", "trail week")
 
 check(ns.On("SOME_EVENT_THAT_DOES_NOT_EXIST", function() end) == false, "unknown events are skipped")
 
 -- Reload: everything goes through a real save and load
-local buffered, jumps = #ns.track.buffer, ns.stats.jumps
+local buffered, jumps = #path.track.buffer, ns.stats.jumps
 ns = M.Reload()
-local first = TravelLogCharDB.sessions[1]
+path = M.ns("TravelLog_Path")
+local first = TravelLogPathDB.sessions[1]
 check(first.stop and #first.track == 1, "path flushed into the session on logout")
-check(ns.CountRecords(first.track) == buffered, "all points saved")
-check(ns.CountRecords(first.jumps) == 3, "all jumps saved")
-check(#TravelLogCharDB.sessions == 2 and ns.stats.jumps == jumps, "second session keeps history")
+check(first.start == TravelLogCharDB.sessions[1].start and not TravelLogCharDB.sessions[1].track, "path kept in its own file, matched to TravelLog's session")
+check(path.CountRecords(first.track) == buffered, "all points saved")
+check(path.CountRecords(first.jumps) == 3, "all jumps saved")
+check(#TravelLogCharDB.sessions == 2 and #TravelLogPathDB.sessions == 2 and ns.stats.jumps == jumps, "second session keeps history")
 
 M.viewMap = 1429
 M.frame()
-overlay = M.mapOverlay()
+overlay = M.mapOverlay(2010)
 check(#M.shown(overlay.lines) >= 4, "previous session drawn from the saved chunks: " .. #M.shown(overlay.lines))
 
 -- Walking with the map open adds segments; the result matches a full redraw
@@ -289,6 +299,6 @@ end
 M.advance(4); M.frame() -- past the live refresh throttle
 local liveLines, liveDots = #M.shown(overlay.lines), #M.shown(overlay.textures)
 check(liveLines > beforeLines, ("live trail grows while the map is open: %d -> %d"):format(beforeLines, liveLines))
-ns.RefreshTrail(); M.frame()
+path.RefreshTrail(); M.frame()
 check(#M.shown(overlay.lines) == liveLines and #M.shown(overlay.textures) == liveDots,
 	("incremental draw matches a full redraw: %d/%d vs %d/%d"):format(liveLines, liveDots, #M.shown(overlay.lines), #M.shown(overlay.textures)))

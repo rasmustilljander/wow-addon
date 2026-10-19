@@ -1,14 +1,10 @@
 -- Loot: what you took from corpses, chests, herbs, ore, fishing and
 -- containers (with the source), plus items that arrive without a loot window:
--- quest rewards, crafts, roll wins and other pickups. Chests and gathering
--- nodes are also remembered by place, so the map can show when you last
--- emptied each one.
+-- quest rewards, crafts, roll wins and other pickups.
 local _, ns = ...
 
 local MONEY_SLOT = Enum and Enum.LootSlotType and Enum.LootSlotType.Money or 2
-local CAST_WINDOW = 2   -- seconds between a cast finishing and the loot it opened
-local NODE_RADIUS = 10  -- yards; loot spots closer than this are the same node
-local NODE_TIMES = 5    -- loot times kept per node
+local CAST_WINDOW = 2 -- seconds between a cast finishing and the loot it opened
 
 local current    -- the loot window being looted: { event, slots, guid }
 local lastLoot   -- the last saved loot event, for coins that arrive late
@@ -123,69 +119,6 @@ ns.On("LOOT_SLOT_CLEARED", function(slot)
 	end
 end)
 
---------------------------------------------------------------------------------
--- Chests and gathering nodes
---------------------------------------------------------------------------------
-
-local kindBySpell
-
-local function NodeKind(via)
-	if not kindBySpell then
-		kindBySpell = {}
-		local herb, mining = SpellName(2366), SpellName(2575)
-		if herb then kindBySpell[herb] = "herb" end
-		if mining then kindBySpell[mining] = "ore" end
-	end
-	if not via then
-		return "object"
-	end
-	return kindBySpell[via] or "chest"
-end
-
-local function IsNear(node, e, inst, a, b)
-	if a and node.a and node.inst == inst then
-		return (node.a - a) ^ 2 + (node.b - b) ^ 2 <= NODE_RADIUS ^ 2
-	end
-	return math.abs(node.x - e.x) + math.abs(node.y - e.y) <= 0.5
-end
-
--- Finds or adds the node at this spot and notes the loot. Spawn points are
--- matched by kind and place rather than by object, because the same spot can
--- grow different herbs.
-local function RememberNode(e)
-	if not (e.map and e.x) then
-		return
-	end
-	local kind = NodeKind(e.via)
-	local inst, a, b = ns.WorldPosition()
-	local nodes = ns.char.nodes
-	nodes[e.map] = nodes[e.map] or {}
-	local list = nodes[e.map]
-	local node
-	for _, n in ipairs(list) do
-		if n.kind == kind and IsNear(n, e, inst, a, b) then
-			node = n
-			break
-		end
-	end
-	if not node then
-		node = { kind = kind, x = e.x, y = e.y, count = 0, times = {} }
-		if a then
-			node.inst, node.a, node.b = inst, ns.Round(a, 1), ns.Round(b, 1)
-		end
-		list[#list + 1] = node
-		ns.Add(1, "nodes", kind)
-	end
-	e.lastHere = node.last
-	node.name = e.source or node.name
-	node.id = e.sourceID or node.id
-	node.last = e.time
-	node.count = node.count + 1
-	table.insert(node.times, 1, e.time)
-	node.times[NODE_TIMES + 1] = nil
-	ns.nodesVersion = ns.nodesVersion + 1
-end
-
 ns.On("LOOT_CLOSED", function()
 	ns.Mark("loot")
 	if not current then
@@ -207,9 +140,9 @@ ns.On("LOOT_CLOSED", function()
 		return
 	end
 	e.items = #items > 0 and items or nil
-	if e.sourceType == "GameObject" then
-		RememberNode(e)
-	end
+	-- Lets companion addons (TravelLog_Nodes) look at it, and add to it,
+	-- before it's saved.
+	ns.Fire("TL_LOOT", e)
 	ns.Add(1, "loot", "opened")
 	ns.Add(1, "loot", "bySource", e.sourceType or "Unknown")
 	lastLoot = ns.Save(e)

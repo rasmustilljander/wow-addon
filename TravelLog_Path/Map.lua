@@ -1,7 +1,8 @@
--- Draws your recorded path on the world map, with markers for jumps, loot,
--- deaths and level-ups, and pins for looted chests and gathering nodes that
--- say when you last looted them. "/tl trail" picks how far back it shows.
+-- Draws your recorded path on the world map, with markers for jumps, and for
+-- loot, deaths and level-ups from TravelLog's log. "/tl trail" picks how far
+-- back it shows.
 local _, ns = ...
+local tl = TravelLog
 
 local MAX_LINES = 5000
 local MAX_DOTS = 3000
@@ -32,11 +33,11 @@ local lines, dots = {}, {}
 local drawnMap, drawnScale, drawnVersion, drawnAt = nil, nil, nil, 0
 
 local function ModeOf(flags)
-	local F = ns.FLAGS
-	if ns.HasFlag(flags, F.taxi) then return "flight" end
-	if ns.HasFlag(flags, F.dead) then return "ghost" end
-	if ns.HasFlag(flags, F.swimming) then return "swim" end
-	if ns.HasFlag(flags, F.mounted) then return "mount" end
+	local F = tl.FLAGS
+	if tl.HasFlag(flags, F.taxi) then return "flight" end
+	if tl.HasFlag(flags, F.dead) then return "ghost" end
+	if tl.HasFlag(flags, F.swimming) then return "swim" end
+	if tl.HasFlag(flags, F.mounted) then return "mount" end
 	return "foot"
 end
 
@@ -266,86 +267,28 @@ local function DrawSession(s, data, progress)
 	progress.jumps = #j + 1
 end
 
--- Where history comes from: this character's file, plus every archive slot
--- when the whole history is asked for. Oldest first.
+-- Where history comes from: this character's files, plus the archive when
+-- the whole history is asked for. Oldest first. Each is { sessions, log }:
+-- path sessions, and TravelLog's log for the markers.
 local function Sources()
 	local list = {}
-	if ns.settings.trail == "all" then
-		for _, history in ipairs(ns.ArchivedHistory()) do
-			list[#list + 1] = history
+	if tl.settings.trail == "all" then
+		for _, archived in ipairs(tl.ArchivedHistory()) do
+			-- Sessions archived before TravelLog_Path existed carry their path.
+			local sessions = {}
+			for _, s in ipairs(archived.sessions or {}) do
+				if s.track then
+					sessions[#sessions + 1] = s
+				end
+			end
+			for _, s in ipairs(archived.path or {}) do
+				sessions[#sessions + 1] = s
+			end
+			list[#list + 1] = { sessions = sessions, log = archived.log or {} }
 		end
 	end
-	list[#list + 1] = ns.char
+	list[#list + 1] = { sessions = ns.db.sessions, log = tl.char.log }
 	return list
-end
-
---------------------------------------------------------------------------------
--- Chests and gathering nodes, with a tooltip saying when you last looted them
---------------------------------------------------------------------------------
-
-local NODE_SIZE = 8 -- screen pixels
-local NODE_COLORS = {
-	herb = { 0.35, 0.95, 0.35 },
-	ore = { 0.95, 0.6, 0.3 },
-	chest = { 1, 0.85, 0.2 },
-	object = { 0.8, 0.8, 0.8 },
-}
-local NODE_LABELS = { herb = "Herb", ore = "Ore", chest = "Chest", object = "Object" }
-local pins = {}
-
-local function NodeTooltip(pin)
-	local node = pin.node
-	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-	GameTooltip:AddLine(node.name or NODE_LABELS[node.kind])
-	GameTooltip:AddLine(("Last looted %s (%s ago)"):format(date("%Y-%m-%d %H:%M", node.last), ns.Ago(node.last)), 1, 1, 1)
-	if node.count > 1 then
-		GameTooltip:AddLine(("Looted %d times. Before that:"):format(node.count), 0.8, 0.8, 0.8)
-		for i = 2, #node.times do
-			GameTooltip:AddLine("  " .. date("%Y-%m-%d %H:%M", node.times[i]), 0.8, 0.8, 0.8)
-		end
-	end
-	GameTooltip:Show()
-end
-
-local function HideTooltip()
-	GameTooltip:Hide()
-end
-
-local function SetPin(i, node, x, y, size)
-	local pin = pins[i]
-	if not pin then
-		pin = CreateFrame("Frame", nil, overlay)
-		pin:EnableMouse(true)
-		pin:SetMouseClickEnabled(false) -- clicks still reach the map
-		pin:SetScript("OnEnter", NodeTooltip)
-		pin:SetScript("OnLeave", HideTooltip)
-		pin.icon = pin:CreateTexture(nil, "OVERLAY")
-		pin.icon:SetAllPoints()
-		pins[i] = pin
-	end
-	pin.node = node
-	local color = NODE_COLORS[node.kind] or NODE_COLORS.object
-	pin.icon:SetColorTexture(color[1], color[2], color[3], 1)
-	pin:SetSize(size, size)
-	pin:ClearAllPoints()
-	pin:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)
-	pin:Show()
-end
-
--- Nodes are only drawn on their own zone's map; continent maps would be a
--- carpet of them.
-local function DrawNodes()
-	view.nodesVersion = ns.nodesVersion
-	local n = 0
-	local list = ns.settings.nodes and view.map and ns.char.nodes[view.map]
-	if list then
-		local size = NODE_SIZE / view.scale
-		for _, node in ipairs(list) do
-			n = n + 1
-			SetPin(n, node, node.x / 100 * view.w, node.y / 100 * view.h, size)
-		end
-	end
-	HideFrom(pins, n + 1)
 end
 
 --------------------------------------------------------------------------------
@@ -354,11 +297,8 @@ end
 
 -- Draws whatever was recorded since the last call.
 local function DrawNew()
-	drawnVersion = ns.version
+	drawnVersion = tl.version
 	drawnAt = GetTime()
-	if view.nodesVersion ~= ns.nodesVersion then
-		DrawNodes()
-	end
 	if not view.since or not view.map then
 		return
 	end
@@ -397,14 +337,13 @@ local function Redraw()
 	drawnScale = WorldMapFrame:GetCanvasScale() or 1
 
 	view.map, view.scale = drawnMap, drawnScale
-	view.since = TrailStart(ns.settings.trail)
+	view.since = TrailStart(tl.settings.trail)
 	view.w, view.h = overlay:GetSize()
 	view.thickness = LINE_WIDTH / view.scale
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
 	view.lines, view.dots = 0, 0
 	view.sources = view.since and Sources() or {}
 	view.logNext = {}
-	view.nodesVersion = nil
 	wipe(view.progress)
 	wipe(view.cells)
 
@@ -427,13 +366,13 @@ local function OnUpdate()
 	local sinceDraw = GetTime() - drawnAt
 	if map ~= drawnMap or (scale ~= drawnScale and sinceDraw > 0.2) then
 		Redraw()
-	elseif drawnVersion ~= ns.version and sinceDraw > REFRESH then
+	elseif drawnVersion ~= tl.version and sinceDraw > REFRESH then
 		DrawNew()
 	end
 end
 
 local function Shown()
-	return ns.settings.trail ~= "off" or ns.settings.nodes
+	return tl.settings.trail ~= "off"
 end
 
 local function Create()
@@ -452,7 +391,7 @@ local function Create()
 	overlay:SetShown(Shown())
 end
 
--- Applies changed "/tl trail" and "/tl nodes" settings, or moved history.
+-- Applies a changed "/tl trail" setting, or moved history.
 function ns.RefreshTrail()
 	if not overlay then
 		return
@@ -461,8 +400,9 @@ function ns.RefreshTrail()
 	drawnMap = nil
 end
 
-ns.On("PLAYER_LOGIN", Create)
-ns.On("ADDON_LOADED", function(name)
+tl.On("TL_ROTATED", ns.RefreshTrail)
+tl.On("PLAYER_LOGIN", Create)
+tl.On("ADDON_LOADED", function(name)
 	if name == "Blizzard_WorldMap" then
 		Create()
 	end

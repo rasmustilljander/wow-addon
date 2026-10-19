@@ -171,7 +171,7 @@ local function Create()
 	local canvas = WorldMapFrame:GetCanvas()
 	overlay = CreateFrame("Frame", nil, canvas)
 	overlay:SetAllPoints(canvas)
-	-- Above the map art (and TravelLog's trail), below icons like flight
+	-- Above the map art (and TravelLog_Path's trail), below icons like flight
 	-- masters and quest markers.
 	local manager = WorldMapFrame.GetPinFrameLevelsManager and WorldMapFrame:GetPinFrameLevelsManager()
 	local level = manager and manager:GetValidFrameLevel("PIN_FRAME_LEVEL_MAP_HIGHLIGHT")

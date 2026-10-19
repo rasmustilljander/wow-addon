@@ -1,19 +1,22 @@
 -- TravelLog core: saved data, sessions, event plumbing and shared helpers.
 local _, ns = ...
 
+-- The companion addons (TravelLog_Path, TravelLog_Nodes) load after this one
+-- and use its helpers, events and saved data through this global.
+TravelLog = ns
+
 -- Bumped whenever something is recorded, so the map knows when to redraw.
 ns.version = 0
-ns.nodesVersion = 0
 
-local DEFAULTS = {
-	interval = 2,     -- seconds between recorded path points while moving (1-5)
-	trail = "today",  -- what the world map overlay shows: session/today/week/all/off
-	nodes = true,     -- show looted chests, herbs and ore on the world map
-}
+-- Settings in the account-wide file. Companion addons add their own with
+-- ns.Defaults while loading.
+local DEFAULTS = {}
 
--- Path points and jumps are packed this many records per string, which keeps
--- the SavedVariables file small and quick to load.
-local CHUNK_SIZE = 200
+function ns.Defaults(t)
+	for key, value in pairs(t) do
+		DEFAULTS[key] = value
+	end
+end
 
 --------------------------------------------------------------------------------
 -- Helpers
@@ -174,7 +177,7 @@ function ns.WorldPosition()
 	return instanceID, a, b
 end
 
--- Movement state bits stored with every path point and jump.
+-- Movement state bits, stored with every path point and jump.
 ns.FLAGS = { mounted = 1, taxi = 2, swimming = 4, dead = 8, combat = 16, indoors = 32 }
 
 function ns.HasFlag(flags, bit)
@@ -200,83 +203,6 @@ function ns.Here()
 	end
 	h.flags = flags
 	return h
-end
-
-local function Fixed(value, fmt)
-	return value and fmt:format(value) or ""
-end
-
--- Packs a snapshot into one compact record:
---   seconds into session, uiMapID, x, y (0-100 like in-game coordinates),
---   instanceID, world axis 1, world axis 2 (yards), flags [, extra...]
--- Missing values are left empty.
-function ns.Pack(h, ...)
-	local rec = ("%d,%s,%s,%s,%s,%s,%s,%d"):format(
-		h.t - ns.session.start, h.map or "",
-		Fixed(h.x and h.x * 100, "%.2f"), Fixed(h.y and h.y * 100, "%.2f"),
-		h.inst or "", Fixed(h.wx, "%.1f"), Fixed(h.wy, "%.1f"), h.flags)
-	for i = 1, select("#", ...) do
-		local extra = tostring(select(i, ...) or ""):gsub("[,;]", " ")
-		rec = rec .. "," .. extra
-	end
-	return rec
-end
-
--- Reverses ns.Pack for one record. Numbers come back as numbers, x/y as 0-1.
-function ns.Unpack(rec)
-	local dt, map, x, y, inst, wx, wy, flags, extra = strsplit(",", rec, 9)
-	x, y = tonumber(x), tonumber(y)
-	return tonumber(dt), tonumber(map), x and x / 100, y and y / 100,
-		tonumber(inst), tonumber(wx), tonumber(wy), tonumber(flags) or 0, extra
-end
-
---------------------------------------------------------------------------------
--- Streams: append-only packed records (path points, jumps)
---------------------------------------------------------------------------------
-
-local Stream = {}
-Stream.__index = Stream
-
-function ns.NewStream(store)
-	return setmetatable({ store = store, buffer = {} }, Stream)
-end
-
-function Stream:Add(rec)
-	ns.version = ns.version + 1
-	local buffer = self.buffer
-	buffer[#buffer + 1] = rec
-	if #buffer >= CHUNK_SIZE then
-		self:Flush()
-	end
-end
-
-function Stream:Flush()
-	if #self.buffer > 0 then
-		self.store[#self.store + 1] = table.concat(self.buffer, ";")
-		self.buffer = {}
-	end
-end
-
--- Calls fn(record) for every record in stored chunks, then an optional buffer.
-function ns.EachRecord(store, buffer, fn)
-	for _, chunk in ipairs(store) do
-		for rec in chunk:gmatch("[^;]+") do
-			fn(rec)
-		end
-	end
-	if buffer then
-		for _, rec in ipairs(buffer) do
-			fn(rec)
-		end
-	end
-end
-
-function ns.CountRecords(store, buffer)
-	local n = buffer and #buffer or 0
-	for _, chunk in ipairs(store) do
-		n = n + select(2, chunk:gsub(";", "")) + 1
-	end
-	return n
 end
 
 --------------------------------------------------------------------------------
@@ -374,8 +300,6 @@ local function EndSession()
 	s.stop = time()
 	s.levelEnd = UnitLevel("player")
 	s.moneyEnd = GetMoney()
-	ns.track:Flush()
-	ns.jumps:Flush()
 end
 
 local function Init()
@@ -416,25 +340,24 @@ local function Init()
 	char.log = char.log or {}
 	char.sessions = char.sessions or {}
 	char.quests = char.quests or {}
-	char.nodes = char.nodes or {}
 
 	local session = {
 		start = time(),
 		level = profile.level,
 		money = GetMoney(),
-		track = {},
-		jumps = {},
 	}
 	char.sessions[#char.sessions + 1] = session
 
 	ns.db, ns.settings, ns.charKey = db, db.settings, key
 	ns.profile, ns.stats, ns.char = profile, profile.stats, char
 	ns.session = session
-	ns.track = ns.NewStream(session.track)
-	ns.jumps = ns.NewStream(session.jumps)
 
-	-- Registered now, after every module's own PLAYER_LOGOUT handler, so the
-	-- streams are flushed last.
+	-- Registered now, after every module's (and companion addon's) own
+	-- handler: old history is rotated once they've all set up their data,
+	-- and the session is closed after they've saved theirs.
+	ns.On("PLAYER_LOGIN", function()
+		ns.Rotate(false)
+	end)
 	ns.On("PLAYER_LOGOUT", EndSession)
 end
 
