@@ -933,10 +933,13 @@ local function ReadToc(name)
 	local path = REPO .. "/" .. name .. "/" .. name .. ".toc"
 	local f = io.open(path)
 	if not f then return nil end
-	local toc = { name = name, files = {}, saved = {}, perChar = {} }
+	local toc = { name = name, files = {}, saved = {}, perChar = {}, meta = {} }
 	for line in f:lines() do
 		line = line:gsub("\r$", "")
 		local key, value = line:match("^##%s*([%w%-]+):%s*(.-)%s*$")
+		if key then
+			toc.meta[key] = value
+		end
 		if key == "SavedVariables" then
 			for var in value:gmatch("[^,%s]+") do toc.saved[#toc.saved + 1] = var end
 		elseif key == "SavedVariablesPerCharacter" then
@@ -1049,6 +1052,18 @@ function M.Login()
 	end
 	M.fire("PLAYER_LOGIN")
 	M.fire("PLAYER_ENTERING_WORLD", true, false)
+	-- The addon compartment (the minimap's addons dropdown) lists the addons
+	-- whose .toc names an AddonCompartmentFunc. Clicking an entry calls that
+	-- global with the addon's name and the mouse button.
+	M.compartment = {}
+	for name, addon in pairs(M.loaded) do
+		local meta = addon.toc.meta
+		if meta.AddonCompartmentFunc then
+			M.compartment[name] = { text = meta.Title, icon = meta.IconTexture, Click = function(_, button)
+				_G[meta.AddonCompartmentFunc](name, button or "LeftButton")
+			end }
+		end
+	end
 	return M.ns()
 end
 

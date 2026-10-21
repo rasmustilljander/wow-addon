@@ -9,7 +9,7 @@ A window for browsing, searching, bookmarking and changing CVars (the game's con
 | `/cvars` or `/cvar` | Open or close the window |
 | `/cvars <text>` | Open the window searching for `<text>` |
 
-The minimap button also opens and closes the window. Drag it to move it around the minimap; the **Minimap button** checkbox in the window hides or shows it.
+CVarBrowser in the addons dropdown on the minimap also opens and closes the window.
 
 ## The window
 
@@ -29,6 +29,5 @@ The buttons are off in combat and for CVars the client doesn't let addons change
 | --- | --- |
 | `bookmarks` | Lowercase name → name of each bookmarked CVar |
 | `point` | Window position: `{ point, relativePoint, x, y }` |
-| `minimap` | Minimap button: `angle` in degrees (starts at 225, bottom left), `hide` when it's off |
 
 CVar values themselves are saved by the game, not by CVarBrowser.

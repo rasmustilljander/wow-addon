@@ -180,29 +180,15 @@ Row("hiddenThing"):Click()
 check(d.meta:GetText() == "not in the client's list", "unlisted meta: " .. d.meta:GetText())
 w.filters[1]:Click()
 
--- The minimap button: on the minimap's edge, bottom left at first.
-local mb = ns.minimapButton
-check(mb and mb:IsShown() and mb.parent == Minimap, "minimap button")
-check(mb.point[1] == "CENTER" and math.abs(mb.point[4] + 53.03) < 0.01 and math.abs(mb.point[5] + 53.03) < 0.01, "at 225 degrees")
-M.script(mb, "OnEnter")
-check(GameTooltip.lines[1] == "CVarBrowser" and GameTooltip.lines[2]:find("drag to move"), "tooltip")
-M.script(mb, "OnLeave")
-mb:Click()
+-- The addon compartment entry, with the gear icon, opens and closes the
+-- window; there's no minimap button.
+local entry = M.compartment.CVarBrowser
+check(entry and entry.text == "CVarBrowser" and entry.icon == "Interface\\Icons\\INV_Misc_Gear_01", "compartment entry")
+check(CVarBrowserMinimapButton == nil and not Minimap.children, "no minimap button")
+entry:Click()
 check(not w:IsShown(), "click closes the window")
-mb:Click()
+entry:Click()
 check(w:IsShown(), "click opens it")
--- Dragging follows the cursor around the edge; the minimap's center is at
--- (1800, 900).
-M.script(mb, "OnDragStart")
-M.cursor = { 1800, 1000 }
-M.frame()
-M.script(mb, "OnDragStop")
-check(CVarBrowserDB.minimap.angle == 90 and math.abs(mb.point[4]) < 0.01 and math.abs(mb.point[5] - 75) < 0.01, "dragged to the top")
-check(mb:GetScript("OnUpdate") == nil, "stops following on release")
--- The window's checkbox hides it.
-check(w.minimap:GetChecked(), "checkbox on")
-w.minimap:Click()
-check(not mb:IsShown() and CVarBrowserDB.minimap.hide, "hidden")
 
 -- Moving the window is remembered.
 M.script(w, "OnDragStart")
@@ -210,13 +196,12 @@ w:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -80)
 M.script(w, "OnDragStop")
 check(CVarBrowserDB.point[1] == "TOPLEFT" and CVarBrowserDB.point[3] == 100 and CVarBrowserDB.point[4] == -80, "position saved")
 
--- Bookmarks and the position survive a reload.
+-- Bookmarks and the position survive a reload; the minimap button's old
+-- settings are dropped.
+CVarBrowserDB.minimap = { angle = 90, hide = true }
 ns = M.Reload()
+check(CVarBrowserDB.minimap == nil, "old minimap settings dropped")
 check(ns.IsBookmarked("autoLootDefault") and ns.IsBookmarked("hiddenThing") and not ns.IsBookmarked("maxFPS"), "bookmarks kept")
 SlashCmdList.CVARBROWSER("")
 check(ns.window.point[1] == "TOPLEFT" and ns.window.point[4] == 100, "position restored")
 check(#UISpecialFrames == 1, "not registered twice")
-check(ns.minimapButton == nil and not ns.window.minimap:GetChecked(), "minimap button stays hidden")
-ns.window.minimap:Click()
-check(ns.minimapButton:IsShown() and not CVarBrowserDB.minimap.hide, "shown again")
-check(math.abs(ns.minimapButton.point[5] - 75) < 0.01, "where it was dragged")
