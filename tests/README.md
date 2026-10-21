@@ -19,7 +19,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | File | |
 | --- | --- |
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
-| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags and the cursor, loot windows, merchants, flights, the world map, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
+| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, mail, owned auctions, loot windows, merchants, flights, the world map, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources and roll wins. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
@@ -32,6 +32,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
 | `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, a reload. |
+| `ItemCount/count.lua` | Bags, bank and account bank, mail and mail to alts, auctions running out, equipped items, tooltip lines, commands, a reload. |
 | `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, a reload. |
 
 ## Writing a test
@@ -57,7 +58,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.x`, `M.y`, `M.wa`, `M.wb`, `M.mapID`, `M.zone`, `M.subzone`, `M.mounted`, `M.taxi`, `M.money`, ... | Player state read by the fake API. `M.x = nil` means inside a dungeon. |
 | `M.player = { name, realm, class }` | Who logs in; `class` is the class file name (default `MAGE`). Change it between logins to play an alt. |
 | `M.units.target = { name, guid, hostile, level, ... }` | Other units (also `classification`, `dead`, `tapped`, `trivial`, `player`, `pet`). |
-| `M.hover(unit)` | Show a unit's tooltip, running addons' post-calls; returns its lines without color codes. |
+| `M.hover(unit)`, `M.hoverItem(itemID)` | Show a unit's or item's tooltip, running addons' post-calls; returns its lines without color codes. |
 | `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, other group members' units, instance type. |
 | `M.skills`, `M.spellNames[id]`, `M.spellRanks[id]` | Skill lines (`{ skillID, name, rank, isHeader }`), spell names and rank text. |
 | `M.trainerServices[i] = { name, rank, cost }` | The open trainer's list (`GetTrainerServiceInfo`, `GetTrainerServiceCost`). |
@@ -65,6 +66,9 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.cvars[name] = { value, default, help, category, ... }` | CVars the client knows (also `secure`, `readOnly`, `account`, `character`, `max`, and `unlisted` to leave one out of `ConsoleGetAllCommands`). |
 | `M.script(frame, name, ...)`, `button:Click([mouseButton])` | Run a frame's script and its hooks (`OnEnterPressed`, `OnDragStop`, ...); click a button (default `"LeftButton"`) unless it's disabled. A scroll box gets a row in `.rows` for every element. |
 | `M.bags["bag:slot"]`, `M.bagSlots[bag]`, `M.items[itemID]` | Bag contents (an item link, or `{ link, count, locked }`), bag sizes (default: a 16-slot backpack) and what the client knows of an item (`quality`, `price`, `icon`, `noValue`, `uncached`). |
+| `M.equipped[slot]`, `M.accountBank` | Worn item links by inventory slot; whether the account bank can be seen. Bank tabs are bags 6 and up (account bank 15 and up) in `M.bags`. |
+| `M.inbox`, `M.sendItems`, `M.sentMail` | Inbox mails `{ cod, items = { { link, count, currency } } }`, attachments of the mail being written, and what `SendMail` sent. |
+| `M.ownedAuctions`, `M.ownedQueries` | What `C_AuctionHouse.GetOwnedAuctions` returns, and how often owned auctions were queried. |
 | `M.cursorItem` | The `"bag:slot"` whose item is on the cursor (`C_Container.PickupContainerItem`, `DeleteCursorItem`). |
 | `M.combat` | In combat (`InCombatLockdown`). |
 | `M.sent`, `M.sendResult`, `M.addonMessage(sender, prefix, text)` | Addon messages sent (`{ prefix, text, chatType, target }`), a function returning another `Enum.SendAddonMessageResult` (throttled, offline), and a whisper arriving from another player. |

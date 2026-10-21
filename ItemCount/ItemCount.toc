@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: ItemCount
+## Notes: Shows on item tooltips how many of the item each of your characters has, in their bags, bank, mail and on the auction house.
+## Author: rasmustilljander
+## Version: 0.1.0
+## SavedVariables: ItemCountDB
+
+ItemCount.lua
+Tooltip.lua
