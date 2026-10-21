@@ -184,12 +184,13 @@ M.fire("PARTY_KILL", ME, Kobold(6))
 XP("Kobold Worker", 40)
 check(TravelLogKillsDB.mobs["Kobold Worker"].count == 7 and #TravelLogKillsDB.places == 2, "keeps recording after reload")
 
--- The Kills tab in TravelLog's window: every mob, searchable; a click shows
--- the zones it died in.
+-- The Kills view in TravelLog's History tab: every mob, searchable; a click
+-- shows the zones it died in.
 check(Run("window") == "", "/kills window")
 local w = M.ns("TravelLog").window
-local page = w.pages[4]
-check(w:IsShown() and w.selectedTab == 4 and page:IsShown(), "opens on the Kills tab")
+local page = w.pages[3].views[2]
+check(w:IsShown() and w.selectedTab == 3 and page:IsShown() and not w.pages[3].views[1]:IsShown(),
+	"opens on History's Kills view")
 -- The shown rows of a list, as "name count".
 local function Rows(list)
 	local out = {}

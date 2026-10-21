@@ -32,8 +32,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 
 - **Totals**: this character's numbers under Travel, Loot, Life and Log.
 - **Settings**: the companions' map options and Path's interval.
-- **Log**: individual events still in the character file, newest first. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location.
-- **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
+- **History**: individual events still in the character file, newest first. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location. With [TravelLog_Kills](../TravelLog_Kills/README.md#window), **Events** and **Kills** buttons switch between these events and every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
 - **Colors**, with [TravelLog_Path](../TravelLog_Path/README.md#world-map): the trail's and markers' colors on the world map.
