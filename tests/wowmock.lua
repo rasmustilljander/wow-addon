@@ -815,8 +815,10 @@ function C_AuctionHouse.HasFullOwnedAuctionResults() return true end
 function C_AuctionHouse.GetOwnedAuctions() return M.ownedAuctions end
 
 -- Merchant: M.merchantItems[i] is C_MerchantFrame.GetItemInfo's table plus
--- the item's link. M.merchantFilter is the list's filter (all by default).
-LE_LOOT_FILTER_ALL, LE_LOOT_FILTER_CLASS = 1, 2
+-- the item's link and cost: { { count, link = ..., currency = ... } }, what
+-- GetMerchantItemCostItem returns. M.merchantFilter is the list's filter (all
+-- by default).
+LE_LOOT_FILTER_ALL, LE_LOOT_FILTER_CLASS, MAX_ITEM_COST = 1, 2, 3
 C_MerchantFrame = {}
 function C_MerchantFrame.GetItemInfo(i) return M.merchantItems[i] end
 function GetMerchantNumItems() return #M.merchantItems end
@@ -824,6 +826,12 @@ function GetMerchantItemID(i) local it = M.merchantItems[i]; return it and LinkI
 function GetMerchantFilter() return M.merchantFilter or LE_LOOT_FILTER_ALL end
 function CanMerchantRepair() return M.canRepair end
 function GetMerchantItemLink(i) local it = M.merchantItems[i]; return it and it.link end
+function GetMerchantItemCostInfo(i) local it = M.merchantItems[i]; return it and it.cost and #it.cost or 0 end
+function GetMerchantItemCostItem(i, c)
+	local it = M.merchantItems[i]
+	local cost = it and it.cost and it.cost[c]
+	if cost then return 134400, cost[1], cost.link, cost.currency end
+end
 function BuyMerchantItem() end
 function GetNumBuybackItems() return #M.buyback end
 function GetBuybackItemInfo(i) local b = M.buyback[i]; if b then return b.name, 1, b.price, b.count end end

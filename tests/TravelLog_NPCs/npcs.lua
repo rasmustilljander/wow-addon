@@ -25,6 +25,10 @@ M.merchantItems = {
 	{ name = "Tough Hunk of Bread", price = 25, stackCount = 1, numAvailable = -1, link = Link(4540, "Tough Hunk of Bread") },
 	{ name = "Fine Longsword", price = 12000, stackCount = 1, numAvailable = 2, link = Link(2528, "Fine Longsword") },
 	{ name = nil, price = 0, stackCount = 1, numAvailable = -1, hasExtendedCost = true, link = Link(20558, "Warsong Gulch Mark of Honor") },
+	{ name = "Sentinel's Blade", price = 0, stackCount = 1, numAvailable = -1, hasExtendedCost = true, link = Link(19549, "Sentinel's Blade"),
+		cost = { { 450, currency = "Honor Points" }, { 30, link = Link(20558, "Warsong Gulch Mark of Honor") } } },
+	{ name = "Insignia", price = 5000, stackCount = 1, numAvailable = -1, hasExtendedCost = true, link = Link(18854, "Insignia"),
+		cost = { { 2, link = Link(20558, "Warsong Gulch Mark of Honor") } } },
 }
 M.items[20558] = { link = Link(20558, "Warsong Gulch Mark of Honor") } -- known to the client by now
 Talk(BROG, Enum.PlayerInteractionType.Merchant)
@@ -39,13 +43,20 @@ check(water and water.name == "Refreshing Spring Water" and water.price == 25 an
 check(brog.items[2528].limited and not brog.items[4540].stack, "limited supply")
 check(brog.items[20558].special and not brog.items[20558].price and brog.items[20558].name == "Warsong Gulch Mark of Honor",
 	"other currency; name from the item cache")
+local BLADE = M.merchantItems[5]
+local blade = brog.items[19549].cost
+check(blade and #blade == 2 and blade[1].name == "Honor Points" and blade[1].count == 450
+	and blade[2].name == "Warsong Gulch Mark of Honor" and blade[2].count == 30, "currencies and items it costs")
+check(ns.PriceText(brog.items[19549]) == "450 Honor Points + 30 Warsong Gulch Mark of Honor", ns.PriceText(brog.items[19549]))
+check(ns.PriceText(brog.items[18854]) == "50s + 2 Warsong Gulch Mark of Honor", ns.PriceText(brog.items[18854]))
 check(ns.Kind(brog).key == "repair", "counts as a repair vendor")
 
 -- Item tooltips.
 local function Tip(id) return table.concat(M.hoverItem(id), "\n") end
 check(Tip(159):find("Sold by Brog Hamfist %(Goldshire%)  25c for 5"), "tooltip: " .. Tip(159))
 check(Tip(2528):find("1g 20s, limited"), "tooltip: limited, gold")
-check(Tip(20558):find("other currency"), "tooltip: other currency")
+check(Tip(20558):find("other currency"), "tooltip: unreadable cost is other currency")
+check(Tip(19549):find("450 Honor Points %+ 30 Warsong"), "tooltip: currencies by name")
 check(not Tip(2589):find("Sold by"), "no line for items nobody sells")
 
 -- With the class filter on, the list is partial: nothing is dropped.
@@ -262,10 +273,14 @@ for _, f in ipairs(M.descendants(w.pages[1])) do totals[#totals + 1] = f.text en
 check(table.concat(totals, "\n"):find("6, selling 2 items"), "totals row")
 
 -- Saved account-wide; the tooltip index comes back after a reload.
+M.merchantItems = { { name = "Refreshing Spring Water", price = 25, stackCount = 5, numAvailable = -1, link = Link(159, "Refreshing Spring Water") }, BLADE }
+Talk(BROG, Enum.PlayerInteractionType.Merchant)
+Close(Enum.PlayerInteractionType.Merchant)
 TravelLogNPCsDB.settings.hideKinds.stable = true
 ns = M.Reload()
 ns = M.ns("TravelLog_NPCs")
 check(TravelLogNPCsDB.npcs[1265].items[159].price == 25, "saved")
+check(Tip(19549):find("450 Honor Points %+ 30 Warsong"), "currencies saved")
 check(TravelLogNPCsDB.settings.hideKinds.stable, "settings saved")
 check(Tip(159):find("Sold by Brog Hamfist"), "tooltip after reload")
 check(MiniPins()["Brog Hamfist"], "pins after reload")
