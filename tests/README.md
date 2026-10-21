@@ -21,7 +21,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
 | `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, mail, owned auctions, loot windows, merchants, flights, the quest log's abandon dialog, the world map and world positions, the minimap's range and facing, the addon compartment, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests (one abandoned), a flight, a death, the map trail, companion commands, a reload. |
-| `TravelLog/loot.lua` | Loot sources (pickpockets too) and roll wins. |
+| `TravelLog/loot.lua` | Loot sources (pickpockets too), roll wins, and the partner or sender of trades and mail. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History without view buttons), moving old path and nodes into the companions. |
 | `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the History tab's searchable event log and Kills view, companion tabs, moving and a reload. |

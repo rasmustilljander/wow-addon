@@ -1,4 +1,4 @@
--- Loot sources (pickpockets too) and roll wins. Remembered chests and
+-- Loot sources (pickpockets too), roll wins, and who a trade or mail was with. Remembered chests and
 -- gathering nodes are TravelLog_Nodes' (tests/TravelLog_Nodes).
 local ns = M.Login()
 
@@ -96,3 +96,44 @@ check(count("receive") == 3 and last("receive").item == RING, "roll win recorded
 M.out = {}
 SlashCmdList.TRAVELLOG("log 1")
 check(table.concat(M.out, "\n"):find("won with a roll of 99"), "log shows the roll")
+
+--------------------------------------------------------------------------------
+-- Trades and mail
+--------------------------------------------------------------------------------
+
+M.advance(30)
+local BREAD = "|cffffffff|Hitem:4540::::|h[Tough Hunk of Bread]|h|r"
+
+-- A trade with a player from another realm
+M.units.npc = { name = "Thrall", realm = "Orgrimmar" }
+M.fire("TRADE_SHOW")
+M.fire("CHAT_MSG_LOOT", "You receive item: " .. BREAD .. ".")
+M.money = M.money - 50
+M.fire("PLAYER_MONEY")
+M.fire("TRADE_CLOSED")
+M.units.npc = nil
+check(last("receive").how == "trade" and last("receive").partner == "Thrall-Orgrimmar", "traded item has the partner")
+check(last("money").reason == "trade" and last("money").partner == "Thrall-Orgrimmar", "trade money has the partner")
+M.out = {}
+SlashCmdList.TRAVELLOG("log 2")
+local out = table.concat(M.out, "\n")
+check(out:find("(trade from Thrall-Orgrimmar)", 1, true) and out:find("(trade to Thrall-Orgrimmar)", 1, true), "log shows the partner")
+
+-- Mail: each take is credited to that mail's sender
+M.inbox = { { sender = "Jaina", money = 300 }, { sender = "Anduin", items = { { link = BREAD } } } }
+M.fire("MAIL_SHOW")
+TakeInboxMoney(1)
+M.money = M.money + 300
+M.fire("PLAYER_MONEY")
+check(last("money").reason == "mail" and last("money").sender == "Jaina" and not last("money").partner, "mail money has its sender")
+AutoLootMailItem(2)
+M.fire("CHAT_MSG_LOOT", "You receive item: " .. BREAD .. ".")
+check(last("receive").how == "mail" and last("receive").sender == "Anduin", "mail item has its sender")
+M.fire("MAIL_CLOSED")
+
+-- Other sources name nobody
+M.fire("CHAT_MSG_LOOT", "You receive item: " .. BREAD .. ".")
+check(last("receive").how == "received" and not last("receive").sender and not last("receive").partner, "no name outside trade and mail")
+
+ns = M.Reload()
+check(last("money").sender == "Jaina", "sender kept after a reload")
