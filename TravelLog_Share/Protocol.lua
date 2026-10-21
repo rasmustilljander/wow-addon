@@ -47,9 +47,18 @@ end
 -- Sharing yours
 --------------------------------------------------------------------------------
 
+-- How many times all your characters together looted the node.
+local function Total(node)
+	local n = 0
+	for _, count in pairs(node.counts) do
+		n = n + count
+	end
+	return n
+end
+
 local function NodeRecord(map, index, node)
 	return ("%d,%d,%s,%.1f,%.1f,%d,%d,%s,%s"):format(map, index, KIND_CODES[node.kind] or "x", node.x, node.y,
-		node.last, node.count, node.id or "", Strip(node.name, NAME_LENGTH))
+		node.last, Total(node), node.id or "", Strip(node.name, NAME_LENGTH))
 end
 
 -- Sends "<head> rec;rec;..." in as few messages as fit.
@@ -69,7 +78,7 @@ end
 
 local function SendNodes(target, since)
 	local records = {}
-	for map, list in pairs(TravelLogNodesDB and TravelLogNodesDB.maps or {}) do
+	for map, list in pairs(TravelLogNodesAccountDB and TravelLogNodesAccountDB.maps or {}) do
 		for i, node in ipairs(list) do
 			if node.last and node.last > since then
 				records[#records + 1] = NodeRecord(map, i, node)

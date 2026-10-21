@@ -1,7 +1,8 @@
 -- The TravelLog window: this character's totals on one tab and the settings
 -- on another, each under section headings. Opened from the minimap button
 -- or /tl window. Companion addons add their own rows with ns.AddStat,
--- ns.AddSetting and ns.AddStepper while loading, or at login.
+-- ns.AddSetting and ns.AddStepper, and whole tabs with ns.AddTab, while
+-- loading or at login.
 local _, ns = ...
 
 local WIDTH = 460
@@ -19,6 +20,7 @@ local REFRESH = 1 -- seconds between redraws while the window is open
 -- in the order they're first used. Empty ones are left out.
 local stats = { order = { "Travel", "Loot", "Life", "Log" }, rows = {} }
 local settings = { order = { "World map", "General" }, rows = {} }
+local extraTabs = {} -- companions' tabs, after Totals and Settings
 local window
 
 local function Add(tab, section, row)
@@ -62,6 +64,14 @@ end
 -- label it reads as part of the row above.
 function ns.AddStepper(section, label, get, step)
 	Add(settings, section, { label = label, get = get, step = step })
+end
+
+-- Adds a tab after Settings. build(page) fills its page when the window is
+-- first opened; the page is the window's width and at least height tall.
+-- refresh(), if given, runs whenever the tab is shown and every second while
+-- it is.
+function ns.AddTab(name, height, build, refresh)
+	extraTabs[#extraTabs + 1] = { name = name, height = height, build = build, refresh = refresh }
 end
 
 local function Text(label)
@@ -132,6 +142,11 @@ local function Refresh()
 			setting.check.Text:SetText(Text(setting.label))
 		end
 	end)
+	for _, tab in ipairs(extraTabs) do
+		if tab.refresh and tab.page:IsShown() then
+			tab.refresh()
+		end
+	end
 end
 ns.RefreshWindow = Refresh
 
@@ -290,19 +305,27 @@ local function CreateWindow()
 	f.who = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	f.who:SetPoint("TOPLEFT", 14, -34)
 
-	-- A page per tab, the window as tall as the taller one.
+	-- A page per tab, the window as tall as the tallest one.
 	f.pages = {}
+	local all = {
+		{ name = "Totals", build = function(page) return Fill(page, stats, AddStatRow) end },
+		{ name = "Settings", build = function(page) return Fill(page, settings, AddSettingRow) end },
+	}
+	for _, tab in ipairs(extraTabs) do
+		all[#all + 1] = tab
+	end
 	local tabs, height = {}, 0
-	for i, tab in ipairs({ { "Totals", stats, AddStatRow }, { "Settings", settings, AddSettingRow } }) do
+	for i, tab in ipairs(all) do
 		local page = CreateFrame("Frame", nil, f)
 		page:SetPoint("TOPLEFT", 0, TOP)
-		height = math.max(height, Fill(page, tab[2], tab[3]))
+		height = math.max(height, tab.height or 0, tab.build(page) or 0)
+		tab.page = page
 		f.pages[i] = page
 
 		-- Named so PanelTemplates finds it as TravelLogFrameTab<i>.
 		tabs[i] = CreateFrame("Button", "TravelLogFrameTab" .. i, f, "PanelTabButtonTemplate")
 		tabs[i]:SetID(i)
-		tabs[i]:SetText(tab[1])
+		tabs[i]:SetText(tab.name)
 		tabs[i]:SetScript("OnClick", function(self)
 			SelectTab(f, self:GetID())
 		end)
@@ -317,14 +340,29 @@ local function CreateWindow()
 	return f
 end
 
--- Opens or closes the window.
-function ns.Toggle()
+local function Window()
 	if not window then
 		window = CreateWindow()
 		window:Hide()
 		ns.window = window
 	end
-	window:SetShown(not window:IsShown())
+	return window
+end
+
+-- Opens or closes the window.
+function ns.Toggle()
+	Window():SetShown(not window:IsShown())
+end
+
+-- Opens the window on the tab with this name.
+function ns.ShowTab(name)
+	local f = Window()
+	f:Show()
+	for i, tab in ipairs(f.Tabs) do
+		if tab:GetText() == name then
+			SelectTab(f, i)
+		end
+	end
 end
 
 ns.Command("window", "window - open or close the TravelLog window", function()

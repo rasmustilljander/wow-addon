@@ -10,7 +10,7 @@ Shares what TravelLog records with other players you choose. Players on your all
 | **Nodes** | Sent whenever an allowed player asks, which their addon does on its own: at their login, at yours, and when they follow you. Nodes you loot afterwards go to them right away. | Shown on your world map beside your own (see [below](#on-the-map)). Only nodes looted since the last batch are sent again. |
 | **Log** | Sent only when they ask with `/tl share log`. Chat tells you who asked. | `/tl share log Rasmus 20` asks for the last 20 entries and prints them when they arrive. |
 
-Names without a realm are on your realm. The allow list is account-wide, so all your characters answer; each sends its own nodes and log.
+Names without a realm are on your realm. The allow list is account-wide, so all your characters answer. Each sends the nodes all your characters looted, with the total loot count, and its own log.
 
 ## Commands
 

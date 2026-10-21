@@ -59,7 +59,7 @@ M.advance(60)
 M.cast(3365, "Battered Chest")
 M.loot = { { name = "Linen Cloth", link = "[Linen Cloth]", qty = 1, guid = "GameObject-0-1-0-1-2843-0000FEED" } }
 M.lootAll()
-check(#TravelLogNodesDB.maps[1429] == 2, "two nodes to share")
+check(#TravelLogNodesAccountDB.maps[1429] == 2, "two nodes to share")
 
 M.out = {}
 M.addonMessage("Bob-Forever", PREFIX, "LOG 5")
@@ -205,14 +205,14 @@ local herb = peer and peer.nodes[1429][1]
 check(herb and herb.kind == "herb" and herb.name == "Silverleaf" and herb.count == 2 and herb.x == 30, "shared node stored, updated by the push")
 check(peer.nodes[1429][2].kind == "chest" and peer.nodesSince == herb.last, "chest too; since is the newest")
 check(Printed("got 2 new or updated nodes from Rasmus%-Forever"), "told how many arrived")
-check(#TravelLogNodesDB.maps == 0 and next(TravelLogNodesDB.maps) == nil, "not mixed into Bob's own nodes")
+check(#TravelLogNodesAccountDB.maps == 0 and next(TravelLogNodesAccountDB.maps) == nil, "not mixed into Bob's own nodes")
 
 M.viewMap = 1429
 M.frame()
 local pins = M.shown(M.mapOverlay(2012).children)
 check(#pins == 2 and pins[1].from == "Rasmus-Forever" and pins[1].icon.color[4] == 0.6 and pins[1].w == 6, "shared pins, smaller and dimmer")
 pins[1].scripts.OnEnter(pins[1])
-check(GameTooltip.lines[1] == "Silverleaf" and GameTooltip.lines[2] == "Shared by Rasmus-Forever" and GameTooltip.lines[4] == "Looted 2 times.", "shared pin tooltip: " .. table.concat(GameTooltip.lines, " / "))
+check(GameTooltip.lines[1] == "Silverleaf" and GameTooltip.lines[2] == "Shared by Rasmus-Forever" and GameTooltip.lines[4] == "Looted 2 times", "shared pin tooltip: " .. table.concat(GameTooltip.lines, " / "))
 
 -- Bob's own herb shows beside them
 Herb("Earthroot", 2449, { 0.60, 0.60, -9400, -600 })

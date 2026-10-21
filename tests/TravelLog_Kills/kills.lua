@@ -184,6 +184,40 @@ M.fire("PARTY_KILL", ME, Kobold(6))
 XP("Kobold Worker", 40)
 check(TravelLogKillsDB.mobs["Kobold Worker"].count == 7 and #TravelLogKillsDB.places == 2, "keeps recording after reload")
 
+-- The Kills tab in TravelLog's window: every mob, searchable; a click shows
+-- the zones it died in.
+check(Run("window") == "", "/kills window")
+local w = M.ns("TravelLog").window
+local page = w.pages[3]
+check(w:IsShown() and w.selectedTab == 3 and page:IsShown(), "opens on the Kills tab")
+-- The shown rows of a list, as "name count".
+local function Rows(list)
+	local out = {}
+	for _, row in ipairs(M.shown(list.rows)) do out[#out + 1] = row.name:GetText() .. " " .. row.count:GetText() end
+	return table.concat(out, ", ")
+end
+check(Rows(page.mobs) == "Kobold Worker 7, Diseased Young Wolf 3, Murloc Forager 1", "mobs, most first: " .. Rows(page.mobs))
+check(page.found:GetText() == "3 mobs, 11 kills", "count: " .. page.found:GetText())
+check(page.hint:GetText():find("Click a mob") and Rows(page.zones) == "", "nothing picked yet")
+page.search:SetText("WO")
+check(Rows(page.mobs) == "Kobold Worker 7, Diseased Young Wolf 3", "search: " .. Rows(page.mobs))
+check(page.found:GetText() == "2 of 3 mobs", "found: " .. page.found:GetText())
+page.mobs.rows[2]:Click()
+check(page.title:GetText() == "Diseased Young Wolf" and page.summary:GetText():find("^3 kills, last "), "picked: " .. page.summary:GetText())
+check(page.mobs.rows[2].selected:IsShown() and not page.mobs.rows[1].selected:IsShown(), "picked row marked")
+check(Rows(page.zones) == "Elwynn Forest 3" and page.hint:GetText() == "", "zones: " .. Rows(page.zones))
+-- A kill elsewhere shows up while the window is open.
+M.zone, M.subzone = "Westfall", "Moonbrook"
+M.guidNames["Creature-0-1-2-3-299-12"] = "Diseased Young Wolf"
+M.fire("PARTY_KILL", ME, "Creature-0-1-2-3-299-12")
+M.tick(3)
+for _ = 1, 70 do M.frame() end
+check(Rows(page.zones) == "Elwynn Forest 3, Westfall 1", "new zone: " .. Rows(page.zones))
+check(Rows(page.mobs) == "Kobold Worker 7, Diseased Young Wolf 4", "new count: " .. Rows(page.mobs))
+page.search.clearButton:Click()
+check(page.found:GetText() == "3 mobs, 12 kills" and page.title:GetText() == "Diseased Young Wolf", "search cleared, pick kept")
+M.zone, M.subzone = "Elwynn Forest", "Goldshire"
+
 -- Wipe.
 SlashCmdList.TRAVELLOGKILLS("wipe confirm")
 check(TravelLogKillsDB == nil and M.reloadRequested, "wipe")
@@ -192,9 +226,11 @@ check(TravelLogKillsDB == nil and M.reloadRequested, "wipe")
 M.Logout()
 M.installed = { "TravelLog_Kills" }
 M.saved, M.savedChar = {}, {}
+TravelLog = nil -- the fake keeps addon globals across logins
 for _, name in ipairs(M.installed) do C_AddOns.LoadAddOn(name) end
 M.fire("PLAYER_LOGIN")
 M.guidNames[Kobold(7)] = "Kobold Worker"
 M.fire("PARTY_KILL", ME, Kobold(7))
 M.tick(3)
 check(TravelLogKillsDB.total == 1, "works on its own")
+check(Run("window"):find("needs TravelLog"), "no window without TravelLog")

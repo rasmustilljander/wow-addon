@@ -47,10 +47,12 @@ check(w and w:IsShown(), "click opens the window")
 check(w.TitleText:GetText() == "TravelLog", "title")
 check(w.who:GetText() == "Rasmus-Forever, level 5 Human Mage", "who: " .. w.who:GetText())
 
--- Two tabs, Totals open first; the other one's page is hidden.
+-- Totals and Settings, then TravelLog_Kills' tab; Totals open first, the
+-- other pages hidden.
 local totals, settings = w.pages[1], w.pages[2]
-check(#w.Tabs == 2 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings", "tabs")
-check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown(), "totals tab open")
+check(#w.Tabs == 3 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings"
+	and w.Tabs[3]:GetText() == "Kills", "tabs")
+check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown() and not w.pages[3]:IsShown(), "totals tab open")
 check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disabled")
 
 -- Totals by section, each companion's rows in its section in load order.

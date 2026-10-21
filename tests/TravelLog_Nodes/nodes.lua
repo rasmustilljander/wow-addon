@@ -1,6 +1,7 @@
 -- TravelLog_Nodes: chests and gathering nodes remembered by place, with
--- when they were last looted, their map pins and tooltips, and moving them
--- out of TravelLog's file.
+-- when they were last looted and by whom, their map pins and tooltips, alts
+-- sharing them, wiping, and moving old per-character nodes into the
+-- account-wide file.
 local ns = M.Login()
 
 local function last(kind)
@@ -13,7 +14,23 @@ local function Herb(name, id)
 	return { { name = name, link = "[" .. name .. "]", qty = 2, guid = "GameObject-0-1-0-1-" .. id .. "-00F00D" } }
 end
 local function Nodes(map)
-	return TravelLogNodesDB.maps[map or 1429] or {}
+	return TravelLogNodesAccountDB.maps[map or 1429] or {}
+end
+local function Total(node)
+	return M.ns("TravelLog_Nodes").Total(node)
+end
+local function Tooltip(node)
+	for _, pin in ipairs(M.shown(M.mapOverlay(2012).children)) do
+		if pin.node == node then
+			pin.scripts.OnEnter(pin)
+			return table.concat(GameTooltip.lines, "\n")
+		end
+	end
+end
+local function Stats()
+	M.out = {}
+	SlashCmdList.TRAVELLOG("stats")
+	return table.concat(M.out, "\n")
 end
 
 -- Kills' loot isn't a node
@@ -28,7 +45,7 @@ M.units.target = nil
 M.loot = { { name = "Apple", link = "[Apple]", qty = 1, guid = "GameObject-0-1-0-1-777-0000C0DE" } }
 M.lootAll()
 local crate = Nodes()[1]
-check(crate and crate.kind == "object" and crate.count == 1 and crate.id == 777, "uncast object remembered as 'object'")
+check(crate and crate.kind == "object" and Total(crate) == 1 and crate.id == 777, "uncast object remembered as 'object'")
 
 --------------------------------------------------------------------------------
 -- Gathering nodes
@@ -52,8 +69,9 @@ M.loot = Herb("Silverleaf", 1617)
 M.lootAll()
 check(last("loot").lastHere == firstPick, "loot remembers when this node was last picked")
 local node = Nodes()[2]
-check(#Nodes() == 2 and node.count == 2 and node.name == "Silverleaf" and node.last == M.now, "same spawn point, updated")
+check(#Nodes() == 2 and Total(node) == 2 and node.name == "Silverleaf" and node.last == M.now, "same spawn point, updated")
 check(node.times[1] == M.now and node.times[2] == firstPick, "loot times kept newest first")
+check(node.by[1] == "Rasmus-Forever" and node.by[2] == "Rasmus-Forever" and node.counts["Rasmus-Forever"] == 2, "who looted each time")
 
 -- Mining a vein next to it is a different node
 M.cast(2575, "Copper Vein")
@@ -76,15 +94,15 @@ for _ = 1, 6 do
 	M.loot = Herb("Peacebloom", 1618)
 	M.lootAll()
 end
-check(Nodes()[2].count == 8 and #Nodes()[2].times == 5, "count keeps going, times capped at 5")
-check(ns.stats.nodes.herb == 1 and ns.stats.nodes.ore == 1 and ns.stats.nodes.chest == 1, "node stats count spawn points")
+check(Total(Nodes()[2]) == 8 and #Nodes()[2].times == 5 and #Nodes()[2].by == 5, "count keeps going, times capped at 5")
+check(Stats():find("Nodes remembered: 1 herbs, 1 ore, 1 chests, 1 other (all characters)", 1, true), "node stats count spawn points")
 
 -- Nodes in dungeons (no coordinates) aren't remembered
 M.x, M.wa = nil, nil
 M.cast(3365, "Dusty Chest")
 M.loot = { { name = "Coin", link = "[Coin]", qty = 1, guid = "GameObject-0-1-0-1-9999-0000" } }
 M.lootAll()
-check(last("loot").source == "Dusty Chest" and ns.stats.nodes.chest == 1, "dungeon loot logged but no node")
+check(last("loot").source == "Dusty Chest" and #Nodes() == 4, "dungeon loot logged but no node")
 M.x, M.y, M.wa, M.wb = 0.42, 0.65, -9000, -100
 
 --------------------------------------------------------------------------------
@@ -104,8 +122,10 @@ check(math.abs(herbPin.point[4] - 300) < 0.01 and math.abs(herbPin.point[5] + 26
 herbPin.scripts.OnEnter(herbPin)
 local tip = table.concat(GameTooltip.lines, "\n")
 check(GameTooltip.lines[1] == "Peacebloom", "tooltip names the node")
-check(tip:find("Last looted " .. date("%Y-%m-%d %H:%M", Nodes()[2].last) .. " (under a minute ago)", 1, true), "tooltip shows the last looted time: " .. tip)
-check(tip:find("Looted 8 times"), "tooltip shows how often")
+check(tip:find("Last looted " .. date("%Y-%m-%d %H:%M", Nodes()[2].last) .. " (under a minute ago) by |cff3fc7ebRasmus|r", 1, true),
+	"tooltip shows the last looted time and who, in their class color: " .. tip)
+check(tip:find("Looted 8 times. Before that:", 1, true) and not tip:find("Rasmus 8"), "tooltip shows how often, without a breakdown for one looter")
+check(tip:find("  " .. date("%Y-%m-%d %H:%M", Nodes()[2].times[2]) .. "  |cff3fc7ebRasmus|r", 1, true), "earlier times say who")
 herbPin.scripts.OnLeave(herbPin)
 check(not GameTooltip.shown, "tooltip hides")
 
@@ -138,15 +158,80 @@ check(logged:find("Looted [Peacebloom]x2 from Peacebloom (looted here 30m before
 
 -- Nodes survive a reload
 ns = M.Reload()
-check(#Nodes() == 5 and Nodes()[2].count == 8, "nodes saved")
+check(#Nodes() == 5 and Total(Nodes()[2]) == 8, "nodes saved")
 check(not M.savedChar["Rasmus-Forever"].TravelLog:find("nodes"), "nodes aren't in TravelLog's file")
+check(M.savedSize("TravelLog_Nodes", true) == 0 and M.saved.TravelLog_Nodes:find("Peacebloom"), "nodes are saved account-wide only")
 
 
 --------------------------------------------------------------------------------
--- Nodes from before TravelLog_Nodes existed move out of TravelLog's file
+-- An alt sees the same nodes and adds to them
 --------------------------------------------------------------------------------
 
 M.Logout()
+M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
+ns = M.Login()
+M.viewMap = 1429
+M.frame()
+check(#M.shown(M.mapOverlay(2012).children) == 5, "the alt sees the main's nodes")
+
+M.advance(600)
+M.x, M.y, M.wa, M.wb = 0.30, 0.40, -9100, -300
+M.cast(2366, "Peacebloom")
+M.loot = Herb("Peacebloom", 1618)
+M.lootAll()
+local herbNode = Nodes()[2]
+check(#Nodes() == 5 and Total(herbNode) == 9 and herbNode.counts["Altie-Forever"] == 1 and herbNode.counts["Rasmus-Forever"] == 8,
+	"the alt's pick lands on the same node")
+check(herbNode.by[1] == "Altie-Forever" and herbNode.by[2] == "Rasmus-Forever" and #herbNode.times == 5, "the alt's pick is the newest")
+check(last("loot").lastBy == "Rasmus-Forever", "the loot entry notes who looted it before")
+M.out = {}
+SlashCmdList.TRAVELLOG("log 1")
+check(table.concat(M.out, "\n"):find("(looted here 3h 25m before by Rasmus-Forever)", 1, true), "log names the alt who looted it before: " .. table.concat(M.out, "\n"))
+
+-- A chest only the alt has opened
+M.x, M.y, M.wa, M.wb = 0.80, 0.80, -8500, -1200
+M.cast(3365, "Battered Chest")
+M.loot = { { name = "Linen Cloth", link = "[Linen Cloth]", qty = 1, guid = "GameObject-0-1-0-1-2843-0000FEED" } }
+M.lootAll()
+check(#Nodes() == 6 and last("loot").lastBy == nil, "a new node has no one before")
+
+M.frame()
+tip = Tooltip(herbNode)
+check(tip:find("(under a minute ago) by |cffc69b6dAltie|r", 1, true), "tooltip names the alt in their class color: " .. tip)
+check(tip:find("Looted 9 times (|cff3fc7ebRasmus|r 8, |cffc69b6dAltie|r 1). Before that:", 1, true), "tooltip splits the count by character")
+check(Stats():find("Nodes remembered: 1 herbs, 2 ore, 2 chests, 1 other (all characters)", 1, true), "stats count every character's nodes")
+
+-- Back on the main, the alt's loot shows too
+M.Logout()
+M.player = { name = "Rasmus", realm = "Forever" }
+ns = M.Login()
+M.frame()
+check(#M.shown(M.mapOverlay(2012).children) == 6 and Tooltip(Nodes()[2]):find("by |cffc69b6dAltie|r", 1, true), "the main sees the alt's loot")
+
+-- A character on another realm is named with the realm
+M.Logout()
+M.player = { name = "Faraway", realm = "Elsewhere" }
+ns = M.Login()
+M.frame()
+check(Tooltip(Nodes()[2]):find("by |cffc69b6dAltie-Forever|r", 1, true), "other realms' characters show their realm")
+
+-- Wiping the alt takes it out of the shared nodes
+M.Logout()
+M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
+ns = M.Login()
+SlashCmdList.TRAVELLOG("wipe confirm")
+ns = M.Reload()
+herbNode = Nodes()[2]
+check(#Nodes() == 5 and Total(herbNode) == 8 and herbNode.counts["Altie-Forever"] == nil, "wipe drops the alt's loot and the chest only it opened")
+check(herbNode.by[1] == "Rasmus-Forever" and #herbNode.times == 4 and herbNode.last == herbNode.times[1], "and its time")
+M.Logout()
+M.player = { name = "Rasmus", realm = "Forever" }
+
+--------------------------------------------------------------------------------
+-- Nodes from 0.1's per-character file, and from TravelLog's file before
+-- TravelLog_Nodes existed, move into the shared file
+--------------------------------------------------------------------------------
+
 M.saved, M.savedChar = {}, { ["Rasmus-Forever"] = { TravelLog = [[
 TravelLogCharDB = {
 	["log"] = {},
@@ -154,18 +239,31 @@ TravelLogCharDB = {
 	["nodes"] = { [1429] = { { ["kind"] = "herb", ["name"] = "Peacebloom", ["x"] = 30, ["y"] = 40,
 		["count"] = 3, ["last"] = 1759990000, ["times"] = { 1759990000 } } } },
 }
+]] }, ["Altie-Forever"] = { TravelLog_Nodes = [[
+TravelLogNodesDB = { ["maps"] = { [1429] = {
+	{ ["kind"] = "herb", ["name"] = "Silverleaf", ["x"] = 30.1, ["y"] = 40.1, ["inst"] = 0, ["a"] = -9101, ["b"] = -301,
+		["count"] = 2, ["last"] = 1759995000, ["times"] = { 1759995000, 1759980000 } },
+	{ ["kind"] = "ore", ["name"] = "Copper Vein", ["x"] = 60, ["y"] = 60, ["inst"] = 0, ["a"] = -9500, ["b"] = -700,
+		["count"] = 1, ["last"] = 1759985000, ["times"] = { 1759985000 } },
+} } }
 ]] } }
 ns = M.Login()
-check(TravelLogCharDB.nodes == nil and #Nodes() == 1 and Nodes()[1].count == 3, "old nodes moved to TravelLog_Nodes")
+check(TravelLogCharDB.nodes == nil and #Nodes() == 1 and Total(Nodes()[1]) == 3 and Nodes()[1].by[1] == "Rasmus-Forever",
+	"old nodes moved out of TravelLog's file, as the character's")
+M.Logout()
+
+M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
+ns = M.Login()
+local merged = Nodes()[1]
+check(TravelLogNodesDB == nil and #Nodes() == 2, "0.1's per-character nodes moved into the shared file")
+check(Total(merged) == 5 and merged.counts["Altie-Forever"] == 2 and merged.counts["Rasmus-Forever"] == 3, "the same spot merges into one node")
+check(merged.times[1] == 1759995000 and merged.times[2] == 1759990000 and merged.times[3] == 1759980000
+	and merged.by[1] == "Altie-Forever" and merged.by[2] == "Rasmus-Forever" and merged.last == 1759995000 and merged.name == "Silverleaf",
+	"merged times in order, named after the newest loot")
 M.x, M.y, M.wa, M.wb = 0.30, 0.40, -9100, -300
 M.cast(2366, "Peacebloom")
 M.loot = Herb("Peacebloom", 1618)
 M.lootAll()
-check(#Nodes() == 1 and Nodes()[1].count == 4 and last("loot").lastHere == 1759990000, "a moved node is found again by place")
+check(#Nodes() == 2 and Total(Nodes()[1]) == 6 and last("loot").lastHere == 1759995000, "a moved node is found again by place")
 ns = M.Reload()
-check(#Nodes() == 1 and TravelLogCharDB.nodes == nil, "and stays moved")
-
--- Wiping the character drops this file too
-SlashCmdList.TRAVELLOG("wipe confirm")
-ns = M.Reload()
-check(next(TravelLogNodesDB.maps) == nil, "wipe empties the nodes")
+check(#Nodes() == 2 and TravelLogNodesDB == nil and M.savedSize("TravelLog_Nodes", true) == 0, "and stays moved")
