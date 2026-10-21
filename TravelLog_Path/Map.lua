@@ -13,26 +13,28 @@ local MIN_SEGMENT = 4    -- screen pixels between drawn trail points
 local MAX_STEP = 300     -- yards between consecutive points; more is a teleport
 local REFRESH = 3        -- seconds between adding new points while the map is open
 
--- Trail colors by how you were moving.
-local COLORS = {
+-- Trail colors by how you were moving, and marker colors. Changes from the
+-- Colors tab (tl.settings.trailColors, markerColors) take their place.
+ns.TRAIL_COLORS = {
 	foot = { 1, 0.82, 0, 0.9 },
 	mount = { 1, 0.5, 0.1, 0.9 },
 	flight = { 0.3, 0.85, 1, 0.8 },
 	swim = { 0.3, 0.5, 1, 0.9 },
 	ghost = { 0.85, 0.85, 0.85, 0.6 },
 }
-
--- Marker colors and sizes (screen pixels).
-local MARKERS = {
-	jump = { 1, 1, 1, 0.8, 3 },
-	loot = { 0.75, 0.4, 1, 0.9, 5 },
-	death = { 1, 0.15, 0.15, 1, 9 },
-	level = { 0.2, 1, 0.3, 1, 9 },
-	learned = { 1, 0.45, 0.75, 1, 7 },
-	taxipath = { 0, 0.75, 0.65, 1, 7 },
-	standing = { 0.65, 0.45, 0.25, 1, 7 },
-	mount = { 1, 1, 1, 1, 9 },
+ns.MARKER_COLORS = {
+	jump = { 1, 1, 1, 0.8 },
+	loot = { 0.75, 0.4, 1, 0.9 },
+	death = { 1, 0.15, 0.15, 1 },
+	level = { 0.2, 1, 0.3, 1 },
+	learned = { 1, 0.45, 0.75, 1 },
+	taxipath = { 0, 0.75, 0.65, 1 },
+	standing = { 0.65, 0.45, 0.25, 1 },
+	mount = { 1, 1, 1, 1 },
 }
+
+-- Marker sizes (screen pixels).
+local MARKER_SIZES = { jump = 3, loot = 5, death = 9, level = 9, learned = 7, taxipath = 7, standing = 7, mount = 9 }
 
 -- Log entry types drawn with another type's marker.
 local MARKER_OF = { spell = "learned", skill = "learned", skillup = "learned" }
@@ -48,6 +50,11 @@ local function ModeOf(flags)
 	if tl.HasFlag(flags, F.swimming) then return "swim" end
 	if tl.HasFlag(flags, F.mounted) then return "mount" end
 	return "foot"
+end
+
+local function TrailColor(flags)
+	local mode = ModeOf(flags)
+	return tl.settings.trailColors[mode] or ns.TRAIL_COLORS[mode]
 end
 
 --------------------------------------------------------------------------------
@@ -187,14 +194,14 @@ local function SetLine(i, x1, y1, x2, y2, color, thickness, sublevel)
 	line:Show()
 end
 
-local function SetDot(i, x, y, marker, size)
+local function SetDot(i, x, y, color, size)
 	local dot = dots[i]
 	if not dot then
 		dot = overlay:CreateTexture(nil, "OVERLAY", nil, 1)
 		dot:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask")
 		dots[i] = dot
 	end
-	dot:SetVertexColor(marker[1], marker[2], marker[3], marker[4])
+	dot:SetVertexColor(color[1], color[2], color[3], color[4])
 	dot:SetSize(size, size)
 	dot:ClearAllPoints()
 	dot:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)
@@ -247,8 +254,7 @@ local function Dot(x, y, kind, event)
 	if view.dots >= MAX_DOTS then
 		return
 	end
-	local marker = MARKERS[kind]
-	local size = marker[5] / view.scale
+	local size = MARKER_SIZES[kind] / view.scale
 	-- Markers that would land on top of one of the same kind add nothing.
 	local cell = kind .. math.floor(x / size) .. ":" .. math.floor(y / size)
 	if view.cells[cell] then
@@ -256,7 +262,7 @@ local function Dot(x, y, kind, event)
 	end
 	view.cells[cell] = true
 	view.dots = view.dots + 1
-	SetDot(view.dots, x, y, marker, size)
+	SetDot(view.dots, x, y, tl.settings.markerColors[kind] or ns.MARKER_COLORS[kind], size)
 	if kind == "death" then
 		view.deaths = view.deaths + 1
 		SetDeathPin(view.deaths, event, x, y, size)
@@ -282,7 +288,7 @@ local function DrawSession(s, data, progress, source)
 			if lastX and p[i + 5] then
 				if (x - lastX) ^ 2 + (y - lastY) ^ 2 >= view.minSegment and view.lines < MAX_LINES then
 					view.lines = view.lines + 1
-					SetLine(view.lines, lastX, lastY, x, y, color or COLORS[ModeOf(p[i + 4])], thickness, sublevel)
+					SetLine(view.lines, lastX, lastY, x, y, color or TrailColor(p[i + 4]), thickness, sublevel)
 					lastX, lastY = x, y
 				end
 			else
@@ -396,7 +402,7 @@ local function DrawNew()
 			for i = view.logNext[log] or 1, #log do
 				local e = log[i]
 				local kind = MARKER_OF[e.type] or e.type
-				if MARKERS[kind] and e.map and e.x and (not history.before or e.time < history.before) then
+				if MARKER_SIZES[kind] and e.map and e.x and (not history.before or e.time < history.before) then
 					local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
 					if x then
 						Dot(x * view.w, y * view.h, kind, e)

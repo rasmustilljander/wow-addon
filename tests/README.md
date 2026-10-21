@@ -26,6 +26,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
 | `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the searchable event log, companion tabs, moving and a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
+| `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, an alt's archive, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their minimap and world map pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
@@ -82,6 +83,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.secrets[value] = true` | Make a value secret, as the Midnight-era client does in dungeons. |
 | `M.installed`, `M.disabled` | Addon folders the client knows (default TravelLog, TravelLog_Path, TravelLog_Nodes) and which are off. |
 | `M.viewMap`, `M.mapOverlay(level)`, `M.shown(pool)` | The shown world map, an addon's overlay on it (newest, or by frame level: Path 2010, Kills 2011, Nodes 2012), and its visible lines, textures and frames. |
+| `M.pickColor(r, g, b, a)`, `M.closeColorPicker(okay)` | Drag the open `ColorPickerFrame` to a color; close it with Okay or Cancel. |
 | `M.out`, `M.errors` | Everything printed to chat, and Lua errors sent to `geterrorhandler` (they count as failures). |
 | `M.saved`, `M.savedSize(addon, perCharacter)` | The saved files' text and size. |
 
