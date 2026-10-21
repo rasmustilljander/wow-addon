@@ -20,7 +20,7 @@ An NPC is saved, or updated, each time you open one of these windows with it:
 
 For each NPC: name, title (`General Supplies`), kinds, zone, subzone, map coordinates (your position, not the NPC's) and when you last visited. In dungeons there are no coordinates, so no pins.
 
-For vendors, every item on sale with its price, stack size, whether it's limited supply, and whether it costs another currency (honor, marks, tokens). With the vendor's filter on **All**, each visit replaces the list. With a class filter, items are only added.
+For vendors, every item on sale with its price, stack size, whether it's limited supply, and any currencies or items it costs (honor, marks, tokens). With the vendor's filter on **All**, each visit replaces the list. With a class filter, items are only added.
 
 ## Item tooltips
 
@@ -33,7 +33,7 @@ Sold by Innkeeper Farley (Goldshire)   20c for 5
 and 2 more vendors
 ```
 
-A price can read `1g 20s, limited`, `other currency` or `2g + more` (gold and another currency).
+A price can read `1g 20s, limited` or `2g + 30 Warsong Gulch Mark of Honor`. `other currency` (or `2g + more`) means the client didn't say which.
 
 ## Minimap and world map
 
@@ -91,17 +91,17 @@ TravelLogNPCsDB = {
       items = {
         [159] = { name = "Refreshing Spring Water", price = 25, stack = 5 },
         [2528] = { name = "Fine Longsword", price = 12000, limited = true },
-        [20558] = { name = "Warsong Gulch Mark of Honor", special = true },   -- other currency
+        [19549] = { name = "Sentinel's Blade", special = true,                -- costs more than money
+          cost = { { name = "Honor Points", count = 450 }, { name = "Warsong Gulch Mark of Honor", count = 30 } } },
       } },
   },
 }
 ```
 
-`x`, `y` are map coordinates 0–100. `price` is in copper, for `stack` items when that's set.
+`x`, `y` are map coordinates 0–100. `price` is in copper and `cost` lists the other currencies and items, both for `stack` items when that's set. `special` without `cost` is an unreadable cost.
 
 ## Limits
 
 - One position per NPC: the last place you talked to it. NPCs that share an ID (some guards) are one NPC.
 - Gossip-only NPCs (quest givers, guards) aren't saved unless you `/npcs add` them.
-- Other-currency prices aren't itemized.
 - Untested in the live game; written against the Forever 1.60.1 API documentation and tested against a fake client ([tests](../tests/README.md)).

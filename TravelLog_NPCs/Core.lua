@@ -124,7 +124,7 @@ end)
 --       map = 1429, x = 43.2, y = 65.8, zone = "Elwynn Forest", subzone = "Goldshire",
 --       seen = 1760000000, hidden = true,
 --       items = { [159] = { name = "Refreshing Spring Water", price = 25, stack = 5,
---         limited = true, special = true } } },
+--         limited = true, special = true, cost = { { name = "Honor Points", count = 450 } } } } },
 --   },
 -- }
 -- x, y are map coordinates 0-100 of where you stood.
@@ -208,16 +208,21 @@ function ns.KindsText(npc)
 	return #list > 0 and table.concat(list, ", ") or ns.kindInfo.other.name
 end
 
--- The text for what one item costs: "25c", "1s for 5", "other currency".
+-- The text for what one item costs: "25c", "1s for 5", "1g + 20 Honor Points",
+-- "other currency" (one whose currencies weren't readable).
 function ns.PriceText(item)
-	local text
+	local parts = {}
 	if item.price then
-		text = ns.MoneyText(item.price)
-		if item.special then
-			text = text .. " + more"
-		end
+		parts[1] = ns.MoneyText(item.price)
+	end
+	for _, cost in ipairs(item.cost or {}) do
+		parts[#parts + 1] = ("%d %s"):format(cost.count, cost.name)
+	end
+	local text
+	if item.special and not item.cost then
+		text = item.price and parts[1] .. " + more" or "other currency"
 	else
-		text = item.special and "other currency" or "free"
+		text = #parts > 0 and table.concat(parts, " + ") or "free"
 	end
 	if item.stack then
 		text = ("%s for %d"):format(text, item.stack)
@@ -336,6 +341,24 @@ end
 
 local merchant -- ID of the vendor whose window is open
 
+-- The currencies and items (not money) merchant item i costs, as
+-- { { name = "Honor Points", count = 450 } }, or nil if none are readable.
+local function MerchantCost(i)
+	if not GetMerchantItemCostItem then
+		return nil
+	end
+	local cost = {}
+	for c = 1, MAX_ITEM_COST or 3 do
+		local texture, count, link, currency = GetMerchantItemCostItem(i, c)
+		count, link, currency = ns.Clean(count), ns.Clean(link), ns.Clean(currency)
+		local name = currency or (link and link:match("|h%[(.-)%]|h"))
+		if texture and name and count then
+			cost[#cost + 1] = { name = name, count = count }
+		end
+	end
+	return #cost > 0 and cost or nil
+end
+
 -- Reads the open vendor's items. With the vendor's filter on "All" this is
 -- the whole list; with a class filter it only adds to what's known.
 local function ScanMerchant()
@@ -364,6 +387,7 @@ local function ScanMerchant()
 				stack = info.stackCount and info.stackCount > 1 and info.stackCount or nil,
 				limited = info.numAvailable and info.numAvailable >= 0 or nil,
 				special = info.hasExtendedCost or nil,
+				cost = info.hasExtendedCost and MerchantCost(i) or nil,
 			}
 		end
 	end
