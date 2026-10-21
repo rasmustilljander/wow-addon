@@ -37,6 +37,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl window`, fo
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
 - **Colors**, with [TravelLog_Path](../TravelLog_Path/README.md#world-map): the trail's and markers' colors on the world map.
+- **Sharing**, with [TravelLog_Share](../TravelLog_Share/README.md#the-sharing-tab): who you share with and follow, and their logs.
 
 Companions add their rows to the matching section.
 
@@ -50,7 +51,7 @@ Companions add their rows to the matching section.
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
 | `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' data |
 
-`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`.
+`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
 
 ## Where the data is
 
