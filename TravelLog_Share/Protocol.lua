@@ -11,7 +11,7 @@
 --
 -- Only players on your allow list get your data. Nodes go to them whenever
 -- they ask, which their addon does on its own; the log only when they ask
--- for it with /tl share log.
+-- for it from the Sharing tab.
 local _, ns = ...
 local tl = TravelLog
 
@@ -120,7 +120,7 @@ handlers.NODES = function(sender, key, arg)
 	ns.Record(sender, "nodes", allowed)
 	if not allowed then
 		if Refuse(sender, key, "nodes") then
-			tl.Print("%s asked for your nodes but isn't allowed (/tl share allow %s).", sender, sender)
+			tl.Print("%s asked for your nodes but isn't allowed (/tl share to allow them).", sender)
 		end
 		return
 	end
@@ -134,12 +134,24 @@ handlers.LOG = function(sender, key, arg)
 	ns.Record(sender, "log", allowed, n)
 	if not allowed then
 		if Refuse(sender, key, "log") then
-			tl.Print("%s asked for your log but isn't allowed (/tl share allow %s).", sender, sender)
+			tl.Print("%s asked for your log but isn't allowed (/tl share to allow them).", sender)
 		end
 		return
 	end
 	tl.Print("%s asked for your log: sending the last %d entries.", sender, n)
 	SendLog(sender, n)
+end
+
+-- Lets a player get your nodes and ask for your log, and tells them you're online.
+function ns.Allow(name, key)
+	ns.db.allowed[key] = name
+	ns.Changed()
+	ns.Send(name, "HELLO")
+end
+
+function ns.Revoke(key)
+	ns.db.allowed[key], ns.listeners[key] = nil, nil
+	ns.Changed()
 end
 
 -- Nodes you loot go straight to whoever asked for them this session.
@@ -156,8 +168,11 @@ end)
 -- Getting theirs
 --------------------------------------------------------------------------------
 
-local pending = {}  -- key -> log entries arriving after a /tl share log
-local toldNo = {}   -- followed players who said no, told once a session
+-- This session only, by key:
+ns.pending = {}       -- log entries arriving after you asked for them
+ns.logRefused = {}    -- players who said no to your last log request
+ns.nodesRefused = {}  -- followed players who said no to sharing nodes, told once
+local pending = ns.pending
 
 function ns.RequestNodes(key)
 	local peer = ns.db.peers[key]
@@ -165,8 +180,30 @@ function ns.RequestNodes(key)
 end
 
 function ns.RequestLog(name, key, n)
-	pending[key] = { entries = {} }
+	pending[key] = { entries = {}, count = n }
+	ns.logRefused[key] = nil
+	ns.Changed()
 	ns.Send(name, "LOG " .. n)
+end
+
+-- Gets a player's nodes now and whenever you're both online.
+function ns.Follow(name, key)
+	ns.db.follow[key] = name
+	ns.Changed()
+	ns.RequestNodes(key)
+end
+
+-- Stops, and drops their nodes.
+function ns.Unfollow(key)
+	ns.db.follow[key] = nil
+	if ns.db.peers[key] then
+		ns.db.peers[key].nodes, ns.db.peers[key].nodesSince = {}, nil
+	end
+	ns.nodesRefused[key] = nil
+	ns.Changed()
+	if tl.NodesChanged then
+		tl.NodesChanged()
+	end
 end
 
 handlers.HELLO = function(_, key)
@@ -177,10 +214,12 @@ end
 
 handlers.NO = function(sender, key, what)
 	if what == "log" and pending[key] then
-		pending[key] = nil
+		pending[key], ns.logRefused[key] = nil, true
+		ns.Changed()
 		tl.Print("%s hasn't allowed you to see their log.", sender)
-	elseif what == "nodes" and ns.db.follow[key] and not toldNo[key] then
-		toldNo[key] = true
+	elseif what == "nodes" and ns.db.follow[key] and not ns.nodesRefused[key] then
+		ns.nodesRefused[key] = true
+		ns.Changed()
 		tl.Print("%s doesn't share their nodes with you.", sender)
 	end
 end
@@ -201,6 +240,8 @@ handlers.N = function(sender, key, arg)
 			peer.nodesSince = math.max(peer.nodesSince or 0, last)
 		end
 	end
+	ns.nodesRefused[key] = nil
+	ns.Changed()
 	if tl.NodesChanged then
 		tl.NodesChanged()
 	end
@@ -234,7 +275,8 @@ handlers.LEND = function(sender, key)
 	end
 	pending[key] = nil
 	ns.Peer(key, sender).log = { received = time(), entries = p.entries }
-	ns.ShowLog(key)
+	ns.Changed()
+	tl.Print("got %d log entries from %s: /tl share shows them.", #p.entries, sender)
 end
 
 tl.On("CHAT_MSG_ADDON", function(prefix, text, channel, sender)

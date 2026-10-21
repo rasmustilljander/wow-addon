@@ -31,7 +31,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
-| `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, a reload. |
+| `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, the Sharing tab, a reload. |
 | `ItemCount/count.lua` | Bags, bank and account bank, mail and mail to alts, auctions running out, equipped items, tooltip lines, commands, a reload. |
 | `TravelLog_Group/group.lua` | Groups from the roster, other realms, kills together, unreadable names, raids, reloads and long logouts while grouped, tooltips, commands, the Players tab. |
 | `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, the Kills tab, a reload. |

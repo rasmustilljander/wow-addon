@@ -1,31 +1,26 @@
 # TravelLog Share
 
-Shares what TravelLog records with other players you choose. Players on your allow list get your looted chests, herbs and ore automatically, and can ask for your log; everyone else is refused. Every request you get is recorded. Needs [TravelLog](../TravelLog/); install [TravelLog_Nodes](../TravelLog_Nodes/) to share nodes and see other players' on the map. Both players need TravelLog Share.
+Shares what TravelLog records with other players you choose. Players on your allow list get your looted chests, herbs and ore automatically, and can ask for your log; everyone else is refused. Every request you get is recorded. Needs [TravelLog](../TravelLog/); install [TravelLog_Nodes](../TravelLog_Nodes/) to share nodes and see other players' on the map.
 
-## How it works
+## The Sharing tab
+
+Open it with `/tl share`, or from the [TravelLog window](../TravelLog/README.md#window). On the left is everyone you share with, follow or who asked you for something, tagged `share`, `follow` or `asked`. Type a name and press Enter or **Add** to add someone; names without a realm are on your realm, and they stay listed after a reload once you tick a box. Pick a player to see and change:
+
+| | |
+| --- | --- |
+| **Share my nodes and log** | They get your nodes and may ask for your log. |
+| **Get their nodes** | Follow them: their nodes show [on your map](#on-the-map), with how many you have. Unticking drops them. |
+| **Asked** | How often they asked you, and what they asked for last, from which character, and whether it was sent. |
+| **Ask for log** | Ask for their last 20, 50 or 100 entries. They're listed below, newest first, and kept until the next ones arrive. |
+
+With nobody picked, the tab shows the last request you got. The Totals tab shows how many players you share with and follow, and when the last request came.
 
 | | You share | You receive |
 | --- | --- | --- |
-| **Set up** | `/tl share allow Bob` | `/tl share follow Rasmus` |
-| **Nodes** | Sent whenever an allowed player asks, which their addon does on its own: at their login, at yours, and when they follow you. Nodes you loot afterwards go to them right away. | Shown on your world map beside your own (see [below](#on-the-map)). Only nodes looted since the last batch are sent again. |
-| **Log** | Sent only when they ask with `/tl share log`. Chat tells you who asked. | `/tl share log Rasmus 20` asks for the last 20 entries and prints them when they arrive. |
+| **Nodes** | Sent whenever an allowed player asks, which their addon does on its own: at their login, at yours, and when they follow you. Nodes you loot afterwards go to them right away. | Only nodes looted since the last batch are sent again. |
+| **Log** | Sent only when they ask. Chat tells you who asked. | Chat tells you when it arrives. |
 
-Names without a realm are on your realm. The allow list is account-wide, so all your characters answer. Each sends the nodes all your characters looted, with the total loot count, and its own log.
-
-## Commands
-
-| Command | |
-| --- | --- |
-| `/tl share` | Who you share with and follow, and the last request |
-| `/tl share allow <name>` | Let `<name>` get your nodes and ask for your log |
-| `/tl share revoke <name>` | Stop sharing with `<name>` |
-| `/tl share follow <name>` | Get `<name>`'s nodes automatically |
-| `/tl share unfollow <name>` | Stop, and drop their nodes |
-| `/tl share log <name> [n]` | Ask `<name>` for their last n log entries (default 20, max 100) |
-| `/tl share show <name>` | The log `<name>` last sent you |
-| `/tl share requests [n]` | The last n requests you got (default 10) |
-
-The [TravelLog window](../TravelLog/README.md#window) shows how many players you share with and follow, and when the last request came.
+The allow list is account-wide, so all your characters answer. Each sends the nodes all your characters looted, with the total loot count, and its own log. Both players need TravelLog Share.
 
 ## On the map
 

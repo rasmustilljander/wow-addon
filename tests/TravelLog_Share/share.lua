@@ -29,7 +29,26 @@ end
 local function Printed(pattern)
 	return table.concat(M.out, "\n"):find(pattern) ~= nil
 end
-local function Share(cmd) M.out = {}; SlashCmdList.TRAVELLOG("share " .. cmd) end
+-- The Sharing tab, opened with /tl share and redrawn.
+local function Tab()
+	SlashCmdList.TRAVELLOG("share")
+	local w = M.ns("TravelLog").window
+	for i, tab in ipairs(w.Tabs) do
+		if tab:GetText() == "Sharing" then return w.pages[i] end
+	end
+end
+-- Types a name into the tab and presses Enter; returns the player's side.
+local function Pick(name)
+	local page = Tab()
+	page.name:SetText(name)
+	M.script(page.name, "OnEnterPressed")
+	return Tab().detail
+end
+local function Rows(list)
+	local out = {}
+	for _, row in ipairs(M.shown(list.rows)) do out[#out + 1] = row.name:GetText() .. " " .. row.tag:GetText() end
+	return table.concat(out, ", ")
+end
 
 -- Two accounts, each with its own SavedVariables.
 local accounts, current = {}, "rasmus"
@@ -75,12 +94,27 @@ M.addonMessage("Bob-Forever", "OtherAddon", "LOG 5")
 M.fire("CHAT_MSG_ADDON", PREFIX, "LOG 5", "PARTY", "Bob-Forever", "", 0, 0, "", 0)
 check(#db.requests == 2, "other prefixes and channels are ignored")
 
+-- The tab lists who asked; nobody is picked yet
+local page = Tab()
+check(page:IsShown() and Rows(page.players) == "Bob-Forever |cffff9933asked|r", "requester listed: " .. Rows(page.players))
+check(not page.detail:IsShown() and page.hint:GetText():find("Last request, under a minute ago: Bob%-Forever asked Rasmus%-Forever for nodes: not allowed"),
+	"hint: " .. page.hint:GetText())
+Pick("rasmus")
+check(not page.detail:IsShown() and page.name:GetText() == "rasmus", "you can't add yourself")
+page.name:SetText("")
+page.players.rows[1]:Click()
+local d = page.detail
+check(d:IsShown() and d.title:GetText() == "Bob-Forever" and not d.share:GetChecked() and not d.follow:GetChecked(), "picked Bob")
+check(d.asked:GetText() == "Asked 2 times. Last under a minute ago, for nodes from Rasmus-Forever: not allowed", "asked: " .. d.asked:GetText())
+
 --------------------------------------------------------------------------------
 -- Allowed: nodes on request and as you loot them, the log on request
 --------------------------------------------------------------------------------
 
-Share("allow bob")
-check(db.allowed["bob-forever"] == "Bob-Forever", "bob allowed, realm added")
+d = Pick("bob")
+d.share:Click()
+check(db.allowed["bob-forever"] == "Bob-Forever" and Tab().detail.share:GetChecked(), "bob allowed, realm added")
+check(Rows(page.players) == "Bob-Forever share", "tagged: " .. Rows(page.players))
 check(Find(Take("Bob-Forever"), "^HELLO$"), "allowing says hello")
 
 M.addonMessage("Bob-Forever", PREFIX, "NODES 0")
@@ -157,14 +191,10 @@ M.tick(1)
 M.sendResult = nil
 check(#Take("Bob-Forever") == 0, "TargetOffline drops the queue too")
 
--- Status, requests, the window
-Share("")
-check(Printed("sharing with: Bob%-Forever") and Printed("Last request, under a minute ago: Bob%-Forever asked Rasmus%-Forever for log %(10%): sent"), "status: " .. table.concat(M.out, "\n"))
-Share("requests 2")
-check(#M.out == 3 and M.out[2]:find("asked Rasmus%-Forever for log %(10%): sent"), "/tl share requests")
-Share("bogus")
-check(Printed("/tl share follow <name>"), "help")
-SlashCmdList.TRAVELLOG("window")
+-- Requests in the tab and the totals
+Tab()
+check(d.asked:GetText():find("^Asked %d+ times%. Last under a minute ago, for log %(10%) from Rasmus%-Forever: sent$"), "asked: " .. d.asked:GetText())
+M.ns("TravelLog").window.Tabs[1]:Click()
 local found
 for _, fs in ipairs(M.descendants(TravelLogFrame)) do
 	if fs.text and fs.text:find("^with 1, following 0, last request") then found = true end
@@ -183,10 +213,12 @@ check(Find(Take("Bob-Forever", true), "^HELLO$"), "hello at login")
 -- Revoked: no more nodes
 M.addonMessage("Bob-Forever", PREFIX, "NODES 0")
 Take("Bob-Forever")
-Share("revoke bob-forever")
+d = Pick("bob-forever")
+check(d.share:GetChecked(), "still allowed after a reload")
+d.share:Click()
 Herb("Peacebloom", 1618, { 0.30, 0.40, -9100, -300 })
 check(TravelLogShareDB.allowed["bob-forever"] == nil and #Take("Bob-Forever") == 0, "revoked")
-Share("allow Bob")
+Pick("Bob").share:Click()
 
 --------------------------------------------------------------------------------
 -- Bob: follows Rasmus's nodes and asks for his log
@@ -196,7 +228,9 @@ ns = Play("bob", "Bob")
 M.addonMessage("Rasmus-Forever", PREFIX, "N 1429,9,h,50.0,50.0,1760000000,1,1618,Peacebloom")
 check(next(TravelLogShareDB.peers) == nil, "nodes from someone not followed are ignored")
 
-Share("follow rasmus")
+d = Pick("rasmus")
+check(d.follow.Text:GetText() == "Get their nodes", "not following yet")
+d.follow:Click()
 check(TravelLogShareDB.follow["rasmus-forever"] == "Rasmus-Forever" and Take("Rasmus-Forever")[1] == "NODES 0", "following asks for nodes")
 M.out = {}
 Deliver("Rasmus-Forever", nodeMsgs)
@@ -206,6 +240,9 @@ check(herb and herb.kind == "herb" and herb.name == "Silverleaf" and herb.count 
 check(peer.nodes[1429][2].kind == "chest" and peer.nodesSince == herb.last, "chest too; since is the newest")
 check(Printed("got 2 new or updated nodes from Rasmus%-Forever"), "told how many arrived")
 check(#TravelLogNodesAccountDB.maps == 0 and next(TravelLogNodesAccountDB.maps) == nil, "not mixed into Bob's own nodes")
+Tab()
+check(d.follow:GetChecked() and d.follow.Text:GetText() == "Get their nodes (2)", "count in the tab: " .. d.follow.Text:GetText())
+check(d.status:GetText() == "You haven't asked for their log." and #M.shown(d.log.rows) == 0, "no log yet")
 
 M.viewMap = 1429
 M.frame()
@@ -224,19 +261,25 @@ check(#M.shown(M.mapOverlay(2012).children) == 3, "own and shared pins together"
 -- The log, only when asked
 Deliver("Rasmus-Forever", logMsgs)
 check(peer.log == nil, "a log nobody asked for is ignored")
-Share("log rasmus 3")
-check(Take("Rasmus-Forever")[1] == "LOG 3", "asks for the log")
+d.ask[1]:Click()
+check(Take("Rasmus-Forever")[1] == "LOG 20", "asks for the log")
+check(d.status:GetText() == "Asked for 20 entries, waiting...", "waiting: " .. d.status:GetText())
 M.out = {}
 Deliver("Rasmus-Forever", logMsgs)
 check(#peer.log.entries == 3 and peer.log.entries[2].text:find("^Looted |cffffffff|Hitem:1617") and peer.log.entries[2].time == looted, "log stored")
-check(Printed("Rasmus%-Forever's last 3 log entries") and Printed("Goldshire %(30%.2, 40%.1%)"), "and shown")
-Share("show rasmus")
-check(#M.out == 4, "/tl share show")
-Share("log rasmus")
-Take("Rasmus-Forever")
+check(Printed("got 3 log entries from Rasmus%-Forever"), "told in chat")
+Tab()
+local entries = M.shown(d.log.rows)
+check(d.status:GetText() == "Their last 3 entries, received under a minute ago:" and #entries == 3, "shown in the tab: " .. d.status:GetText())
+check(entries[1].what:GetText():find("Glittering") and entries[2].what:GetText():find("^Looted |cffffffff|Hitem:1617")
+	and entries[2].where:GetText() == date("%m-%d %H:%M", looted) .. "  Goldshire (30.2, 40.1)", "newest first: " .. entries[2].where:GetText())
+d.ask[3]:Click()
+check(Take("Rasmus-Forever")[1] == "LOG 100", "asks for more")
 M.out = {}
 M.addonMessage("Rasmus-Forever", PREFIX, "NO log")
 check(Printed("Rasmus%-Forever hasn't allowed you to see their log"), "told when refused")
+Tab()
+check(d.status:GetText() == "They haven't allowed you to see their log." and #M.shown(d.log.rows) == 3, "refused, the old log stays")
 
 -- Saved; asks for newer nodes at login and when Rasmus says hello
 ns = M.Reload()
@@ -248,6 +291,8 @@ check(Take("Rasmus-Forever")[1] == "NODES " .. peer.nodesSince, "and on hello")
 M.addonMessage("Ann-Forever", PREFIX, "HELLO")
 check(#Take("Ann-Forever") == 0, "hello from someone not followed does nothing")
 
-Share("unfollow rasmus")
+d = Pick("rasmus")
+check(#M.shown(d.log.rows) == 3, "log shown after a reload")
+d.follow:Click()
 M.frame()
 check(TravelLogShareDB.follow["rasmus-forever"] == nil and #M.shown(M.mapOverlay(2012).children) == 1, "unfollow drops their pins")

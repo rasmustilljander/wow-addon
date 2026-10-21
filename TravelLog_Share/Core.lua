@@ -52,6 +52,7 @@ tl.On("TL_WIPE", function()
 		end
 	end
 	ns.db.requests = keep
+	ns.Changed()
 end)
 
 -- "bob", "Bob-Forever" -> "Bob-Forever", "bob-forever": a character name as
@@ -79,6 +80,12 @@ function ns.Peer(key, name)
 	return peer
 end
 
+-- Goes up whenever anything the Sharing tab shows changes.
+ns.version = 0
+function ns.Changed()
+	ns.version = ns.version + 1
+end
+
 -- Notes a request someone sent you.
 function ns.Record(from, what, allowed, count)
 	local list = ns.db.requests
@@ -86,6 +93,7 @@ function ns.Record(from, what, allowed, count)
 	if #list > MAX_REQUESTS then
 		table.remove(list, 1)
 	end
+	ns.Changed()
 end
 
 --------------------------------------------------------------------------------
