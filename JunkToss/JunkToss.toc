@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: JunkToss
+## Notes: Throws away the least valuable grey in your bags with a right-click on the minimap button, plus any items you allowlist.
+## Author: rasmustilljander
+## Version: 0.1.0
+## SavedVariables: JunkTossDB
+
+JunkToss.lua
+UI.lua
+Minimap.lua

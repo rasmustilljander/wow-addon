@@ -11,13 +11,14 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where), with map pins and tooltip counts. TravelLog optional. |
 | [KillXP](KillXP/) | Shows a mob's kill XP (rested and party bonus included) and kills to level on its tooltip. |
 | [CVarBrowser](CVarBrowser/) | A window to search, bookmark and change CVars, with descriptions of well-known ones. |
+| [JunkToss](JunkToss/) | Right-click its minimap button to throw away the cheapest grey, or anything on its allowlist. |
 
 ## Installing
 
 Copy or link the addon folders into `World of Warcraft/<forever folder>/Interface/AddOns/`. The Forever folder sits next to `_retail_` (during the beta it was `_forever_beta_`). Linking lets `git pull` update the addons; on Windows, in a command prompt:
 
 ```
-for /d %d in ("C:\path\to\wow-addon\TravelLog*" "C:\path\to\wow-addon\KillXP" "C:\path\to\wow-addon\CVarBrowser") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
+for /d %d in ("C:\path\to\wow-addon\TravelLog*" "C:\path\to\wow-addon\KillXP" "C:\path\to\wow-addon\CVarBrowser" "C:\path\to\wow-addon\JunkToss") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
 ```
 
 Then `/reload` and make sure the addons are enabled on the character select screen.
