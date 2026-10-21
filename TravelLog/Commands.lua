@@ -241,9 +241,13 @@ function ns.LogMatches(e, query, group)
 end
 
 local function ShowLog(arg)
-	local number, query = arg:match("^(%d+)%s*(.-)%s*$")
+	-- A count is a number on its own, so "2026-10-19" is a search.
+	local number, query = arg:match("^(%d+)$")
+	if not number then
+		number, query = arg:match("^(%d+)%s+(.+)$")
+	end
 	local limit = tonumber(number) or 15
-	query = number and query or arg
+	query = query or arg
 	local found = {}
 	if limit > 0 then
 		for i = #ns.char.log, 1, -1 do
