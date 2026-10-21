@@ -20,6 +20,8 @@ Copy or link the addon folders into `World of Warcraft/<forever folder>/Interfac
 for /d %d in ("C:\path\to\wow-addon\TravelLog*" "C:\path\to\wow-addon\KillXP" "C:\path\to\wow-addon\CVarBrowser") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
 ```
 
+Or copy them with `./deploy.sh` (needs bash and rsync). Copy `.env.example` to `.env` and set `WOW_ADDONS_DIR` to the AddOns folder, or to `user@host:path` for another machine. `./deploy.sh` replaces every addon folder there with the repo's copy, `./deploy.sh TravelLog KillXP` only those, and `-n` first shows what would change. Other addons and SavedVariables aren't touched; linked folders are skipped.
+
 Then `/reload` and make sure the addons are enabled on the character select screen.
 
 ## Game version
