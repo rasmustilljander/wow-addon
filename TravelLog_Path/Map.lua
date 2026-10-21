@@ -38,7 +38,7 @@ local MARKERS = {
 local MARKER_OF = { spell = "learned", skill = "learned", skillup = "learned" }
 
 local overlay
-local lines, dots = {}, {}
+local lines, dots, deathPins = {}, {}, {}
 local drawnMap, drawnScale, drawnVersion, drawnAt = nil, nil, nil, 0
 
 local function ModeOf(flags)
@@ -201,6 +201,38 @@ local function SetDot(i, x, y, marker, size)
 	dot:Show()
 end
 
+local function DeathTooltip(pin)
+	local e = pin.event
+	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
+	GameTooltip:AddLine("Death")
+	GameTooltip:AddLine(date("%Y-%m-%d %H:%M", e.time), 1, 1, 1)
+	GameTooltip:AddLine(tl.Describe(e), 1, 1, 1)
+	GameTooltip:Show()
+end
+
+local function HideTooltip()
+	GameTooltip:Hide()
+end
+
+-- An invisible, click-through frame over a death dot makes just that marker
+-- hoverable without changing how the trail and its textures are drawn.
+local function SetDeathPin(i, e, x, y, size)
+	local pin = deathPins[i]
+	if not pin then
+		pin = CreateFrame("Frame", nil, overlay)
+		pin:EnableMouse(true)
+		pin:SetMouseClickEnabled(false)
+		pin:SetScript("OnEnter", DeathTooltip)
+		pin:SetScript("OnLeave", HideTooltip)
+		deathPins[i] = pin
+	end
+	pin.event = e
+	pin:SetSize(size, size)
+	pin:ClearAllPoints()
+	pin:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)
+	pin:Show()
+end
+
 local function HideFrom(pool, first)
 	for i = first, #pool do
 		pool[i]:Hide()
@@ -211,7 +243,7 @@ end
 -- zoom or setting changes; otherwise only newly recorded points are added.
 local view = { progress = {}, cells = {}, sources = {}, logNext = {} }
 
-local function Dot(x, y, kind)
+local function Dot(x, y, kind, event)
 	if view.dots >= MAX_DOTS then
 		return
 	end
@@ -225,6 +257,10 @@ local function Dot(x, y, kind)
 	view.cells[cell] = true
 	view.dots = view.dots + 1
 	SetDot(view.dots, x, y, marker, size)
+	if kind == "death" then
+		view.deaths = view.deaths + 1
+		SetDeathPin(view.deaths, event, x, y, size)
+	end
 end
 
 -- Draws a session's points not drawn yet. source is the history it's from
@@ -363,7 +399,7 @@ local function DrawNew()
 				if MARKERS[kind] and e.map and e.x and (not history.before or e.time < history.before) then
 					local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
 					if x then
-						Dot(x * view.w, y * view.h, kind)
+						Dot(x * view.w, y * view.h, kind, e)
 					end
 				end
 			end
@@ -379,7 +415,7 @@ local function Redraw()
 	view.map, view.scale = drawnMap, drawnScale
 	view.w, view.h = overlay:GetSize()
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
-	view.lines, view.dots = 0, 0
+	view.lines, view.dots, view.deaths = 0, 0, 0
 	view.sources = Sources()
 	view.logNext = {}
 	wipe(view.progress)
@@ -400,6 +436,7 @@ local function Redraw()
 	DrawNew()
 	HideFrom(lines, view.lines + 1)
 	HideFrom(dots, view.dots + 1)
+	HideFrom(deathPins, view.deaths + 1)
 end
 
 local function OnUpdate()

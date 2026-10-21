@@ -47,16 +47,19 @@ function ns.Look(unit)
 	end
 
 	local dungeon = ns.InDungeon()
-	info.solo, info.estimate = ns.SoloXP(level, mobLevel, elite, dungeon)
-	if info.solo == 0 or ns.Clean(UnitIsTrivial(unit)) then
+	local base
+	base, info.estimate = ns.SoloXP(level, mobLevel, elite, dungeon)
+	if base == 0 or ns.Clean(UnitIsTrivial(unit)) then
 		info.solo, info.gray = 0, true
 		return info
 	end
+	info.bonus = ns.XPBonus()
+	info.solo = ns.ApplyXPBonus(base, info.bonus)
 	info.xp = info.solo
 	if GetNumGroupMembers() > 0 then
 		local levels, raid = GroupLevels()
 		info.groupSize = #levels
-		info.xp = ns.GroupShare(info.solo, level, mobLevel, levels, raid)
+		info.xp = ns.ApplyXPBonus(ns.GroupShare(base, level, mobLevel, levels, raid), info.bonus)
 		info.estimate = true   -- assumes everyone is alive and close by
 	end
 
@@ -93,6 +96,9 @@ function ns.XPText(info)
 	local parts = {}
 	if info.rested > 0 then
 		parts[#parts + 1] = BLUE .. "+" .. Number(info.rested) .. " rested|r"
+	end
+	if info.bonus and info.bonus > 0 then
+		parts[#parts + 1] = "+" .. info.bonus .. "% XP buffs"
 	end
 	if info.groupSize then
 		parts[#parts + 1] = ("%d in group, %s%s solo"):format(info.groupSize, about, Number(info.solo))

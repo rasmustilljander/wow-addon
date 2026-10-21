@@ -33,7 +33,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 
 ## World map
 
-Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups and other milestones. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups and other milestones. Hover a death marker to see its date and what you were fighting. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
 
 | Trail | | Marker | |
 | --- | --- | --- | --- |

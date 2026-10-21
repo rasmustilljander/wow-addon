@@ -191,6 +191,7 @@ check(ns.stats.distance.flight > 800, "flight distance counted")
 -- Death, release, corpse run, level-up
 M.units.target = { name = "Defias Thug", guid = "Creature-0-1-0-1-38-1", hostile = true }
 M.dead = true
+local deathTime = M.now
 M.fire("PLAYER_DEAD")
 M.dead, M.ghost = false, true
 M.fire("PLAYER_ALIVE")
@@ -238,6 +239,14 @@ local colors = {}
 for _, t in ipairs(M.shown(overlay.textures)) do colors[#colors + 1] = table.concat(t.color, ",") end
 table.sort(colors)
 check(#colors == 2 and colors[1]:match("^0.2,1") and colors[2]:match("^1,0.15"), "death and level markers in Westfall: " .. table.concat(colors, " | "))
+local deathPin = M.shown(overlay.children)[1]
+check(deathPin and deathPin.mouse and deathPin.mouseClicks == false, "death marker is hoverable and click-through")
+M.script(deathPin, "OnEnter")
+local deathTip = table.concat(GameTooltip.lines, "\n")
+check(deathTip:find("Death", 1, true) and deathTip:find(date("%Y-%m-%d %H:%M", deathTime), 1, true)
+	and deathTip:find("Died fighting Defias Thug at level 5", 1, true), "death marker tooltip: " .. deathTip)
+M.script(deathPin, "OnLeave")
+check(not GameTooltip.shown, "death marker tooltip hides")
 
 M.viewMap = 1415
 M.frame()

@@ -12,7 +12,7 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where), with map pins and tooltip counts. TravelLog optional. |
 | [TravelLog_NPCs](TravelLog_NPCs/) | Remembers vendors, trainers and other NPCs with what they sell: searchable, pinned on the minimap and world map, and named on item tooltips. TravelLog optional. |
 | [TravelLog_Group](TravelLog_Group/) | Records every player you group with (how often, when, how long, where), searchable in a window tab. TravelLog optional. |
-| [KillXP](KillXP/) | Shows a mob's kill XP (rested and party bonus included) and kills to level on its tooltip. |
+| [KillXP](KillXP/) | Shows a mob's kill XP (Forever XP buffs, rested and party bonus included) and kills to level on its tooltip. |
 | [CVarBrowser](CVarBrowser/) | A window to search, bookmark and change CVars, with descriptions of well-known ones. |
 | [JunkToss](JunkToss/) | Right-click its minimap button to throw away the cheapest grey, or anything on its allowlist. |
 | [ItemCount](ItemCount/) | Shows on item tooltips how many each character has in bags, bank, mail and on the AH. |

@@ -20,6 +20,7 @@ M = {
 	inst = 0, wa = -9000, wb = -100, zone = "Elwynn Forest", subzone = "Goldshire",
 	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false,
 	combat = false, indoors = false, secrets = {}, viewMap = 1429, facing = 0, minimapRadius = 200,
+	auras = {},
 	loot = {}, buyback = {}, merchantItems = {}, units = {}, taxiNodes = {},
 	quests = {}, bind = "Goldshire", bags = {}, repairCost = 0, canRepair = false,
 	installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }, -- addon folders the fake client knows about
@@ -564,6 +565,8 @@ function GetXPExhaustion() return M.rested end
 function GetMaxPlayerLevel() return M.maxLevel end
 function IsXPUserDisabled() return M.xpDisabled end
 function IsInInstance() return M.instance ~= nil, M.instance or "none" end
+C_UnitAuras = {}
+function C_UnitAuras.GetPlayerAuraBySpellID(spellID) return M.auras[spellID] end
 -- M.group lists the other members' units ("party1", ...), set in M.units.
 function GetNumGroupMembers() return #M.group > 0 and #M.group + 1 or 0 end
 function IsInRaid() return M.raid end

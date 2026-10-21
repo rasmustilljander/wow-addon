@@ -1,11 +1,10 @@
 -- KillXP: how much experience a kill gives, and how many kills to the next
 -- level.
 --
--- Forever gives Classic's kill XP for mobs of your own level, but less than
--- Classic (by an unpublished amount) for mobs below it, and dungeon mobs give
--- a bit more. So the Classic formula is only a first guess: every solo kill
--- teaches us what that mob level is really worth at our level, and the
--- tooltip uses that once it's known.
+-- Forever gives Classic's kill XP for mobs of your own level, but bases the
+-- value of lower-level mobs on the mob's level. Dungeon creatures use their
+-- own reduced modifier. Every solo kill still teaches us the unbuffed value
+-- for that player level, mob level and setting, in case the server changes.
 local _, ns = ...
 
 -- Forever runs on the Midnight-era client, which hands addons unreadable
@@ -27,8 +26,12 @@ function ns.Print(text, ...)
 end
 
 --------------------------------------------------------------------------------
--- The Classic formula
+-- The Forever formula
 --------------------------------------------------------------------------------
+
+local function Round(n)
+	return math.floor(n + 0.5)
+end
 
 -- Mobs at or below this level are gray and give nothing.
 function ns.GrayLevel(level)
@@ -59,25 +62,67 @@ local function ZeroDifference(level)
 	return 17
 end
 
--- Classic's solo XP for a kill, without rested bonus, in whole points like
--- the server computes it. Mobs more than 4 levels above you count as +4.
-function ns.ClassicXP(level, mobLevel, elite, dungeon)
+-- Forever's solo XP for a kill, without rested or temporary XP buffs. Mobs
+-- more than 4 levels above you count as +4. Below your level, Forever uses the
+-- mob's level for the base as well as the usual level-difference reduction.
+-- Dungeon creatures currently give about 1.2x normal XP regardless of their
+-- elite classification; outdoor elites give 2x.
+function ns.ForeverXP(level, mobLevel, elite, dungeon)
 	if mobLevel <= ns.GrayLevel(level) then
 		return 0
 	end
-	local base = level * 5 + 45
 	local xp
 	if mobLevel >= level then
+		local base = level * 5 + 45
 		local diff = math.min(mobLevel - level, 4)
-		xp = math.floor((math.floor(base * (20 + diff) / 10) + 1) / 2)
+		xp = Round(base * (20 + diff) / 20)
 	else
+		local base = mobLevel * 5 + 45
 		local zd = ZeroDifference(level)
-		xp = math.floor(base * (zd + mobLevel - level) / zd)
+		xp = Round(base * (zd + mobLevel - level) / zd)
 	end
-	if elite then
-		xp = math.floor(xp * (dungeon and 2.5 or 2))
+	if dungeon then
+		xp = Round(xp * 1.2)
+	elseif elite then
+		xp = xp * 2
 	end
 	return xp
+end
+
+--------------------------------------------------------------------------------
+-- Forever XP buffs
+--------------------------------------------------------------------------------
+
+local WELL_FED_XP = 1243969 -- Well Fed XP Boost: 5% kill XP
+local WELL_RESTED = 429959   -- Sleeping bag: 1% per stack, up to 3
+
+local function PlayerAura(spellID)
+	if not C_UnitAuras or not C_UnitAuras.GetPlayerAuraBySpellID then
+		return nil
+	end
+	return ns.Clean(C_UnitAuras.GetPlayerAuraBySpellID(spellID))
+end
+
+-- Active percentage bonus to kill XP. This is separate from the traditional
+-- rested-XP pool returned by GetXPExhaustion().
+function ns.XPBonus()
+	local bonus = PlayerAura(WELL_FED_XP) and 5 or 0
+	local sleeping = PlayerAura(WELL_RESTED)
+	if sleeping then
+		local stacks = ns.Clean(sleeping.applications) or 1
+		if type(stacks) == "number" then
+			bonus = bonus + math.min(math.max(stacks, 1), 3)
+		end
+	end
+	return bonus
+end
+
+function ns.ApplyXPBonus(xp, bonus)
+	return Round(xp * (100 + (bonus or 0)) / 100)
+end
+
+local function RemoveXPBonus(xp, bonus)
+	return Round(xp * 100 / (100 + (bonus or 0)))
 end
 
 -- Party bonus by group size; raids get none.
@@ -145,7 +190,7 @@ function ns.SoloXP(level, mobLevel, elite, dungeon)
 	if seen then
 		return seen, false
 	end
-	return ns.ClassicXP(level, mobLevel, elite, dungeon), true
+	return ns.ForeverXP(level, mobLevel, elite, dungeon), true
 end
 
 -- Mobs we've looked at recently, by name, so a kill message ("Kobold
@@ -224,12 +269,20 @@ local function OnKill(text)
 	if not mob then
 		return
 	end
-	KillXPDB.seen[Key(UnitLevel("player"), mob.level, mob.elite, InDungeon())] = xp
+	-- Save an unbuffed value so food or sleeping-bag buffs can come and go
+	-- without making the learned number stale.
+	KillXPDB.seen[Key(UnitLevel("player"), mob.level, mob.elite, InDungeon())] = RemoveXPBonus(xp, ns.XPBonus())
 end
 
 frame:SetScript("OnEvent", function(_, event, arg)
 	if event == "ADDON_LOADED" and arg == "KillXP" then
 		KillXPDB = KillXPDB or {}
+		-- Version 1 learned the buffed result, without remembering which buffs
+		-- were active. Those values cannot be normalized safely.
+		if KillXPDB.version ~= 2 then
+			KillXPDB.seen = {}
+		end
+		KillXPDB.version = 2
 		KillXPDB.seen = KillXPDB.seen or {}
 	elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
 		OnKill(arg)

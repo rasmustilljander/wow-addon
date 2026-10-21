@@ -61,7 +61,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.player = { name, realm, class }` | Who logs in; `class` is the class file name (default `MAGE`). Change it between logins to play an alt. |
 | `M.units.target = { name, guid, hostile, level, ... }` | Other units (also `realm` for another realm, `class`, `classification`, `dead`, `tapped`, `trivial`, `player`, `pet`, and `title` for the tooltip line under an NPC's name). `M.units.npc` is who you're talking to. |
 | `M.hover(unit)`, `M.hoverItem(itemID)` | Show a unit's or item's tooltip, running addons' post-calls; returns its lines without color codes. |
-| `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.raid`, `M.instance` | Experience, rested pool, other group members' units (`party1`, ... or `raid1`, ...), raid or party, instance type. |
+| `M.xp`, `M.xpMax`, `M.rested`, `M.auras`, `M.group`, `M.raid`, `M.instance` | Experience, rested pool, player auras by spell ID, other group members' units (`party1`, ... or `raid1`, ...), raid or party, instance type. |
 | `M.skills`, `M.spellNames[id]`, `M.spellRanks[id]` | Skill lines (`{ skillID, name, rank, isHeader }`), spell names and rank text. |
 | `M.trainerServices[i] = { name, rank, cost }` | The open trainer's list (`GetTrainerServiceInfo`, `GetTrainerServiceCost`). |
 | `M.guidNames[guid] = name` | Units the client still knows by GUID (`UnitNameFromGUID`) after they're gone. |

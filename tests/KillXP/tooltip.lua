@@ -2,7 +2,11 @@
 -- bonuses, and learning the real XP from kills.
 M.installed = { "KillXP" }
 M.level, M.xp, M.xpMax = 10, 7000, 7600   -- 600 XP to level 11
+-- Old learned values included whatever XP buffs happened to be active and
+-- cannot be migrated safely.
+M.saved.KillXP = 'KillXPDB = { seen = { ["10:8"] = 999 } }\n'
 local ns = M.Login()
+check(KillXPDB.version == 2 and next(KillXPDB.seen) == nil, "old learned values migrated")
 
 local function Line(lines, label)
 	for _, line in ipairs(lines) do
@@ -19,13 +23,17 @@ local function Mob(level, extra)
 	return M.hover("mouseover")
 end
 
--- The Classic formula at level 10: 95 XP for an even-level mob.
-check(ns.ClassicXP(10, 10) == 95, "even level")
-check(ns.ClassicXP(10, 12) == 105, "two levels above")
-check(ns.ClassicXP(10, 20) == ns.ClassicXP(10, 14), "more than 4 levels above counts as +4")
-check(ns.ClassicXP(10, 8) == 67, "two levels below")
-check(ns.ClassicXP(10, 4) == 0, "gray")
-check(ns.ClassicXP(10, 10, true) == 190 and ns.ClassicXP(10, 10, true, true) == 237, "elites, in and out of dungeons")
+-- The Forever formula: lower-level mobs use the mob's level for their base;
+-- dungeon creatures get the current 20% modifier instead of elite XP.
+check(ns.ForeverXP(10, 10) == 95, "even level")
+check(ns.ForeverXP(10, 12) == 105, "two levels above")
+check(ns.ForeverXP(10, 20) == ns.ForeverXP(10, 14), "more than 4 levels above counts as +4")
+check(ns.ForeverXP(10, 8) == 61, "two levels below")
+check(ns.ForeverXP(16, 15) == 107 and ns.ForeverXP(16, 11) == 44, "Forever lower-level formula and rounding")
+check(ns.ForeverXP(10, 4) == 0, "gray")
+check(ns.ForeverXP(10, 10, true) == 190 and ns.ForeverXP(10, 10, true, true) == 114, "outdoor elite and dungeon creature")
+check(ns.GroupShare(ns.ForeverXP(20, 20, true, true), 20, 20, { 20, 20, 20, 20, 20 }, false) == 48,
+	"level 20 five-player dungeon share")
 check(ns.GrayLevel(5) == 0 and ns.GrayLevel(25) == 18 and ns.GrayLevel(50) == 39 and ns.GrayLevel(60) == 51, "gray levels")
 
 -- Kills to level with rested: two doubled kills, one partly rested, then plain.
@@ -46,10 +54,17 @@ check(Line(lines, "Kill XP") == "~190 (+95 rested)", "rested: " .. tostring(Line
 check(Line(lines, "Kills to level") == "~5", "rested kills: " .. tostring(Line(lines, "Kills to level")))
 M.rested = nil
 
+-- Forever's percentage buffs are separate from the rested-XP pool and stack.
+M.auras[1243969] = { spellId = 1243969, applications = 1 }
+check(Line(Mob(10), "Kill XP") == "~100 (+5% XP buffs)", "food XP buff")
+M.auras[429959] = { spellId = 429959, applications = 3 }
+check(Line(Mob(10), "Kill XP") == "~103 (+8% XP buffs)", "food and sleeping-bag XP buffs")
+M.auras = {}
+
 -- Elite and dungeon elite.
 check(Line(Mob(10, { classification = "elite" }), "Kill XP") == "~190", "elite")
 M.instance = "party"
-check(Line(Mob(10, { classification = "rareelite" }), "Kill XP") == "~237", "dungeon elite")
+check(Line(Mob(10, { classification = "rareelite" }), "Kill XP") == "~114", "dungeon creature")
 M.instance = nil
 
 -- Mobs that give nothing.
@@ -79,6 +94,12 @@ check(Line(lines, "Kills to level") == "~18", "party kills: " .. tostring(Line(l
 M.rested = 1000
 check(Line(Mob(10), "Kill XP") == "~68 (+34 rested, 3 in group, ~95 solo)", "party, rested")
 M.rested = nil
+M.auras[1243969] = { spellId = 1243969, applications = 1 }
+M.auras[429959] = { spellId = 429959, applications = 3 }
+M.rested = 1000
+check(Line(Mob(10), "Kill XP") == "~74 (+37 rested, +8% XP buffs, 3 in group, ~103 solo)", "party, Forever XP buffs")
+M.auras = {}
+M.rested = nil
 -- A much higher member makes the mob gray for everyone.
 M.units.party2.level = 30
 check(Line(Mob(10), "Kill XP") == "none (too low for your group)", "high-level party member")
@@ -90,11 +111,17 @@ M.group = {}
 
 -- Solo kills teach the real value (Forever gives less than Classic below
 -- your level), which then replaces the estimate.
-check(Line(Mob(8), "Kill XP") == "~67", "estimate before the kill")
-M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 60 experience.")
+check(Line(Mob(8), "Kill XP") == "~61", "estimate before the kill")
+-- Learning removes active percentage buffs before saving the value.
+M.auras[1243969] = { spellId = 1243969, applications = 1 }
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 63 experience.")
+M.auras = {}
 lines = Mob(8)
 check(Line(lines, "Kill XP") == "60", "learned: " .. tostring(Line(lines, "Kill XP")))
 check(Line(lines, "Kills to level") == "10", "learned kills to level")
+M.auras[1243969] = { spellId = 1243969, applications = 1 }
+check(Line(Mob(8), "Kill XP") == "63 (+5% XP buffs)", "buff applied to learned value")
+M.auras = {}
 -- The rested bonus is taken out of what's learned.
 M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 116 experience. (+58 exp Rested bonus)")
 check(Line(Mob(8), "Kill XP") == "58", "learned from a rested kill")
@@ -131,7 +158,7 @@ check(#M.tooltipPostCalls[Enum.TooltipDataType.Unit] == 1, "tooltip hook not sta
 SlashCmdList.KILLXP("")
 check(M.out[#M.out]:find("3 mob levels"), "status: " .. M.out[#M.out])
 SlashCmdList.KILLXP("reset")
-check(Line(Mob(8), "Kill XP") == "~67", "reset back to estimates")
+check(Line(Mob(8), "Kill XP") == "~61", "reset back to estimates")
 
 -- Bigger numbers get thousands separators.
 M.level, M.xp, M.xpMax = 55, 0, 300000
