@@ -1,12 +1,12 @@
--- Slash commands (/kills), rows in the TravelLog window, and the kill count on
--- mob tooltips.
+-- Slash commands (/kills) and the kill count on mob tooltips.
 local _, ns = ...
 
-local function Count(n)
+function ns.Count(n)
 	local s = tostring(math.floor((n or 0) + 0.5))
 	local formatted = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
 	return (formatted:gsub("^(-?),", "%1"))
 end
+local Count = ns.Count
 
 local function Times(n)
 	return n == 1 and "once" or Count(n) .. " times"
@@ -24,7 +24,8 @@ local function Where(k)
 	return where
 end
 
-local function SortedMobs()
+-- Every mob, most killed first.
+function ns.SortedMobs()
 	local list = {}
 	for _, mob in pairs(ns.db.mobs) do
 		list[#list + 1] = mob
@@ -37,6 +38,7 @@ local function SortedMobs()
 	end)
 	return list
 end
+local SortedMobs = ns.SortedMobs
 
 --------------------------------------------------------------------------------
 -- /kills, /kills top
@@ -208,39 +210,6 @@ local function SetMap(arg)
 end
 
 --------------------------------------------------------------------------------
--- The TravelLog window, when TravelLog is installed
---------------------------------------------------------------------------------
-
-local tl = TravelLog
-if tl and tl.AddStat then
-	tl.AddStat("Life", "All kills", function()
-		local mobs = 0
-		for _ in pairs(ns.db.mobs) do
-			mobs = mobs + 1
-		end
-		return ("%s of %s mobs"):format(Count(ns.db.total), Count(mobs))
-	end)
-	tl.AddStat("Life", "Most killed", function()
-		local best
-		for _, mob in pairs(ns.db.mobs) do
-			if not best or mob.count > best.count then
-				best = mob
-			end
-		end
-		return best and ("%s (%s)"):format(best.name, Count(best.count)) or "nothing yet"
-	end)
-	tl.AddSetting("World map", function()
-		return "Kills" .. (ns.db.settings.mapFilter and ns.db.settings.map
-			and (": only %s"):format(ns.db.settings.mapFilter) or "")
-	end, function()
-		return ns.db.settings.map
-	end, function(on)
-		ns.db.settings.map, ns.db.settings.mapFilter = on, nil
-		ns.RefreshMap()
-	end)
-end
-
---------------------------------------------------------------------------------
 -- Dispatch
 --------------------------------------------------------------------------------
 
@@ -250,6 +219,7 @@ local function Help()
 	print("  /kills <name> - how often, when and where you killed a mob")
 	print("  /kills target - the same for your target")
 	print("  /kills recent [n] - your last n kills (default 15)")
+	print("  /kills window - every mob and the zones you killed it in (needs TravelLog)")
 	print("  /kills map on|off|<name>|target - kill spots on the world map, or one mob's (now: " .. MapStatus() .. ")")
 	print("  /kills wipe confirm - delete every recorded kill for this character")
 end
@@ -268,6 +238,12 @@ SlashCmdList.TRAVELLOGKILLS = function(msg)
 		ShowRecent(tonumber(arg) or 15)
 	elseif command == "target" and arg == "" then
 		ShowTarget()
+	elseif command == "window" and arg == "" then
+		if ns.ShowWindow then
+			ns.ShowWindow()
+		else
+			ns.Print("the kills window needs TravelLog.")
+		end
 	elseif command == "map" then
 		SetMap(msg:match("^%S+%s*(.-)$"))
 	elseif command == "wipe" and arg == "confirm" then

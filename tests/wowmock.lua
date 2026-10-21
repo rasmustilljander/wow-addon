@@ -130,7 +130,9 @@ Enum = {
 	ConsoleCommandType = { Cvar = 0, Command = 1, Macro = 2, Script = 3 },
 	ConsoleCategory = { Debug = 0, Graphics = 1, Console = 2, Combat = 3, Game = 4, Default = 5, Net = 6, Sound = 7, Gm = 8, Reveal = 9, None = 10 },
 	ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
-	BagIndex = { Backpack = 0 },
+	BagIndex = { Keyring = -1, Backpack = 0, CharacterBankTab_1 = 6, AccountBankTab_1 = 15 },
+	BankType = { Character = 0, Guild = 1, Account = 2 },
+	AuctionStatus = { Active = 0, Sold = 1 },
 	SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
 		NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10,
 		AddOnMessageLockdown = 11, TargetOffline = 12 },
@@ -151,7 +153,9 @@ UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_O
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
 QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
-PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
+PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED
+PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
+AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
@@ -432,7 +436,7 @@ function M.tick(n)
 end
 
 GameTooltip = { lines = {} }
-function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit = owner, {}, nil end
+function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit, self.item = owner, {}, nil, nil end
 function GameTooltip:AddLine(text) self.lines[#self.lines + 1] = text end
 function GameTooltip:SetText(text) self.lines = { text } end
 function GameTooltip:SetHyperlink(link) self.lines = { link } end
@@ -441,6 +445,9 @@ function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
 function GameTooltip:GetUnit()
 	if self.unit then return UnitName(self.unit), self.unit, UnitGUID(self.unit) end
+end
+function GameTooltip:GetItem()
+	if self.item then local name, link = C_Item.GetItemInfo(self.item); return name, link, self.item end
 end
 
 -- Tooltip post-calls added by addons, by tooltip data type.
@@ -451,14 +458,11 @@ function TooltipDataProcessor.AddTooltipPostCall(kind, fn)
 	table.insert(M.tooltipPostCalls[kind], fn)
 end
 
--- Shows the unit tooltip for a unit (like hovering it) and returns its lines
+-- Runs the post-calls for a tooltip of this data type and returns its lines
 -- without color codes.
-function M.hover(unit)
-	GameTooltip:SetOwner(UIParent)
-	GameTooltip.unit = unit
-	GameTooltip:AddLine(UnitName(unit))
-	for _, fn in ipairs(M.tooltipPostCalls[Enum.TooltipDataType.Unit] or {}) do
-		fn(GameTooltip, { type = Enum.TooltipDataType.Unit, guid = UnitGUID(unit) })
+local function ShowTooltip(data)
+	for _, fn in ipairs(M.tooltipPostCalls[data.type] or {}) do
+		fn(GameTooltip, data)
 	end
 	GameTooltip:Show()
 	local lines = {}
@@ -466,6 +470,23 @@ function M.hover(unit)
 		lines[i] = line:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
 	end
 	return lines
+end
+
+-- Shows the unit tooltip for a unit (like hovering it) and returns its lines
+-- without color codes.
+function M.hover(unit)
+	GameTooltip:SetOwner(UIParent)
+	GameTooltip.unit = unit
+	GameTooltip:AddLine(UnitName(unit))
+	return ShowTooltip({ type = Enum.TooltipDataType.Unit, guid = UnitGUID(unit) })
+end
+
+-- The same for an item, by item ID (like hovering it in the bags).
+function M.hoverItem(id)
+	GameTooltip:SetOwner(UIParent)
+	GameTooltip.item = id
+	GameTooltip:AddLine(C_Item.GetItemInfo(id) or ("Item " .. id))
+	return ShowTooltip({ type = Enum.TooltipDataType.Item, id = id })
 end
 
 --------------------------------------------------------------------------------
@@ -669,6 +690,15 @@ function ClearCursor() M.cursorItem = nil end
 function DeleteCursorItem()
 	if M.cursorItem then M.bags[M.cursorItem], M.cursorItem = nil, nil end
 end
+-- Equipped items: M.equipped[inventorySlot] = item link.
+INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED = 1, 19
+M.equipped = {}
+function GetInventoryItemID(_, slot) local link = M.equipped[slot]; return link and LinkID(link) end
+-- The bank: its tabs are bags (Enum.BagIndex.CharacterBankTab_1 and up, the
+-- account bank's from AccountBankTab_1), in M.bags and M.bagSlots like the
+-- others. M.accountBank: the account bank can be seen.
+C_Bank = {}
+function C_Bank.CanViewBank(bankType) return bankType ~= Enum.BankType.Account or M.accountBank == true end
 C_Item = {}
 function C_Item.GetItemInfo(item)
 	local id = tonumber(item) or LinkID(item)
@@ -708,6 +738,38 @@ function M.lootAll(take)
 	end
 	M.fire("LOOT_CLOSED")
 end
+
+-- Mail. M.inbox = { { cod, items = { { link, count, currency }, ... } }, ... };
+-- M.sendItems[i] = { link, count } are the attachments of the mail being
+-- written, and SendMail puts { to, items } in M.sentMail.
+M.inbox, M.sendItems, M.sentMail = {}, {}, {}
+function GetInboxNumItems() return #M.inbox, #M.inbox end
+function GetInboxHeaderInfo(i)
+	local m = M.inbox[i]
+	return nil, nil, m.sender or "Someone", m.subject or "", 0, m.cod or 0, 30, #(m.items or {}), false
+end
+function GetInboxItem(i, a)
+	local it = (M.inbox[i].items or {})[a]
+	if not it then return nil end
+	local id = LinkID(it.link)
+	return it.link:match("%[(.-)%]"), id, 134400, it.count or 1, (M.items[id] or {}).quality or 1, true, it.currency or false
+end
+function GetSendMailItem(i)
+	local it = M.sendItems[i]
+	if not it then return nil end
+	local id = LinkID(it.link)
+	return it.link:match("%[(.-)%]"), id, 134400, it.count or 1, (M.items[id] or {}).quality or 1
+end
+function SendMail(to) M.sentMail[#M.sentMail + 1] = { to = to, items = M.sendItems } end
+
+-- Auction house. M.ownedAuctions = { OwnedAuctionInfo, ... } is what
+-- GetOwnedAuctions returns after QueryOwnedAuctions, which counts its calls
+-- in M.ownedQueries.
+M.ownedAuctions, M.ownedQueries = {}, 0
+C_AuctionHouse = {}
+function C_AuctionHouse.QueryOwnedAuctions(sorts) assert(type(sorts) == "table"); M.ownedQueries = M.ownedQueries + 1 end
+function C_AuctionHouse.HasFullOwnedAuctionResults() return true end
+function C_AuctionHouse.GetOwnedAuctions() return M.ownedAuctions end
 
 -- Merchant
 C_MerchantFrame = {}

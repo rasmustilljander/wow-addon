@@ -26,10 +26,11 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 ## Window
 
-Click the map icon on the minimap, or type `/tl window`, for a window with two tabs:
+Click the map icon on the minimap, or type `/tl window`, for a window with these tabs:
 
 - **Totals**: this character's numbers under Travel, Loot, Life and Log.
 - **Settings**: the companions' World map options, then General (the **Minimap button** checkbox and Path's interval).
+- **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 
 Companions add their rows to the matching section. Drag the minimap icon to move it around the minimap.
 
