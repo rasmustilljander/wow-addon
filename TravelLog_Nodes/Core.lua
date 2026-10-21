@@ -1,6 +1,7 @@
--- TravelLog Nodes: remembers each chest, herb and ore spot you loot, by
--- place, so the map can show when you last emptied each one. Needs TravelLog,
--- whose loot recording tells it what was looted where.
+-- TravelLog Nodes: remembers each chest, herb and ore spot any of your
+-- characters loot, by place, so the map can show when it was last emptied
+-- and by whom. Needs TravelLog, whose loot recording tells it what was
+-- looted where.
 local _, ns = ...
 local tl = TravelLog
 
@@ -15,40 +16,134 @@ local NODE_TIMES = 5   -- loot times kept per node
 ns.version = 0
 
 --------------------------------------------------------------------------------
+-- Nodes
+--------------------------------------------------------------------------------
+
+local function IsNear(node, x, y, inst, a, b)
+	if a and node.a and node.inst == inst then
+		return (node.a - a) ^ 2 + (node.b - b) ^ 2 <= NODE_RADIUS ^ 2
+	end
+	return math.abs(node.x - x) + math.abs(node.y - y) <= 0.5
+end
+
+-- The node of this kind at this spot, added if there's none. Spawn points
+-- are matched by kind and place rather than by object, because the same
+-- spot can grow different herbs.
+local function Find(map, kind, x, y, inst, a, b)
+	local maps = ns.db.maps
+	maps[map] = maps[map] or {}
+	local list = maps[map]
+	for _, node in ipairs(list) do
+		if node.kind == kind and IsNear(node, x, y, inst, a, b) then
+			return node
+		end
+	end
+	local node = { kind = kind, x = x, y = y, times = {}, by = {}, counts = {} }
+	if a then
+		node.inst, node.a, node.b = inst, tl.Round(a, 1), tl.Round(b, 1)
+	end
+	list[#list + 1] = node
+	return node
+end
+
+-- Notes that a character looted the node at time t, keeping the newest
+-- NODE_TIMES times.
+local function AddTime(node, t, who)
+	local i = 1
+	while node.times[i] and node.times[i] > t do
+		i = i + 1
+	end
+	if i <= NODE_TIMES then
+		table.insert(node.times, i, t)
+		table.insert(node.by, i, who)
+		node.times[NODE_TIMES + 1], node.by[NODE_TIMES + 1] = nil, nil
+	end
+	node.last = node.times[1]
+end
+
+-- How many times all characters together looted the node.
+function ns.Total(node)
+	local n = 0
+	for _, count in pairs(node.counts) do
+		n = n + count
+	end
+	return n
+end
+
+--------------------------------------------------------------------------------
 -- Saved data
 --------------------------------------------------------------------------------
 
--- TravelLogNodesDB = {
+-- TravelLogNodesAccountDB = {
 --   maps = {   -- per uiMapID
 --     [1429] = { { kind = "herb", name = "Peacebloom", id = 1618, x = 42.1, y = 65.3,
 --                  inst = 0, a = -9000.0, b = -100.0, last = 1760000000,
---                  count = 8, times = { 1760000000, 1759998200, ... } } },
+--                  times = { 1760000000, 1759998200, ... },
+--                  by = { "Rasmus-Forever", "Altie-Forever", ... },
+--                  counts = { ["Rasmus-Forever"] = 5, ["Altie-Forever"] = 3 } } },
 --   },
 -- }
+-- by[i] is who looted at times[i]. Every character's nodes are in the
+-- account-wide file, so all of them see and add to the same nodes.
+
+-- Adds nodes from an older per-character file, all looted by this
+-- character, into the shared ones.
+local function MergeOld(maps)
+	for map, list in pairs(maps) do
+		for _, old in ipairs(list) do
+			local node = Find(map, old.kind, old.x, old.y, old.inst, old.a, old.b)
+			if not node.last or (old.last or 0) > node.last then
+				node.name, node.id = old.name or node.name, old.id or node.id
+			end
+			for _, t in ipairs(old.times or {}) do
+				AddTime(node, t, tl.charKey)
+			end
+			node.counts[tl.charKey] = (node.counts[tl.charKey] or 0) + (old.count or #(old.times or {}))
+		end
+	end
+end
 
 tl.On("PLAYER_LOGIN", function()
-	TravelLogNodesDB = TravelLogNodesDB or {}
-	local db = TravelLogNodesDB
+	TravelLogNodesAccountDB = TravelLogNodesAccountDB or {}
+	local db = TravelLogNodesAccountDB
 	db.maps = db.maps or {}
+	ns.db = db
 
-	-- TravelLog kept the nodes in its own character file before this addon
-	-- existed.
-	local old = tl.char.nodes
-	if old then
-		for map, list in pairs(old) do
-			local into = db.maps[map] or {}
-			db.maps[map] = into
-			for _, node in ipairs(list) do
-				into[#into + 1] = node
-			end
-		end
+	-- Version 0.1 kept the nodes in the character's own file, and TravelLog
+	-- in its own character file before that.
+	if TravelLogNodesDB then
+		MergeOld(TravelLogNodesDB.maps or {})
+		TravelLogNodesDB = nil
+	end
+	if tl.char.nodes then
+		MergeOld(tl.char.nodes)
 		tl.char.nodes = nil
 	end
-	ns.db = db
+	-- 0.1 counted nodes per character in TravelLog's totals.
+	tl.stats.nodes = nil
 end)
 
+-- Takes this character out of the shared nodes, dropping the ones only it
+-- looted.
 tl.On("TL_WIPE", function()
-	TravelLogNodesDB = nil
+	local me = tl.charKey
+	for _, list in pairs(ns.db.maps) do
+		for i = #list, 1, -1 do
+			local node = list[i]
+			node.counts[me] = nil
+			if next(node.counts) == nil then
+				table.remove(list, i)
+			else
+				for j = #node.by, 1, -1 do
+					if node.by[j] == me then
+						table.remove(node.times, j)
+						table.remove(node.by, j)
+					end
+				end
+				node.last = node.times[1]
+			end
+		end
+	end
 end)
 
 --------------------------------------------------------------------------------
@@ -70,48 +165,23 @@ local function NodeKind(via)
 	return kindBySpell[via] or "chest"
 end
 
-local function IsNear(node, e, inst, a, b)
-	if a and node.a and node.inst == inst then
-		return (node.a - a) ^ 2 + (node.b - b) ^ 2 <= NODE_RADIUS ^ 2
-	end
-	return math.abs(node.x - e.x) + math.abs(node.y - e.y) <= 0.5
-end
-
--- Finds or adds the node at this spot and notes the loot. Spawn points are
--- matched by kind and place rather than by object, because the same spot can
--- grow different herbs. Notes on the loot entry when the node was last
--- looted before, for /tl log.
+-- Notes the loot on the node at this spot. Notes on the loot entry when the
+-- node was last looted before, and by which alt if it wasn't you, for
+-- /tl log.
 local function Remember(e)
 	if e.sourceType ~= "GameObject" or not (e.map and e.x) then
 		return
 	end
-	local kind = NodeKind(e.via)
 	local inst, a, b = tl.WorldPosition()
-	local maps = ns.db.maps
-	maps[e.map] = maps[e.map] or {}
-	local list = maps[e.map]
-	local node
-	for _, n in ipairs(list) do
-		if n.kind == kind and IsNear(n, e, inst, a, b) then
-			node = n
-			break
-		end
-	end
-	if not node then
-		node = { kind = kind, x = e.x, y = e.y, count = 0, times = {} }
-		if a then
-			node.inst, node.a, node.b = inst, tl.Round(a, 1), tl.Round(b, 1)
-		end
-		list[#list + 1] = node
-		tl.Add(1, "nodes", kind)
-	end
+	local node = Find(e.map, NodeKind(e.via), e.x, e.y, inst, a, b)
 	e.lastHere = node.last
+	if node.by[1] ~= tl.charKey then
+		e.lastBy = node.by[1]
+	end
 	node.name = e.source or node.name
 	node.id = e.sourceID or node.id
-	node.last = e.time
-	node.count = node.count + 1
-	table.insert(node.times, 1, e.time)
-	node.times[NODE_TIMES + 1] = nil
+	AddTime(node, e.time, tl.charKey)
+	node.counts[tl.charKey] = (node.counts[tl.charKey] or 0) + 1
 	ns.version = ns.version + 1
 end
 
@@ -121,17 +191,22 @@ tl.On("TL_LOOT", Remember)
 -- /tl nodes, and a line in /tl stats and the TravelLog window
 --------------------------------------------------------------------------------
 
+local function Remembered()
+	local n = { herb = 0, ore = 0, chest = 0, object = 0 }
+	for _, list in pairs(ns.db.maps) do
+		for _, node in ipairs(list) do
+			n[node.kind] = (n[node.kind] or 0) + 1
+		end
+	end
+	local Count = tl.Count
+	return ("%s herbs, %s ore, %s chests, %s other"):format(Count(n.herb), Count(n.ore), Count(n.chest), Count(n.object))
+end
+
 tl.On("TL_STATS", function()
-	local nodes, Count = tl.stats.nodes or {}, tl.Count
-	tl.Print("Nodes remembered: %s herbs, %s ore, %s chests, %s other",
-		Count(nodes.herb), Count(nodes.ore), Count(nodes.chest), Count(nodes.object))
+	tl.Print("Nodes remembered: %s (all characters)", Remembered())
 end)
 
-tl.AddStat("Nodes", function()
-	local nodes, Count = tl.stats.nodes or {}, tl.Count
-	return ("%s herbs, %s ore, %s chests, %s other"):format(Count(nodes.herb), Count(nodes.ore),
-		Count(nodes.chest), Count(nodes.object))
-end)
+tl.AddStat("Nodes", Remembered)
 tl.AddSetting("Looted nodes on the world map", function() return tl.settings.nodes end, function(on)
 	tl.settings.nodes = on
 	ns.RefreshMap()

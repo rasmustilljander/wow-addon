@@ -1,5 +1,5 @@
 -- Pins for looted chests and gathering nodes on zone maps, with a tooltip
--- saying when you last looted each one.
+-- saying when each was last looted and by which character.
 local _, ns = ...
 local tl = TravelLog
 
@@ -16,15 +16,43 @@ local overlay
 local pins = {}
 local drawnMap, drawnScale, drawnVersion
 
+-- A character's name in their class color, with the realm if it isn't yours.
+local function Who(key)
+	local profile = tl.db.chars[key]
+	local _, _, _, color = GetClassColor(profile and profile.class)
+	local name, realm = key:match("^(.-)%-(.+)$")
+	return ("|c%s%s|r"):format(color, realm == GetRealmName() and name or key)
+end
+
+local function Stamp(t)
+	return date("%Y-%m-%d %H:%M", t)
+end
+
 local function NodeTooltip(pin)
 	local node = pin.node
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	GameTooltip:AddLine(node.name or NODE_LABELS[node.kind])
-	GameTooltip:AddLine(("Last looted %s (%s ago)"):format(date("%Y-%m-%d %H:%M", node.last), tl.Ago(node.last)), 1, 1, 1)
-	if node.count > 1 then
-		GameTooltip:AddLine(("Looted %d times. Before that:"):format(node.count), 0.8, 0.8, 0.8)
+	if node.last then
+		GameTooltip:AddLine(("Last looted %s (%s ago) by %s"):format(Stamp(node.last), tl.Ago(node.last),
+			Who(node.by[1])), 1, 1, 1)
+	end
+	local total = ns.Total(node)
+	if total > 1 then
+		local looters = {}
+		for key, count in pairs(node.counts) do
+			looters[#looters + 1] = { key = key, count = count }
+		end
+		local text = ("Looted %d times"):format(total)
+		if #looters > 1 then
+			table.sort(looters, function(a, b) return a.count > b.count or (a.count == b.count and a.key < b.key) end)
+			for i, l in ipairs(looters) do
+				looters[i] = Who(l.key) .. " " .. l.count
+			end
+			text = text .. " (" .. table.concat(looters, ", ") .. ")"
+		end
+		GameTooltip:AddLine(text .. (#node.times > 1 and ". Before that:" or ""), 0.8, 0.8, 0.8)
 		for i = 2, #node.times do
-			GameTooltip:AddLine("  " .. date("%Y-%m-%d %H:%M", node.times[i]), 0.8, 0.8, 0.8)
+			GameTooltip:AddLine(("  %s  %s"):format(Stamp(node.times[i]), Who(node.by[i])), 0.8, 0.8, 0.8)
 		end
 	end
 	GameTooltip:Show()

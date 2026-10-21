@@ -47,7 +47,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, the window's `point` and the minimap button's `minimap` and `minimapAngle`), each character's profile and totals |
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions and quests |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
-| `<Realm>/<Character>/SavedVariables/TravelLog_Nodes.lua` | That character's nodes, for TravelLog_Nodes |
+| `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
 
 **Rotation.** The path grows about 100 KB per hour of movement. When a character's log, sessions and path pass about 3 MB, the next login moves everything older than 10 days into the archive (nodes and totals stay). The archive is a separate load-on-demand addon because each addon gets only one account-wide file. It's read only for the `all` trail range, `/tl archive now` and rotation, so its size doesn't slow down logins. Without it installed, history stays in the character files and TravelLog says so when it tries to rotate.

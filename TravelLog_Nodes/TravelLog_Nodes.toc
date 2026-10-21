@@ -1,9 +1,10 @@
 ## Interface: 16001
 ## Title: TravelLog Nodes
-## Notes: Remembers every chest, herb and ore spot you loot and shows on the world map when you last looted each one.
+## Notes: Remembers every chest, herb and ore spot your characters loot and shows on the world map when each was last looted, and by whom.
 ## Author: rasmustilljander
-## Version: 0.1.0
+## Version: 0.2.0
 ## Dependencies: TravelLog
+## SavedVariables: TravelLogNodesAccountDB
 ## SavedVariablesPerCharacter: TravelLogNodesDB
 
 Core.lua
