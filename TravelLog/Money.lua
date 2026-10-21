@@ -36,6 +36,6 @@ ns.On("PLAYER_MONEY", function()
 		e.money = (e.money or 0) + delta
 		ns.Add(delta, "loot", "money")
 	else
-		ns.Log("money", { amount = delta, reason = reason, balance = money })
+		ns.Log("money", ns.WithCounterpart({ amount = delta, reason = reason, balance = money }, reason))
 	end
 end)

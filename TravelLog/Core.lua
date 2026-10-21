@@ -291,6 +291,36 @@ for event, change in pairs(WINDOW_EVENTS) do
 	end)
 end
 
+-- Who's on the other side: the trade partner, and the sender of the mail you
+-- last took money or an item from.
+local partner, sender
+
+ns.On("TL_OPEN", function(context)
+	if context == "trade" then
+		local name, realm = UnitName("npc")
+		name, realm = ns.Clean(name), ns.Clean(realm)
+		partner = name and realm and realm ~= "" and name .. "-" .. realm or name
+	end
+end)
+
+local function TookMail(index)
+	sender = ns.Clean((select(3, GetInboxHeaderInfo(index))))
+end
+hooksecurefunc("TakeInboxMoney", TookMail)
+hooksecurefunc("TakeInboxItem", TookMail)
+hooksecurefunc("AutoLootMailItem", TookMail)
+
+-- Adds the partner or sender to an event's data for money or items that came
+-- by trade or mail.
+function ns.WithCounterpart(data, how)
+	if how == "trade" then
+		data.partner = partner
+	elseif how == "mail" then
+		data.sender = sender
+	end
+	return data
+end
+
 --------------------------------------------------------------------------------
 -- Startup and sessions
 --------------------------------------------------------------------------------

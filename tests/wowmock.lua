@@ -814,15 +814,19 @@ function M.lootAll(take)
 	M.fire("LOOT_CLOSED")
 end
 
--- Mail. M.inbox = { { cod, items = { { link, count, currency }, ... } }, ... };
+-- Mail. M.inbox = { { sender, money, cod, items = { { link, count, currency }, ... } }, ... };
 -- M.sendItems[i] = { link, count } are the attachments of the mail being
--- written, and SendMail puts { to, items } in M.sentMail.
+-- written, and SendMail puts { to, items } in M.sentMail. Taking money or
+-- items does nothing: as in the game, the result arrives later as events.
 M.inbox, M.sendItems, M.sentMail = {}, {}, {}
 function GetInboxNumItems() return #M.inbox, #M.inbox end
 function GetInboxHeaderInfo(i)
 	local m = M.inbox[i]
-	return nil, nil, m.sender or "Someone", m.subject or "", 0, m.cod or 0, 30, #(m.items or {}), false
+	return nil, nil, m.sender or "Someone", m.subject or "", m.money or 0, m.cod or 0, 30, #(m.items or {}), false
 end
+function TakeInboxMoney(i) assert(M.inbox[i]) end
+function TakeInboxItem(i, a) assert(M.inbox[i] and a) end
+function AutoLootMailItem(i) assert(M.inbox[i]) end
 function GetInboxItem(i, a)
 	local it = (M.inbox[i].items or {})[a]
 	if not it then return nil end

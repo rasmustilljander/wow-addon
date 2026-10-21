@@ -249,7 +249,7 @@ ns.On("CHAT_MSG_LOOT", function(text)
 			end
 			count = tonumber(count) or 1
 			local how = ReceivedHow(p.how)
-			local e = ns.Log("receive", { item = item, count = count, how = how })
+			local e = ns.Log("receive", ns.WithCounterpart({ item = item, count = count, how = how }, how))
 			if how == "loot" then
 				chatLooted[item] = { event = e, at = GetTime() }
 			end

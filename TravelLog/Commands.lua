@@ -188,13 +188,18 @@ local DESCRIBE = {
 	end,
 	receive = function(e)
 		local how = e.roll and ("won with a roll of %d"):format(e.roll) or e.how or "?"
-		return ("Received %s (%s)"):format(Item(e.item, e.count), how)
+		local from = e.partner or e.sender
+		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from and " from " .. from or "")
 	end,
 	buy = function(e) return ("Bought %s for %s from %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	sell = function(e) return ("Sold %s for %s to %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	buyback = function(e) return ("Bought back %s for %s"):format(Item(e.item, e.count), ns.MoneyText(e.price)) end,
 	repair = function(e) return ("Repaired for %s"):format(ns.MoneyText(e.price)) end,
-	money = function(e) return ("%s %s (%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), e.reason) end,
+	money = function(e)
+		local who = e.partner or e.sender
+		who = who and (e.amount > 0 and " from " or " to ") .. who or ""
+		return ("%s %s (%s%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), e.reason, who)
+	end,
 	flight = function(e) return ("Flew from %s to %s for %s"):format(e.from or "?", e.to or "?", ns.MoneyText(e.price)) end,
 	landed = function(e) return e.seconds and ("Landed after %d:%02d"):format(math.floor(e.seconds / 60), e.seconds % 60) or "Landed" end,
 	hearth = function(e) return ("Hearthed to %s"):format(e.to or "?") end,

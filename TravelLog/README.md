@@ -19,9 +19,10 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | | |
 | --- | --- |
 | **Loot** | Corpses, pickpockets, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the spell for herbs, ore, chests, skinning and Pick Pocket). |
-| **Other items** | Quest rewards, crafts, roll wins (with your roll) and other items that arrive without a loot window. |
+| **Other items** | Quest rewards, crafts, roll wins (with your roll), trades and mail, and other items that arrive without a loot window. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
+| **Trades and mail** | Money and items from a trade are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
 | **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted, completed and abandoned, kills that gave XP, discoveries. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
