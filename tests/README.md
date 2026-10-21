@@ -23,8 +23,8 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources (pickpockets too) and roll wins. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
-| `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
-| `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the searchable event log, companion tabs, moving and a reload. |
+| `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History without view buttons), moving old path and nodes into the companions. |
+| `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the History tab's searchable event log and Kills view, companion tabs, moving and a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, an alt's archive, wiping. |
@@ -35,7 +35,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, the Sharing tab, a reload. |
 | `ItemCount/count.lua` | Bags, bank and account bank, mail and mail to alts, auctions running out, equipped items, tooltip lines, commands, a reload. |
 | `TravelLog_Group/group.lua` | Groups from the roster, other realms, kills together, unreadable names, raids, reloads and long logouts while grouped, tooltips, commands, the Players tab. |
-| `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, the Kills tab, a reload. |
+| `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, the Kills view, a reload. |
 | `TravelLog_NPCs/npcs.lua` | NPCs from each kind of window, vendors' stock and filters, item tooltips, minimap pins (range, rotation, other maps), world map pins, hiding, commands, the NPCs tab, a reload and an alt. |
 
 ## Writing a test

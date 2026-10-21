@@ -1,21 +1,29 @@
--- The Log tab: every event in this character's current log, newest first.
--- Category buttons narrow the kinds of event; the search also sees fields
--- not shown in a row, such as source IDs and a death's level.
+-- The History tab, with a button per view along the top. Events, TravelLog's
+-- own view, lists every event in this character's current log, newest first.
+-- Category buttons narrow the kinds of event; the search also sees fields not
+-- shown in a row, such as source IDs and a death's level. Companion addons
+-- add views with ns.AddHistoryView.
 local _, ns = ...
 
-local HEIGHT = 320
+local HEIGHT = 320      -- the Events view
+local VIEWS_HEIGHT = 26 -- the row of view buttons
+local VIEW_WIDTH = 69
 local ROW_HEIGHT = 34
 local LIST_WIDTH = 410
 local GROUPS = { "All", "Travel", "Loot", "Trade", "Life", "Progress" }
 local GROUP_WIDTH = 69
 
-local page
+local views = {} -- { name, height, build, refresh }, Events first
+local history    -- the tab's page, once the window exists
+local selectedView = 1
+local page       -- the Events view
 local selectedGroup
 local drawn
 
-local function SetGroupButtons()
-	for _, button in ipairs(page.groupButtons) do
-		if (button.group == "All" and not selectedGroup) or button.group == selectedGroup then
+-- Lights the chosen one of a row of buttons, with white text.
+local function Light(buttons, chosen)
+	for _, button in ipairs(buttons) do
+		if button == chosen then
 			button:LockHighlight()
 			button:SetNormalFontObject(GameFontHighlight)
 		else
@@ -25,7 +33,15 @@ local function SetGroupButtons()
 	end
 end
 
-local function Refresh()
+local function SetGroupButtons()
+	for _, button in ipairs(page.groupButtons) do
+		if button.group == (selectedGroup or "All") then
+			Light(page.groupButtons, button)
+		end
+	end
+end
+
+local function RefreshEvents()
 	if not ns.char then
 		return
 	end
@@ -96,12 +112,12 @@ local function List(parent)
 	return list
 end
 
-local function Build(f)
+local function BuildEvents(f)
 	page = f
 	f.search = CreateFrame("EditBox", nil, f, "SearchBoxTemplate")
 	f.search:SetSize(214, 20)
 	f.search:SetPoint("TOPLEFT", 22, 0)
-	f.search:HookScript("OnTextChanged", Refresh)
+	f.search:HookScript("OnTextChanged", RefreshEvents)
 	f.found = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	f.found:SetPoint("TOPRIGHT", -18, -4)
 	f.found:SetJustifyH("RIGHT")
@@ -116,7 +132,7 @@ local function Build(f)
 		button:SetScript("OnClick", function(self)
 			selectedGroup = self.group ~= "All" and self.group or nil
 			drawn = nil
-			Refresh()
+			RefreshEvents()
 		end)
 		f.groupButtons[i] = button
 	end
@@ -131,4 +147,75 @@ local function Build(f)
 	f.hint:SetJustifyH("LEFT")
 end
 
-ns.AddTab("Log", HEIGHT, Build, Refresh)
+--------------------------------------------------------------------------------
+-- The views
+--------------------------------------------------------------------------------
+
+-- Adds a view to the History tab, after Events. build(page) fills its page
+-- when the window is first opened; the page is the window's width and at
+-- least height tall. refresh(), if given, runs whenever the view is shown and
+-- every second while it is.
+function ns.AddHistoryView(name, height, build, refresh)
+	views[#views + 1] = { name = name, height = height, build = build, refresh = refresh }
+end
+
+local function Refresh()
+	local view = views[selectedView]
+	if view.refresh then
+		view.refresh()
+	end
+end
+
+local function SelectView(i)
+	selectedView = i
+	for j, view in ipairs(views) do
+		view.page:SetShown(i == j)
+	end
+	if history.viewButtons then
+		Light(history.viewButtons, history.viewButtons[i])
+	end
+	Refresh()
+end
+
+-- The buttons show only when a companion adds a view.
+local function Build(f)
+	history = f
+	local top = #views > 1 and -VIEWS_HEIGHT or 0
+	local height = 0
+	f.views = {}
+	for i, view in ipairs(views) do
+		view.page = CreateFrame("Frame", nil, f)
+		view.page:SetPoint("TOPLEFT", 0, top)
+		view.page:SetPoint("BOTTOMRIGHT")
+		height = math.max(height, view.height or 0, view.build(view.page) or 0)
+		f.views[i] = view.page
+	end
+	if #views > 1 then
+		f.viewButtons = {}
+		for i, view in ipairs(views) do
+			local button = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+			button:SetSize(VIEW_WIDTH, 20)
+			button:SetPoint("TOPLEFT", 14 + (i - 1) * VIEW_WIDTH, 0)
+			button:SetText(view.name)
+			button:SetScript("OnClick", function()
+				SelectView(i)
+			end)
+			f.viewButtons[i] = button
+		end
+	end
+	SelectView(selectedView)
+	return height - top
+end
+
+-- Opens the window on the History view with this name.
+function ns.ShowHistory(name)
+	ns.ShowTab("History")
+	for i, view in ipairs(views) do
+		if view.name == name then
+			SelectView(i)
+		end
+	end
+end
+
+ns.AddHistoryView("Events", HEIGHT, BuildEvents, RefreshEvents)
+ns.AddTab("History", 0, Build, Refresh)

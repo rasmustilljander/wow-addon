@@ -22,7 +22,7 @@ Zone maps (not continent maps) show red pins where you've killed things. Kills w
 
 ## Window
 
-With TravelLog installed, [its window](../TravelLog/README.md#window) gets a **Kills** tab: every mob you've killed, most first, with a search box that matches any part of the name. Click a mob for its kill count, first and last kill, and the zones you killed it in with a count each.
+With TravelLog installed, [its window](../TravelLog/README.md#window)'s History tab gets a **Kills** view: every mob you've killed, most first, with a search box that matches any part of the name. Click a mob for its kill count, first and last kill, and the zones you killed it in with a count each.
 
 The window's Totals tab also shows your total and most-killed mob, and Settings has a **Kills** checkbox for the pins (checking it shows all kills again).
 
@@ -34,7 +34,7 @@ The window's Totals tab also shows your total and most-killed mob, and Settings 
 | `/kills <name>` | One mob: count, first and last kill, top places, total XP and the last 10 kills. Partial names work; several matches are listed. |
 | `/kills target` | The same for your target |
 | `/kills recent [n]` | Your last n kills (default 15) |
-| `/kills window` | Open the [Kills tab](#window) (needs TravelLog) |
+| `/kills window` | Open the [Kills view](#window) (needs TravelLog) |
 | `/kills map on\|off` | Pins on the world map (default on) |
 | `/kills map <name>` | Pin only that mob's kills (`/kills map target` for your target; `on` shows all again) |
 | `/kills wipe confirm` | Delete every kill for this character |

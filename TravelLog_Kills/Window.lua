@@ -1,6 +1,7 @@
 -- The TravelLog window, when TravelLog is installed: kill rows in its totals,
--- a Kills checkbox in its settings, and a Kills tab listing every mob you've
--- killed. Clicking a mob there shows the zones you killed it in.
+-- a Kills checkbox in its settings, and a Kills view in its History tab
+-- listing every mob you've killed. Clicking a mob there shows the zones you
+-- killed it in.
 local _, ns = ...
 
 local tl = TravelLog
@@ -10,7 +11,7 @@ end
 
 local Count = ns.Count
 
-local HEIGHT = 300     -- the Kills tab, at least
+local HEIGHT = 300     -- the Kills view, at least
 local ROW_HEIGHT = 18
 local LIST_WIDTH = 210 -- the mob list
 local DETAIL_X = 252   -- the selected mob, right of the list and its scroll bar
@@ -47,12 +48,12 @@ end, function(on)
 end)
 
 --------------------------------------------------------------------------------
--- The Kills tab
+-- The Kills view
 --------------------------------------------------------------------------------
 
-local page     -- the tab's page, once the window exists
+local page     -- the view's page, once the window exists
 local selected -- name of the mob whose zones are shown
-local drawn    -- what the tab last showed; it's redrawn only when that changes
+local drawn    -- what the view last showed; it's redrawn only when that changes
 
 -- A mob's kills per zone, most first.
 local function Zones(mob)
@@ -193,9 +194,9 @@ local function Build(f)
 	f.hint:SetWordWrap(true)
 end
 
-tl.AddTab("Kills", HEIGHT, Build, Refresh)
+tl.AddHistoryView("Kills", HEIGHT, Build, Refresh)
 
 -- /kills window
 function ns.ShowWindow()
-	tl.ShowTab("Kills")
+	tl.ShowHistory("Kills")
 end
