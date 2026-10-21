@@ -52,7 +52,7 @@ check(w.who:GetText() == "Rasmus-Forever, level 5 Human Mage", "who: " .. w.who:
 -- Totals, Settings and History, then the companions' tabs in load order;
 -- Totals open first, the other pages hidden.
 local totals, settings, history = w.pages[1], w.pages[2], w.pages[3]
-local log, killsView = history.views[1], history.views[2]
+local log, killsView = history.views[1], history.views[3]
 check(#w.Tabs == 4 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings"
 	and w.Tabs[3]:GetText() == "History" and w.Tabs[4]:GetText() == "Colors", "tabs")
 check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown() and not history:IsShown()
@@ -86,15 +86,15 @@ check(Stat(w, "Deaths") == "1", "deaths: " .. Stat(w, "Deaths"))
 check(Stat(w, "All kills") == "1 of 1 mobs", "all kills: " .. Stat(w, "All kills"))
 check(Stat(w, "Most killed") == "Kobold Worker (1)", "most killed: " .. Stat(w, "Most killed"))
 
--- History: Events and Kills buttons, Events first. Events lists individual
+-- History: Events, Sessions and Kills buttons, Events first. Events lists individual
 -- entries newest first, with category buttons and searches over both visible
 -- text and saved fields such as a death's level.
 w.Tabs[3]:Click()
-check(#history.viewButtons == 2 and history.viewButtons[1]:GetText() == "Events"
-	and history.viewButtons[2]:GetText() == "Kills", "view buttons")
+check(#history.viewButtons == 3 and history.viewButtons[1]:GetText() == "Events"
+	and history.viewButtons[2]:GetText() == "Sessions" and history.viewButtons[3]:GetText() == "Kills", "view buttons")
 check(history.viewButtons[1].highlightLocked and log:IsShown() and not killsView:IsShown(), "events view first")
-history.viewButtons[2]:Click()
-check(killsView:IsShown() and not log:IsShown() and history.viewButtons[2].highlightLocked
+history.viewButtons[3]:Click()
+check(killsView:IsShown() and not log:IsShown() and history.viewButtons[3].highlightLocked
 	and not history.viewButtons[1].highlightLocked, "kills view")
 check(killsView.found:GetText() == "1 mobs, 1 kills", "kills view drawn: " .. killsView.found:GetText())
 history.viewButtons[1]:Click()

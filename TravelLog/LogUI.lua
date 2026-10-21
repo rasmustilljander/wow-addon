@@ -1,8 +1,8 @@
 -- The History tab, with a button per view along the top. Events, TravelLog's
 -- own view, lists every event in this character's current log, newest first.
 -- Category buttons narrow the kinds of event; the search also sees fields not
--- shown in a row, such as source IDs and a death's level. Companion addons
--- add views with ns.AddHistoryView.
+-- shown in a row, such as source IDs and a death's level. Sessions.lua and
+-- companion addons add views with ns.AddHistoryView.
 local _, ns = ...
 
 local HEIGHT = 320      -- the Events view
@@ -70,37 +70,40 @@ local function RefreshEvents()
 	SetGroupButtons()
 end
 
-local function InitRow(row, e)
-	if not row.what then
-		local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-		highlight:SetAllPoints()
-		highlight:SetColorTexture(1, 1, 1, 0.08)
-		row.when = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-		row.when:SetPoint("TOPRIGHT", -4, -2)
-		row.when:SetJustifyH("RIGHT")
-		row.what = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		row.what:SetPoint("TOPLEFT", 4, -2)
-		row.what:SetPoint("RIGHT", row.when, "LEFT", -8, 0)
-		row.what:SetJustifyH("LEFT")
-		row.what:SetWordWrap(false)
-		row.kind = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-		row.kind:SetPoint("BOTTOMRIGHT", -4, 2)
-		row.kind:SetJustifyH("RIGHT")
-		row.where = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-		row.where:SetPoint("BOTTOMLEFT", 4, 2)
-		row.where:SetPoint("RIGHT", row.kind, "LEFT", -8, 0)
-		row.where:SetJustifyH("LEFT")
-		row.where:SetWordWrap(false)
+-- A scrolling list of two-line rows, for the Events view and other History
+-- views. fill(element) returns a row's texts: top left, top right, bottom left
+-- and bottom right. A row keeps its element as row.element.
+function ns.HistoryList(parent, fill)
+	local function InitRow(row, element)
+		if not row.what then
+			local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+			highlight:SetAllPoints()
+			highlight:SetColorTexture(1, 1, 1, 0.08)
+			row.when = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+			row.when:SetPoint("TOPRIGHT", -4, -2)
+			row.when:SetJustifyH("RIGHT")
+			row.what = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+			row.what:SetPoint("TOPLEFT", 4, -2)
+			row.what:SetPoint("RIGHT", row.when, "LEFT", -8, 0)
+			row.what:SetJustifyH("LEFT")
+			row.what:SetWordWrap(false)
+			row.kind = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+			row.kind:SetPoint("BOTTOMRIGHT", -4, 2)
+			row.kind:SetJustifyH("RIGHT")
+			row.where = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+			row.where:SetPoint("BOTTOMLEFT", 4, 2)
+			row.where:SetPoint("RIGHT", row.kind, "LEFT", -8, 0)
+			row.where:SetJustifyH("LEFT")
+			row.where:SetWordWrap(false)
+		end
+		local what, when, where, kind = fill(element)
+		row.element = element
+		row.what:SetText(what)
+		row.when:SetText(when)
+		row.where:SetText(where)
+		row.kind:SetText(kind)
 	end
-	local what, where = ns.Describe(e)
-	row.event = e
-	row.what:SetText(what)
-	row.when:SetText(date("%Y-%m-%d %H:%M", e.time))
-	row.where:SetText(where)
-	row.kind:SetText(ns.LogTypeLabel(e))
-end
 
-local function List(parent)
 	local list = CreateFrame("Frame", nil, parent, "WowScrollBoxList")
 	local bar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar")
 	bar:SetPoint("TOPLEFT", list, "TOPRIGHT", 6, 0)
@@ -110,6 +113,11 @@ local function List(parent)
 	view:SetElementInitializer("Frame", InitRow)
 	ScrollUtil.InitScrollBoxListWithScrollBar(list, bar, view)
 	return list
+end
+
+local function EventTexts(e)
+	local what, where = ns.Describe(e)
+	return what, date("%Y-%m-%d %H:%M", e.time), where, ns.LogTypeLabel(e)
 end
 
 local function BuildEvents(f)
@@ -137,7 +145,7 @@ local function BuildEvents(f)
 		f.groupButtons[i] = button
 	end
 
-	f.events = List(f)
+	f.events = ns.HistoryList(f, EventTexts)
 	f.events:SetPoint("TOPLEFT", 14, -54)
 	f.events:SetPoint("BOTTOMLEFT", 14, 8)
 	f.events:SetWidth(LIST_WIDTH)
@@ -177,7 +185,7 @@ local function SelectView(i)
 	Refresh()
 end
 
--- The buttons show only when a companion adds a view.
+-- The buttons show only when there's more than one view.
 local function Build(f)
 	history = f
 	local top = #views > 1 and -VIEWS_HEIGHT or 0
