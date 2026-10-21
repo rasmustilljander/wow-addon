@@ -76,6 +76,7 @@ local Count = ns.Count
 
 ns.AddStat("Travel", "Places visited", function() return Count(ns.PlacesVisited()) end)
 ns.AddStat("Travel", "Flights", function() return Count(ns.stats.flights) end)
+ns.AddStat("Travel", "Flight paths", function() return Count(ns.stats.flightPaths) end)
 ns.AddStat("Loot", "Looted", function()
 	local loot = ns.stats.loot or {}
 	return ("%s items from %s sources, %s in coins"):format(Count(loot.items), Count(loot.opened), ns.MoneyText(loot.money))
@@ -85,6 +86,10 @@ ns.AddStat("Loot", "Vendors", function()
 	return ("spent %s, earned %s"):format(ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 end)
 ns.AddStat("Life", "Quests done", function() return Count((ns.stats.quests or {}).completed) end)
+ns.AddStat("Life", "Learned", function()
+	local st = ns.stats
+	return ("%s spells, %s skills, %s skill points"):format(Count(st.spells), Count(st.skills), Count(st.skillups))
+end)
 ns.AddStat("Life", "XP kills", function() return Count(ns.stats.kills) end)
 ns.AddStat("Life", "Deaths", function() return Count(ns.stats.deaths) end)
 ns.AddStat("Log", "Entries", function()

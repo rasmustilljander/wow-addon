@@ -1,6 +1,6 @@
 -- Draws your recorded path on the world map, with markers for jumps, and for
--- loot, deaths and level-ups from TravelLog's log, and your alts' paths in
--- their class color. "/tl trail" picks how far back each shows.
+-- loot, deaths, level-ups and other milestones from TravelLog's log, and your
+-- alts' paths in their class color. "/tl trail" picks how far back each shows.
 local _, ns = ...
 local tl = TravelLog
 
@@ -28,7 +28,14 @@ local MARKERS = {
 	loot = { 0.75, 0.4, 1, 0.9, 5 },
 	death = { 1, 0.15, 0.15, 1, 9 },
 	level = { 0.2, 1, 0.3, 1, 9 },
+	learned = { 1, 0.45, 0.75, 1, 7 },
+	taxipath = { 0, 0.75, 0.65, 1, 7 },
+	standing = { 0.65, 0.45, 0.25, 1, 7 },
+	mount = { 1, 1, 1, 1, 9 },
 }
+
+-- Log entry types drawn with another type's marker.
+local MARKER_OF = { spell = "learned", skill = "learned", skillup = "learned" }
 
 local overlay
 local lines, dots = {}, {}
@@ -352,10 +359,11 @@ local function DrawNew()
 		if log then
 			for i = view.logNext[log] or 1, #log do
 				local e = log[i]
-				if MARKERS[e.type] and e.map and e.x and (not history.before or e.time < history.before) then
+				local kind = MARKER_OF[e.type] or e.type
+				if MARKERS[kind] and e.map and e.x and (not history.before or e.time < history.before) then
 					local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
 					if x then
-						Dot(x * view.w, y * view.h, e.type)
+						Dot(x * view.w, y * view.h, kind)
 					end
 				end
 			end

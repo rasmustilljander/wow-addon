@@ -116,6 +116,11 @@ COMBATLOG_XPGAIN_EXHAUSTION1 = "%s dies, you gain %d experience. (%s exp %s bonu
 COMBATLOG_XPGAIN_FIRSTPERSON_GROUP = "%s dies, you gain %d experience. (+%d group bonus)"
 ERR_ZONE_EXPLORED = "Discovered: %s"
 ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained"
+ERR_LEARN_SPELL_S = "You have learned a new spell: %s."
+ERR_LEARN_ABILITY_S = "You have learned a new ability: %s."
+ERR_LEARN_RECIPE_S = "You have learned how to create a new item: %s."
+ERR_NEWTAXIPATH = "New flight path discovered!"
+FACTION_STANDING_CHANGED = "You are now %s with %s."
 ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 
 Enum = {
@@ -146,7 +151,8 @@ UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_O
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
 QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
-PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED CHAT_MSG_ADDON]]):gmatch("%S+") do
+PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
+NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -603,6 +609,16 @@ function C_QuestLog.GetTitleForQuestID(id) return M.quests[id] end
 C_Spell = {}
 M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball" }
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
+M.spellRanks = {}
+function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end
+-- Skill lines as the skills frame lists them: { skillID, name, rank, isHeader }.
+M.skills = {}
+C_SkillInfo = {}
+function C_SkillInfo.GetNumSkillLines() return #M.skills end
+function C_SkillInfo.GetSkillLineInfo(i)
+	local s = M.skills[i]
+	return s and { skillID = s.skillID or 0, name = s.name, rank = s.rank or 0, isHeader = s.isHeader or false, maxRank = s.maxRank or 0 }
+end
 -- Bags: M.bags["bag:slot"] is an item link, or { link, count, locked }.
 -- M.bagSlots[bag] is each bag's size and M.items[itemID] = { quality, price,
 -- icon, noValue, uncached } what the client knows about an item (uncached:
@@ -711,6 +727,15 @@ function TaxiNodeName(i) return M.taxiNodes[i] and M.taxiNodes[i].name end
 function TaxiNodeGetType(i) return M.taxiNodes[i] and M.taxiNodes[i].type end
 function TaxiNodeCost(i) return M.taxiNodes[i] and M.taxiNodes[i].cost end
 function TakeTaxiNode() end
+
+-- Trainer: M.trainerServices[i] = { name, rank, cost }.
+M.trainerServices = {}
+function GetTrainerServiceInfo(i)
+	local t = M.trainerServices[i]
+	if t then return t.name, "available", 136116, 1, t.rank or "" end
+end
+function GetTrainerServiceCost(i) return M.trainerServices[i] and M.trainerServices[i].cost or 0, false end
+function BuyTrainerService() end
 
 function GetQuestReward() end
 function JumpOrAscendStart() end
