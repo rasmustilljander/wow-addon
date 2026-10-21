@@ -55,8 +55,8 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
-check(Texts(totals, 18) == "Places visited, Flights, Jumps, Distance, Looted, Vendors, Nodes, "
-	.. "Quests done, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+check(Texts(totals, 18) == "Places visited, Flights, Flight paths, Jumps, Distance, Looted, Vendors, Nodes, "
+	.. "Quests done, Learned, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))

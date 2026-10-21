@@ -52,6 +52,8 @@ local function ShowStats()
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
 		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited()))
+	ns.Print("Spells learned %s, new skills %s, skill points %s, flight paths found %s",
+		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.flightPaths))
 
 	-- Companion addons add their own lines here.
 	ns.Fire("TL_STATS")
@@ -134,6 +136,15 @@ local DESCRIBE = {
 	questdone = function(e) return ("Completed quest: %s"):format(e.title or e.id) end,
 	kill = function(e) return ("Killed %s (+%s xp)"):format(e.name, e.xp or "?") end,
 	discover = function(e) return ("Discovered %s"):format(e.place) end,
+	spell = function(e)
+		local text = "Learned " .. (e.name or e.id or "?")
+		if e.rank then text = ("%s (%s)"):format(text, e.rank) end
+		return e.trainer and ("%s from %s"):format(text, e.trainer) or text
+	end,
+	skill = function(e) return ("Learned skill: %s"):format(e.name or e.id) end,
+	skillup = function(e) return ("%s reached %d"):format(e.name or e.id, e.rank) end,
+	taxipath = function(e) return e.npc and ("Found the flight path at %s"):format(e.npc) or "Found a flight path" end,
+	standing = function(e) return ("Now %s with %s"):format(e.standing, e.faction) end,
 }
 
 -- A log entry as text, and where it happened. TravelLog_Share sends these.

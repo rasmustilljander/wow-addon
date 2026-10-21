@@ -13,6 +13,7 @@ Loot.lua
 Vendor.lua
 Money.lua
 Life.lua
+Progress.lua
 Commands.lua
 UI.lua
 Minimap.lua

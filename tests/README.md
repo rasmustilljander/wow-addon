@@ -22,6 +22,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags and the cursor, loot windows, merchants, flights, the world map, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources and roll wins. |
+| `TravelLog/progress.lua` | Spells from a trainer and chat, new skills and milestones, a flight path, a reputation standing, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
 | `TravelLog/window.lua` | The window and minimap button with every companion's rows: tabs, sections, totals, settings, moving, hiding the button, a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
@@ -58,6 +59,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.units.target = { name, guid, hostile, level, ... }` | Other units (also `classification`, `dead`, `tapped`, `trivial`, `player`, `pet`). |
 | `M.hover(unit)` | Show a unit's tooltip, running addons' post-calls; returns its lines without color codes. |
 | `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, other group members' units, instance type. |
+| `M.skills`, `M.spellNames[id]`, `M.spellRanks[id]` | Skill lines (`{ skillID, name, rank, isHeader }`), spell names and rank text. |
 | `M.guidNames[guid] = name` | Units the client still knows by GUID (`UnitNameFromGUID`) after they're gone. |
 | `M.cvars[name] = { value, default, help, category, ... }` | CVars the client knows (also `secure`, `readOnly`, `account`, `character`, `max`, and `unlisted` to leave one out of `ConsoleGetAllCommands`). |
 | `M.script(frame, name, ...)`, `button:Click([mouseButton])` | Run a frame's script and its hooks (`OnEnterPressed`, `OnDragStop`, ...); click a button (default `"LeftButton"`) unless it's disabled. A scroll box gets a row in `.rows` for every element. |
