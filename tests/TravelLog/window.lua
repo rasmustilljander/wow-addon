@@ -1,5 +1,6 @@
 -- The TravelLog window and its addon compartment entry, with every companion
--- adding its rows: tabs, sections, totals, settings, moving and a reload.
+-- adding its rows: tabs, sections, totals, settings, moving, a reload, and
+-- an alt's totals with the others' and all of them added up.
 M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes", "TravelLog_Kills" }
 local ns = M.Login()
 
@@ -60,10 +61,11 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
-check(Texts(totals, 18) == "Places visited, Flights, Flight paths, Jumps, Distance, Looted, Vendors, Nodes, "
+check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Jumps, Distance, Looted, Vendors, Nodes, "
 	.. "Quests done, Learned, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
+check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
@@ -167,3 +169,48 @@ check(w:IsShown() and w.point[1] == "TOPLEFT" and w.point[4] == 100, "position r
 check(Button(w, "week").highlightLocked and not ExactCheck(w, "Looted nodes on the minimap"):GetChecked()
 	and not ExactCheck(w, "Looted nodes on the world map"):GetChecked(), "settings kept")
 
+
+-- An alt sees its own totals first; the picker steps through the others and
+-- all of them added up, then wraps. Rows only a character's own files know
+-- (its log, Kills) show for the one you're on only.
+M.Logout()
+M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
+ns = M.Login()
+M.dead = true
+M.fire("PLAYER_DEAD")
+M.dead = false
+SlashCmdList.TRAVELLOG("")
+w = ns.window
+totals = w.pages[1]
+local function Picker() return Texts(totals, 152) end
+local function Step(text) Button(totals, text):Click() end
+check(w.who:GetText():find("^Altie%-Forever") and Picker():find("^Altie%-Forever, level 5")
+	and Stat(w, "Deaths") == "1" and Stat(w, "Jumps") == "0 (0 this session)", "the alt's own totals: " .. Picker())
+Step(">")
+check(Picker():find("^Rasmus%-Forever, level 5") and Stat(w, "Deaths") == "1" and Stat(w, "XP kills") == "1"
+	and Stat(w, "Jumps") == "1", "the main's totals, no session: " .. Stat(w, "Jumps"))
+check(Stat(w, "Entries"):find("only for the character you're on") and Stat(w, "All kills"):find("only for")
+	and Stat(w, "Most killed"):find("only for"), "per-character rows: " .. Stat(w, "Entries"))
+Step(">")
+check(Picker():find("^All 2 characters") and Stat(w, "Deaths") == "2" and Stat(w, "Jumps") == "1"
+	and Stat(w, "Places visited") == "1", "all added up, a shared place once: " .. Stat(w, "Places visited"))
+Step(">")
+check(Picker():find("^Altie") and Stat(w, "Entries"):find("^%d+ in 1 sessions"), "wraps to the alt")
+Step("<")
+check(Picker():find("^All 2"), "< steps back")
+
+-- /tl stats takes all or a name.
+local function Stats(arg)
+	M.out = {}
+	SlashCmdList.TRAVELLOG("stats " .. arg)
+	return table.concat(M.out, "\n")
+end
+local main = Stats("rasmus")
+check(main:find("Rasmus%-Forever, level 5\n") and main:find("Deaths 1, kills 1,") and main:find("Jumps: 1, most in Elwynn Forest")
+	and not main:find("this session") and not main:find("Path:") and not main:find("character's file"), "/tl stats rasmus: " .. main)
+check(Stats("Rasmus-Forever") == main, "or Name-Realm, any case")
+local all = Stats("all")
+check(all:find("All 2 characters") and all:find("Deaths 2, kills 1,") and all:find("places visited 1"), "/tl stats all: " .. all)
+check(Stats(""):find("Altie%-Forever, level 5 Human") and Stats(""):find("character's file"), "/tl stats is still you")
+check(Stats("nobody"):find('no character "nobody". Known: Altie%-Forever, Rasmus%-Forever'), "unknown name")
+check(#M.errors == 0, "no errors")

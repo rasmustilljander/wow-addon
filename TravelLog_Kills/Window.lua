@@ -27,7 +27,7 @@ tl.AddStat("Life", "All kills", function()
 		mobs = mobs + 1
 	end
 	return ("%s of %s mobs"):format(Count(ns.db.total), Count(mobs))
-end)
+end, true)
 tl.AddStat("Life", "Most killed", function()
 	local best
 	for _, mob in pairs(ns.db.mobs) do
@@ -36,7 +36,7 @@ tl.AddStat("Life", "Most killed", function()
 		end
 	end
 	return best and ("%s (%s)"):format(best.name, Count(best.count)) or "nothing yet"
-end)
+end, true)
 tl.AddSetting("World map", function()
 	return "Kills" .. (ns.db.settings.mapFilter and ns.db.settings.map
 		and (": only %s"):format(ns.db.settings.mapFilter) or "")

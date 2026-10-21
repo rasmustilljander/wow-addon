@@ -25,10 +25,52 @@ end
 -- /tl stats
 --------------------------------------------------------------------------------
 
--- Subzones visited, counted across zones.
-function ns.PlacesVisited()
+-- Every character's key ("Name-Realm"), the one you're on first, then the
+-- others alphabetically.
+function ns.Characters()
+	local list = {}
+	for key in pairs(ns.db.chars) do
+		if key ~= ns.charKey then
+			list[#list + 1] = key
+		end
+	end
+	table.sort(list)
+	table.insert(list, 1, ns.charKey)
+	return list
+end
+
+-- Adds from's counters into into: numbers summed, nested tables merged,
+-- anything else kept from the first character that has it.
+local function AddUp(into, from)
+	for k, v in pairs(from) do
+		if type(v) == "table" then
+			into[k] = AddUp(type(into[k]) == "table" and into[k] or {}, v)
+		elseif type(v) == "number" and type(into[k]) == "number" then
+			into[k] = into[k] + v
+		elseif into[k] == nil then
+			into[k] = v
+		end
+	end
+	return into
+end
+
+-- A character's totals, or with no key every character's added up.
+function ns.StatsFor(key)
+	if key then
+		return key == ns.charKey and ns.stats or (ns.db.chars[key] or {}).stats or {}
+	end
+	local total = {}
+	for _, profile in pairs(ns.db.chars) do
+		AddUp(total, profile.stats or {})
+	end
+	return total
+end
+
+-- Subzones visited, counted across zones. Added up, a place visited by
+-- several characters counts once.
+function ns.PlacesVisited(st)
 	local places = 0
-	for _, subzones in pairs(ns.stats.places or {}) do
+	for _, subzones in pairs((st or ns.stats).places or {}) do
 		for _ in pairs(subzones) do
 			places = places + 1
 		end
@@ -36,9 +78,34 @@ function ns.PlacesVisited()
 	return places
 end
 
-local function ShowStats()
-	local char, st = ns.char, ns.stats
-	ns.Print("%s, level %d %s %s", ns.charKey, ns.profile.level or 0, UnitRace("player"), UnitClass("player"))
+-- The character a /tl stats argument names: "Name" or "Name-Realm".
+local function FindCharacter(arg)
+	for _, key in ipairs(ns.Characters()) do
+		if key:lower() == arg or (ns.db.chars[key].name or ""):lower() == arg then
+			return key
+		end
+	end
+end
+
+local function ShowStats(arg)
+	local key = ns.charKey
+	if arg == "all" then
+		key = nil
+	elseif arg ~= "" then
+		key = FindCharacter(arg)
+		if not key then
+			ns.Print("no character \"%s\". Known: %s", arg, table.concat(ns.Characters(), ", "))
+			return
+		end
+	end
+	local st = ns.StatsFor(key)
+	if key == ns.charKey then
+		ns.Print("%s, level %d %s %s", key, ns.profile.level or 0, UnitRace("player"), UnitClass("player"))
+	elseif key then
+		ns.Print("%s, level %d", key, ns.db.chars[key].level or 0)
+	else
+		ns.Print("All %d characters", #ns.Characters())
+	end
 
 	local loot = st.loot or {}
 	ns.Print("Loot: %s items from %s corpses/chests/nodes, plus %s in coins",
@@ -51,16 +118,19 @@ local function ShowStats()
 
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
-		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited()))
+		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited(st)))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, flight paths found %s, mounts %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.flightPaths), Count(st.mounts))
 
-	-- Companion addons add their own lines here.
-	ns.Fire("TL_STATS")
+	-- Companion addons add their own lines here, for these totals and this
+	-- character (nil for all of them).
+	ns.Fire("TL_STATS", st, key)
 
-	ns.Print("In this character's file: %s sessions, %s log entries%s",
-		Count(#char.sessions), Count(#char.log),
-		ns.ArchiveStatus() and " (older history: /tl archive)" or "")
+	if key == ns.charKey then
+		ns.Print("In this character's file: %s sessions, %s log entries%s",
+			Count(#ns.char.sessions), Count(#ns.char.log),
+			ns.ArchiveStatus() and " (older history: /tl archive)" or "")
+	end
 end
 
 local function ShowArchive(arg)
@@ -277,7 +347,7 @@ end
 local function Help()
 	ns.Print("commands:")
 	print("  /tl - open or close the TravelLog window")
-	print("  /tl stats - totals for this character")
+	print("  /tl stats [all|name] - totals for this character, all of them or another")
 	print("  /tl log [n] [search] - the last matching events (default 15)")
 	for _, name in ipairs(order) do
 		local help = commands[name].help
@@ -297,7 +367,7 @@ SlashCmdList.TRAVELLOG = function(msg)
 	if command == "" then
 		ns.Toggle()
 	elseif command == "stats" then
-		ShowStats()
+		ShowStats(arg)
 	elseif command == "log" then
 		ShowLog(arg)
 	elseif command == "archive" then

@@ -1,8 +1,8 @@
--- The TravelLog window: this character's totals on one tab and the settings
--- on another, each under section headings. Opened from the addon compartment
--- (the minimap's addons dropdown) or /tl. Companion addons add their
--- own rows with ns.AddStat, ns.AddSetting and ns.AddStepper, and whole tabs
--- with ns.AddTab, while loading or at login.
+-- The TravelLog window: any character's totals, or all of them added up, on
+-- one tab and the settings on another, each under section headings. Opened
+-- from the addon compartment (the minimap's addons dropdown) or /tl.
+-- Companion addons add their own rows with ns.AddStat, ns.AddSetting and
+-- ns.AddStepper, and whole tabs with ns.AddTab, while loading or at login.
 local _, ns = ...
 
 local WIDTH = 600
@@ -22,6 +22,11 @@ local stats = { order = { "Travel", "Loot", "Life", "Log" }, rows = {} }
 local settings = { order = { "World map", "General" }, rows = {} }
 local extraTabs = {} -- companions' tabs, after Totals and Settings
 local window
+
+-- Whose totals show: an index into ns.Characters(), one past its end for all
+-- of them added up. 1 is the character you're on.
+local showing = 1
+local ONLY_YOU = "|cff999999only for the character you're on|r"
 
 local function Add(tab, section, row)
 	if not tab.rows[section] then
@@ -46,9 +51,12 @@ local function EachRow(tab, fn)
 	end
 end
 
--- Adds a line to the totals under section. value() returns its text.
-function ns.AddStat(section, label, value)
-	Add(stats, section, { label = label, value = value })
+-- Adds a line to the totals under section. value(st, key) returns its text
+-- for the totals shown: st is that character's stats (every character's
+-- added up when key is nil) and key its "Name-Realm". A row whose data only
+-- the character you're on has passes mine, and says so for the others.
+function ns.AddStat(section, label, value, mine)
+	Add(stats, section, { label = label, value = value, mine = mine })
 end
 
 -- Adds a setting under section: a checkbox, or a button per choice when
@@ -84,27 +92,44 @@ end
 
 local Count = ns.Count
 
-ns.AddStat("Travel", "Places visited", function() return Count(ns.PlacesVisited()) end)
-ns.AddStat("Travel", "Flights", function() return Count(ns.stats.flights) end)
-ns.AddStat("Travel", "Flight paths", function() return Count(ns.stats.flightPaths) end)
-ns.AddStat("Loot", "Looted", function()
-	local loot = ns.stats.loot or {}
+ns.AddStat("Travel", "Places visited", function(st) return Count(ns.PlacesVisited(st)) end)
+ns.AddStat("Travel", "Flights", function(st) return Count(st.flights) end)
+ns.AddStat("Travel", "Flight paths", function(st) return Count(st.flightPaths) end)
+ns.AddStat("Loot", "Looted", function(st)
+	local loot = st.loot or {}
 	return ("%s items from %s sources, %s in coins"):format(Count(loot.items), Count(loot.opened), ns.MoneyText(loot.money))
 end)
-ns.AddStat("Loot", "Vendors", function()
-	local v = ns.stats.vendor or {}
+ns.AddStat("Loot", "Vendors", function(st)
+	local v = st.vendor or {}
 	return ("spent %s, earned %s"):format(ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 end)
-ns.AddStat("Life", "Quests done", function() return Count((ns.stats.quests or {}).completed) end)
-ns.AddStat("Life", "Learned", function()
-	local st = ns.stats
+ns.AddStat("Life", "Quests done", function(st) return Count((st.quests or {}).completed) end)
+ns.AddStat("Life", "Learned", function(st)
 	return ("%s spells, %s skills, %s skill points"):format(Count(st.spells), Count(st.skills), Count(st.skillups))
 end)
-ns.AddStat("Life", "XP kills", function() return Count(ns.stats.kills) end)
-ns.AddStat("Life", "Deaths", function() return Count(ns.stats.deaths) end)
+ns.AddStat("Life", "XP kills", function(st) return Count(st.kills) end)
+ns.AddStat("Life", "Deaths", function(st) return Count(st.deaths) end)
 ns.AddStat("Log", "Entries", function()
 	return ("%s in %s sessions"):format(Count(#ns.char.log), Count(#ns.char.sessions))
-end)
+end, true)
+
+-- The Totals tab's < and > buttons, stepping through the characters and all
+-- of them together.
+local picker = {
+	label = "Character",
+	get = function()
+		local list = ns.Characters()
+		local key = list[showing]
+		if not key then
+			return ("All %d characters"):format(#list)
+		end
+		return ("%s, level %d"):format(key, ns.db.chars[key].level or 0)
+	end,
+	step = function(step)
+		local n = #ns.Characters() + 1
+		showing = (showing - 1 + step) % n + 1
+	end,
+}
 
 --------------------------------------------------------------------------------
 -- The window
@@ -115,8 +140,13 @@ local function Refresh()
 		return
 	end
 	window.who:SetText(("%s, level %d %s %s"):format(ns.charKey, UnitLevel("player"), UnitRace("player"), UnitClass("player")))
+	local list = ns.Characters()
+	showing = math.min(showing, #list + 1)
+	local key = list[showing]
+	local st = ns.StatsFor(key)
+	picker.text:SetText(picker.get())
 	EachRow(stats, function(stat)
-		stat.text:SetText(stat.value())
+		stat.text:SetText(stat.mine and key ~= ns.charKey and ONLY_YOU or stat.value(st, key))
 	end)
 	EachRow(settings, function(setting)
 		local value = setting.get()
@@ -215,9 +245,10 @@ local function AddStepper(f, setting, y)
 	Button(f, ">", 24, VALUE_X + CHOICES_WIDTH - 24, y, function() setting.step(1) end)
 end
 
--- Fills a tab's page with its sections and returns how tall it is.
-local function Fill(page, tab, AddRow)
-	local y = 0
+-- Fills a tab's page with its sections, from y (default 0) down, and returns
+-- how tall it is.
+local function Fill(page, tab, AddRow, y)
+	y = y or 0
 	for _, section in ipairs(tab.order) do
 		local rows = tab.rows[section]
 		if rows then
@@ -304,7 +335,10 @@ local function CreateWindow()
 	-- A page per tab, the window as tall as the tallest one.
 	f.pages = {}
 	local all = {
-		{ name = "Totals", build = function(page) return Fill(page, stats, AddStatRow) end },
+		{ name = "Totals", build = function(page)
+			AddStepper(page, picker, 0)
+			return Fill(page, stats, AddStatRow, -SETTING_HEIGHT - 4)
+		end },
 		{ name = "Settings", build = function(page) return Fill(page, settings, AddSettingRow) end },
 	}
 	for _, tab in ipairs(extraTabs) do
