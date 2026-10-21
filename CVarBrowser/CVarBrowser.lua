@@ -192,8 +192,7 @@ frame:SetScript("OnEvent", function(_, event, arg)
 	if event == "ADDON_LOADED" and arg == "CVarBrowser" then
 		CVarBrowserDB = CVarBrowserDB or {}
 		CVarBrowserDB.bookmarks = CVarBrowserDB.bookmarks or {}
-		CVarBrowserDB.minimap = CVarBrowserDB.minimap or { angle = 225 }
-		ns.ShowMinimapButton(not CVarBrowserDB.minimap.hide)
+		CVarBrowserDB.minimap = nil -- the minimap button's, before the addon compartment
 	elseif ns.Refresh then
 		-- A CVar changed, or combat started or ended.
 		ns.Refresh()
@@ -208,4 +207,9 @@ SLASH_CVARBROWSER1 = "/cvars"
 SLASH_CVARBROWSER2 = "/cvar"
 SlashCmdList.CVARBROWSER = function(msg)
 	ns.Toggle(msg:match("^%s*(.-)%s*$"))
+end
+
+-- The addon compartment's entry, named in the .toc.
+function CVarBrowser_OnAddonCompartmentClick()
+	ns.Toggle()
 end

@@ -19,17 +19,17 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | File | |
 | --- | --- |
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
-| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, mail, owned auctions, loot windows, merchants, flights, the world map and world positions, the minimap's range and facing, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
+| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, mail, owned auctions, loot windows, merchants, flights, the world map and world positions, the minimap's range and facing, the addon compartment, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources (pickpockets too) and roll wins. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
-| `TravelLog/window.lua` | The window and minimap button: sections, totals, settings, the searchable event log, companion tabs, moving, hiding the button and a reload. |
+| `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the searchable event log, companion tabs, moving and a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, an alt's archive, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their minimap and world map pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
-| `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, and a reload. |
+| `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, its addon compartment entry, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
 | `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, a reload. |
 | `ItemCount/count.lua` | Bags, bank and account bank, mail and mail to alts, auctions running out, equipped items, tooltip lines, commands, a reload. |
@@ -75,6 +75,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.combat` | In combat (`InCombatLockdown`). |
 | `M.sent`, `M.sendResult`, `M.addonMessage(sender, prefix, text)` | Addon messages sent (`{ prefix, text, chatType, target }`), a function returning another `Enum.SendAddonMessageResult` (throttled, offline), and a whisper arriving from another player. |
 | `M.chat(event, text)` | Send a chat event; returns whether the chat frame would show it after addons' filters. |
+| `M.compartment[addon]` | The addon's entry in the minimap's addons dropdown (`text`, `icon`, `:Click([mouseButton])`), for addons whose `.toc` names an `AddonCompartmentFunc`. |
 | `M.cursor` | Cursor position in screen coordinates (`GetCursorPosition`); `Minimap` is 140 wide with its center at (1800, 900). |
 | `M.minimapRadius`, `M.facing`, `M.world[mapID]` | Yards the minimap shows from its center, your facing in radians, and where maps lie in the world (`{ continent, left, top, width, height }` in yards). |
 | `M.merchantItems`, `M.merchantFilter`, `M.canRepair` | The open vendor's items (`C_MerchantFrame.GetItemInfo` fields plus `link`), its filter (`LE_LOOT_FILTER_ALL` when nil) and whether it repairs. |

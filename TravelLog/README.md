@@ -28,16 +28,16 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 ## Window
 
-Click the map icon on the minimap, or type `/tl window`, for a window with these tabs:
+Pick TravelLog from the addons dropdown on the minimap, or type `/tl window`, for a window with these tabs:
 
 - **Totals**: this character's numbers under Travel, Loot, Life and Log.
-- **Settings**: the companions' map options, then General (the **Minimap button** checkbox and Path's interval).
+- **Settings**: the companions' map options and Path's interval.
 - **Log**: individual events still in the character file, newest first. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location.
 - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
 
-Companions add their rows to the matching section. Drag the minimap icon to move it around the minimap.
+Companions add their rows to the matching section.
 
 ## Commands
 
@@ -57,7 +57,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
-| `SavedVariables/TravelLog.lua` | Settings (the companions' too, the window's `point` and the minimap button's `minimap` and `minimapAngle`), each character's profile and totals |
+| `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals |
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills and mounts |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |

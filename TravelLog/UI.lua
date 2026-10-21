@@ -1,8 +1,8 @@
 -- The TravelLog window: this character's totals on one tab and the settings
--- on another, each under section headings. Opened from the minimap button
--- or /tl window. Companion addons add their own rows with ns.AddStat,
--- ns.AddSetting and ns.AddStepper, and whole tabs with ns.AddTab, while
--- loading or at login.
+-- on another, each under section headings. Opened from the addon compartment
+-- (the minimap's addons dropdown) or /tl window. Companion addons add their
+-- own rows with ns.AddStat, ns.AddSetting and ns.AddStepper, and whole tabs
+-- with ns.AddTab, while loading or at login.
 local _, ns = ...
 
 local WIDTH = 460
@@ -104,10 +104,6 @@ ns.AddStat("Life", "XP kills", function() return Count(ns.stats.kills) end)
 ns.AddStat("Life", "Deaths", function() return Count(ns.stats.deaths) end)
 ns.AddStat("Log", "Entries", function()
 	return ("%s in %s sessions"):format(Count(#ns.char.log), Count(#ns.char.sessions))
-end)
-
-ns.AddSetting("General", "Minimap button", function() return ns.settings.minimap end, function(on)
-	ns.ShowMinimapButton(on)
 end)
 
 --------------------------------------------------------------------------------
@@ -352,6 +348,11 @@ end
 -- Opens or closes the window.
 function ns.Toggle()
 	Window():SetShown(not window:IsShown())
+end
+
+-- The addon compartment's entry, named in the .toc.
+function TravelLog_OnAddonCompartmentClick()
+	ns.Toggle()
 end
 
 -- Opens the window on the tab with this name.
