@@ -22,7 +22,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
 | **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted and completed, kills that gave XP, discoveries. |
-| **Progress** | Spells, abilities and recipes learned (with rank and trainer), new skills, every 25 points of a skill, flight paths found, reputation standings reached. |
+| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
 
 ## Window
 
@@ -52,7 +52,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, the window's `point` and the minimap button's `minimap` and `minimapAngle`), each character's profile and totals |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests and skills |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills and mounts |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `<Realm>/<Character>/SavedVariables/TravelLog_Nodes.lua` | That character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
@@ -76,11 +76,12 @@ TravelLogCharDB = {
     { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500 },
   },
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ... } },
-  skills = { [129] = 75 },   -- skill ID -> rank, to tell new skills and milestones
+  skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones
+  mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
@@ -90,6 +91,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - A loot window combining several corpses is credited to the first one.
 - Objects are named from the cast that opened them. One that opens without a cast (some quest crates) gets its object ID but no name.
 - Addons get no coordinates in dungeons and raids. The Midnight-era client also hides some chat there, so crafted items, quest rewards, kills, discoveries and reputation standings may be missing. Loot windows and roll wins still work.
+- Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.

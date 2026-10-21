@@ -152,7 +152,7 @@ LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
 QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
 PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
-NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE]]):gmatch("%S+") do
+NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -727,6 +727,15 @@ function TaxiNodeName(i) return M.taxiNodes[i] and M.taxiNodes[i].name end
 function TaxiNodeGetType(i) return M.taxiNodes[i] and M.taxiNodes[i].type end
 function TaxiNodeCost(i) return M.taxiNodes[i] and M.taxiNodes[i].cost end
 function TakeTaxiNode() end
+
+-- Trainer: M.trainerServices[i] = { name, rank, cost }.
+M.trainerServices = {}
+function GetTrainerServiceInfo(i)
+	local t = M.trainerServices[i]
+	if t then return t.name, "available", 136116, 1, t.rank or "" end
+end
+function GetTrainerServiceCost(i) return M.trainerServices[i] and M.trainerServices[i].cost or 0, false end
+function BuyTrainerService() end
 
 function GetQuestReward() end
 function JumpOrAscendStart() end

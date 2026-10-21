@@ -1,5 +1,6 @@
--- Progress while leveling: spells learned, new skills and skill milestones,
--- flight paths found and reputation standings reached.
+-- Progress while leveling: spells learned (and what the trainer charged), new
+-- skills and skill milestones, flight paths found, reputation standings
+-- reached and the first ride on each mount.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -10,6 +11,45 @@ local _, ns = ...
 -- logged once within this many seconds.
 local SPELL_DEDUPE = 5
 local learned = {} -- spell ID and name -> GetTime() when logged
+
+-- What was just bought from a trainer, so the spell it teaches gets its cost.
+-- The trainer's list only says the name and rank, and the spell arrives
+-- after the click.
+local BOUGHT_FOR = 5 -- seconds a purchase waits for its spell
+local bought = {}    -- { name, rank, cost, at }
+
+if BuyTrainerService then
+	hooksecurefunc("BuyTrainerService", function(index)
+		if not ns.char or not GetTrainerServiceInfo then
+			return
+		end
+		local name, _, _, _, rank = GetTrainerServiceInfo(index)
+		local cost = ns.Clean(GetTrainerServiceCost and GetTrainerServiceCost(index))
+		rank = ns.Clean(rank)
+		for i = #bought, 1, -1 do
+			if GetTime() - bought[i].at > BOUGHT_FOR then
+				table.remove(bought, i)
+			end
+		end
+		name = ns.Clean(name)
+		if name then
+			bought[#bought + 1] = {
+				name = name, rank = rank ~= "" and rank or nil,
+				cost = cost and cost > 0 and cost or nil, at = GetTime(),
+			}
+		end
+	end)
+end
+
+-- The cost of the purchase that taught this spell, if one is waiting.
+local function Cost(name, rank)
+	for i, b in ipairs(bought) do
+		if GetTime() - b.at <= BOUGHT_FOR and b.name == name and (not b.rank or not rank or b.rank == rank) then
+			table.remove(bought, i)
+			return b.cost
+		end
+	end
+end
 
 local function Learned(id, name)
 	id = ns.Clean(id)
@@ -29,11 +69,13 @@ local function Learned(id, name)
 		learned[name] = GetTime()
 	end
 	local rank = id and C_Spell and C_Spell.GetSpellSubtext and ns.Clean(C_Spell.GetSpellSubtext(id))
+	rank = rank ~= "" and rank or nil
 	ns.Log("spell", {
 		id = id,
 		name = name,
-		rank = rank ~= "" and rank or nil,
+		rank = rank,
 		trainer = ns.open.trainer and ns.Clean(UnitName("npc")) or nil,
+		cost = Cost(name, rank),
 	})
 	ns.Add(1, "spells")
 end
@@ -141,6 +183,56 @@ local function CheckStanding(text)
 	end
 	return true
 end
+
+--------------------------------------------------------------------------------
+-- Mounts: the first ride on each one
+--------------------------------------------------------------------------------
+
+-- Mounting is a cast, so the mount is the spell cast just before.
+local lastCast, lastCastAt
+local wasMounted
+
+ns.On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
+	if unit == "player" then
+		lastCast, lastCastAt = ns.Clean(spellID), GetTime()
+	end
+end)
+
+local function CheckMount()
+	local mounted = IsMounted() and not UnitOnTaxi("player")
+	local justMounted = mounted and not wasMounted
+	wasMounted = mounted
+	if not justMounted or not lastCast or GetTime() - lastCastAt > 5 then
+		return
+	end
+	local mounts = ns.char.mounts or {}
+	ns.char.mounts = mounts
+	if mounts[lastCast] then
+		return
+	end
+	mounts[lastCast] = time()
+	ns.Log("mount", {
+		id = lastCast,
+		name = C_Spell and ns.Clean(C_Spell.GetSpellName(lastCast)),
+		first = not ns.stats.mounts or nil,
+	})
+	ns.Add(1, "mounts")
+end
+
+-- Clients without the event are checked every second instead.
+local mountEvent = ns.On("PLAYER_MOUNT_DISPLAY_CHANGED", CheckMount)
+
+ns.On("PLAYER_LOGIN", function()
+	wasMounted = IsMounted() and not UnitOnTaxi("player")
+	if not mountEvent then
+		C_Timer.NewTicker(1, function()
+			local ok, err = pcall(CheckMount)
+			if not ok then
+				geterrorhandler()(err)
+			end
+		end)
+	end
+end)
 
 --------------------------------------------------------------------------------
 -- Chat
