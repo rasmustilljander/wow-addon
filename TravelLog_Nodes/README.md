@@ -12,7 +12,7 @@ Per spot: what it was, when you last looted it, how many times, and the five lat
 | --- | --- |
 | `/tl nodes on\|off` | Pins on the world map (default on) |
 
-`/tl stats` and the [TravelLog window](../TravelLog/README.md#window) show how many herbs, ore, chests and other objects are remembered. The window also has a checkbox for the pins.
+`/tl stats` and the [TravelLog window](../TravelLog/README.md#window) show how many herbs, ore, chests and other objects are remembered. The window also has a **Looted nodes** checkbox for the pins.
 
 ## World map
 

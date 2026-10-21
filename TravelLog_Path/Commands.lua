@@ -99,17 +99,17 @@ end)
 -- The TravelLog window
 --------------------------------------------------------------------------------
 
-tl.AddStat("Jumps", function()
+tl.AddStat("Travel", "Jumps", function()
 	return ("%s (%s this session)"):format(tl.Count(tl.stats.jumps), tl.Count(ns.session.jumpCount))
 end)
-tl.AddStat("Distance", function()
+tl.AddStat("Travel", "Distance", function()
 	return ("%.1f miles"):format(Sum(tl.stats.distance) / YARDS_PER_MILE)
 end)
-tl.AddSetting("Map trail", function() return tl.settings.trail end, SetTrail, TRAIL_CHOICES)
-tl.AddStepper("Showing", function() return ns.DescribeTrail(tl.settings.trail) end, function(step)
+tl.AddSetting("World map", "Your trail", function() return tl.settings.trail end, SetTrail, TRAIL_CHOICES)
+tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.trail) end, function(step)
 	SetTrail(ns.StepDay(tl.settings.trail, step))
 end)
-tl.AddSetting("Path interval (s)", function() return tl.settings.interval end, function(seconds)
+tl.AddSetting("General", "Path interval (s)", function() return tl.settings.interval end, function(seconds)
 	tl.settings.interval = seconds
 end, { 1, 2, 3, 4, 5 })
 
@@ -119,16 +119,16 @@ tl.On("PLAYER_LOGIN", function()
 	if #alts == 0 then
 		return
 	end
-	tl.AddSetting("Alts' trail", function() return tl.settings.altTrail end, SetAltTrail, TRAIL_CHOICES)
-	tl.AddStepper("Showing", function() return ns.DescribeTrail(tl.settings.altTrail) end, function(step)
+	tl.AddSetting("World map", "Alts' trail", function() return tl.settings.altTrail end, SetAltTrail, TRAIL_CHOICES)
+	tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.altTrail) end, function(step)
 		SetAltTrail(ns.StepDay(tl.settings.altTrail, step))
 	end)
 	for _, alt in ipairs(alts) do
 		local _, _, _, color = GetClassColor(alt.profile.class)
 		local label = ("|c%s%s|r, level %s"):format(color, alt.key, alt.profile.level or "?")
-		tl.AddSetting(label, function() return not tl.settings.hiddenAlts[alt.key] end, function(shown)
+		tl.AddSetting("World map", label, function() return not tl.settings.hiddenAlts[alt.key] end, function(shown)
 			tl.settings.hiddenAlts[alt.key] = not shown or nil
 			ns.RefreshTrail()
-		end)
+		end, nil, true)
 	end
 end)

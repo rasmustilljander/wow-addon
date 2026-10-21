@@ -25,7 +25,12 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 ## Window
 
-Click the map icon on the minimap, or type `/tl window`, for a window with this character's totals and the settings. Companions add their totals and settings to it. Drag the icon to move it around the minimap; the **Minimap button** checkbox in the window hides or shows it.
+Click the map icon on the minimap, or type `/tl window`, for a window with two tabs:
+
+- **Totals**: this character's numbers under Travel, Loot, Life and Log.
+- **Settings**: the companions' World map options, then General (the **Minimap button** checkbox and Path's interval).
+
+Companions add their rows to the matching section. Drag the minimap icon to move it around the minimap.
 
 ## Commands
 

@@ -166,7 +166,7 @@ Share("bogus")
 check(Printed("/tl share follow <name>"), "help")
 SlashCmdList.TRAVELLOG("window")
 local found
-for _, fs in ipairs(TravelLogFrame.fontStrings) do
+for _, fs in ipairs(M.descendants(TravelLogFrame)) do
 	if fs.text and fs.text:find("^with 1, following 0, last request") then found = true end
 end
 check(found, "sharing line in the window")

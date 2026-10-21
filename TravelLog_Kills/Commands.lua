@@ -213,14 +213,14 @@ end
 
 local tl = TravelLog
 if tl and tl.AddStat then
-	tl.AddStat("All kills", function()
+	tl.AddStat("Life", "All kills", function()
 		local mobs = 0
 		for _ in pairs(ns.db.mobs) do
 			mobs = mobs + 1
 		end
 		return ("%s of %s mobs"):format(Count(ns.db.total), Count(mobs))
 	end)
-	tl.AddStat("Most killed", function()
+	tl.AddStat("Life", "Most killed", function()
 		local best
 		for _, mob in pairs(ns.db.mobs) do
 			if not best or mob.count > best.count then
@@ -229,8 +229,8 @@ if tl and tl.AddStat then
 		end
 		return best and ("%s (%s)"):format(best.name, Count(best.count)) or "nothing yet"
 	end)
-	tl.AddSetting(function()
-		return "Kills on the world map" .. (ns.db.settings.mapFilter and ns.db.settings.map
+	tl.AddSetting("World map", function()
+		return "Kills" .. (ns.db.settings.mapFilter and ns.db.settings.map
 			and (": only %s"):format(ns.db.settings.mapFilter) or "")
 	end, function()
 		return ns.db.settings.map

@@ -1,29 +1,32 @@
 -- The TravelLog window and its minimap button, with every companion adding
--- its rows: totals, settings, moving, hiding the button and a reload.
+-- its rows: tabs, sections, totals, settings, moving, hiding the button and
+-- a reload.
 M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes", "TravelLog_Kills" }
 local ns = M.Login()
 
 -- The value shown next to a label in the totals.
 local function Stat(w, label)
-	for i, fs in ipairs(w.fontStrings) do
-		if fs:GetText() == label then return w.fontStrings[i + 1]:GetText() end
+	local all = M.descendants(w)
+	for i, r in ipairs(all) do
+		if r.kind == "FontString" and r:GetText() == label then return all[i + 1]:GetText() end
 	end
 end
-local function Labels(w)
+-- The font strings at x on a page, in order.
+local function Texts(page, x)
 	local list = {}
-	for i, fs in ipairs(w.fontStrings) do
-		if fs.point and fs.point[2] == 18 and fs:GetText() ~= "" then list[#list + 1] = fs:GetText() end
+	for _, fs in ipairs(page.fontStrings or {}) do
+		if fs.point and fs.point[2] == x and fs:GetText() ~= "" then list[#list + 1] = fs:GetText() end
 	end
 	return table.concat(list, ", ")
 end
 local function Button(w, text)
-	for _, child in ipairs(w.children) do
-		if child.kind == "Button" and child:GetText() == text then return child end
+	for _, r in ipairs(M.descendants(w)) do
+		if r.kind == "Button" and r:GetText() == text then return r end
 	end
 end
 local function Check(w, text)
-	for _, child in ipairs(w.children) do
-		if child.kind == "CheckButton" and child.Text:GetText():find(text, 1, true) then return child end
+	for _, r in ipairs(M.descendants(w)) do
+		if r.kind == "CheckButton" and r.Text:GetText():find(text, 1, true) then return r end
 	end
 end
 -- Runs OnUpdate for a bit more than the window's 1 s redraw interval.
@@ -44,10 +47,19 @@ check(w and w:IsShown(), "click opens the window")
 check(w.TitleText:GetText() == "TravelLog", "title")
 check(w.who:GetText() == "Rasmus-Forever, level 5 Human Mage", "who: " .. w.who:GetText())
 
--- Totals: TravelLog's, then each companion's in load order.
-check(Labels(w) == "Loot, Vendors, Quests done, Flights, Deaths, XP kills, Places visited, Log, Jumps, Distance, "
-	.. "Nodes, All kills, Most killed, Map trail, Showing, Path interval (s)", "rows: " .. Labels(w))
-check(Stat(w, "Loot") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Loot"))
+-- Two tabs, Totals open first; the other one's page is hidden.
+local totals, settings = w.pages[1], w.pages[2]
+check(#w.Tabs == 2 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings", "tabs")
+check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown(), "totals tab open")
+check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disabled")
+
+-- Totals by section, each companion's rows in its section in load order.
+check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
+check(Texts(totals, 18) == "Places visited, Flights, Jumps, Distance, Looted, Vendors, Nodes, "
+	.. "Quests done, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
+check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
+check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
 
@@ -62,6 +74,11 @@ check(Stat(w, "All kills") == "1 of 1 mobs", "all kills: " .. Stat(w, "All kills
 check(Stat(w, "Most killed") == "Kobold Worker (1)", "most killed: " .. Stat(w, "Most killed"))
 
 -- Settings: choice buttons and checkboxes change what the commands change.
+w.Tabs[2]:Click()
+check(w.selectedTab == 2 and settings:IsShown() and not totals:IsShown(), "settings tab")
+check(Button(w, "today").normalFont == GameFontHighlight and Button(w, "week").normalFont == GameFontNormal,
+	"the chosen button in white")
+check(Button(w, "1"):GetWidth() == Button(w, "today"):GetWidth(), "choice buttons all the same width")
 check(Button(w, "today").highlightLocked and not Button(w, "week").highlightLocked, "trail today")
 Button(w, "week"):Click()
 check(ns.settings.trail == "week" and Button(w, "week").highlightLocked and not Button(w, "today").highlightLocked, "trail week")
@@ -76,12 +93,12 @@ check(ns.settings.nodes == false, "nodes off")
 -- A /kills map filter shows in the label; the checkbox goes back to all kills.
 SlashCmdList.TRAVELLOGKILLS("map kobold")
 Wait()
-local kills = Check(w, "Kills on the world map")
-check(kills.Text:GetText() == "Kills on the world map: only Kobold Worker", "filter shown: " .. kills.Text:GetText())
+local kills = Check(w, "Kills")
+check(kills.Text:GetText() == "Kills: only Kobold Worker", "filter shown: " .. kills.Text:GetText())
 kills:Click()
 check(TravelLogKillsDB.settings.map == false and TravelLogKillsDB.settings.mapFilter == nil, "kill pins off")
 kills:Click()
-check(TravelLogKillsDB.settings.map and kills.Text:GetText() == "Kills on the world map", "kill pins on, all kills")
+check(TravelLogKillsDB.settings.map and kills.Text:GetText() == "Kills", "kill pins on, all kills")
 
 -- Dragging the button, hiding it, and moving the window.
 M.script(mb, "OnDragStart")
@@ -89,8 +106,9 @@ M.cursor = { 1800, 1000 }
 M.frame()
 M.script(mb, "OnDragStop")
 check(ns.settings.minimapAngle == 90 and math.abs(mb.point[5] - 75) < 0.01, "dragged to the top")
-check(w.minimap:GetChecked(), "minimap checkbox on")
-w.minimap:Click()
+local minimap = Check(w, "Minimap button")
+check(minimap:GetChecked(), "minimap checkbox on")
+minimap:Click()
 check(not mb:IsShown() and ns.settings.minimap == false, "button hidden")
 M.script(w, "OnDragStart")
 w:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -80)
@@ -108,5 +126,5 @@ SlashCmdList.TRAVELLOG("window")
 w = ns.window
 check(w:IsShown() and w.point[1] == "TOPLEFT" and w.point[4] == 100, "position restored")
 check(Button(w, "week").highlightLocked and not Check(w, "Looted nodes"):GetChecked(), "settings kept")
-w.minimap:Click()
+Check(w, "Minimap button"):Click()
 check(ns.minimapButton:IsShown() and math.abs(ns.minimapButton.point[5] - 75) < 0.01, "shown again where it was dragged")

@@ -249,6 +249,10 @@ function Region:Enable() self.disabled = false end
 function Region:Disable() self.disabled = true end
 function Region:IsEnabled() return not self.disabled end
 function Region:LockHighlight() self.highlightLocked = true end
+function Region:SetNormalFontObject(font) self.normalFont = font end
+function Region:SetFontObject(font) self.font = font end
+function Region:SetID(id) self.id = id end
+function Region:GetID() return self.id or 0 end
 function Region:UnlockHighlight() self.highlightLocked = false end
 -- Clicking does nothing on a disabled button, like in the game. A check
 -- button flips before its OnClick runs.
@@ -289,6 +293,11 @@ M.templates = {
 	end,
 	UICheckButtonTemplate = function(f)
 		f.Text = f:CreateFontString()
+	end,
+	PanelTabButtonTemplate = function(f)
+		f.Text = f:CreateFontString()
+		f.parent.Tabs = f.parent.Tabs or {}
+		table.insert(f.parent.Tabs, f)
 	end,
 	SearchBoxTemplate = function(f)
 		f.searchIcon = f:CreateTexture()
@@ -344,6 +353,23 @@ ScrollUtil = {}
 function ScrollUtil.InitScrollBoxListWithScrollBar(box, bar, view) box.view, box.scrollBar = view, bar end
 ScrollBoxConstants = { RetainScrollPosition = true }
 UISpecialFrames = {}
+GameFontNormal, GameFontHighlight = { name = "GameFontNormal" }, { name = "GameFontHighlight" }
+-- Tabs: the selected one is disabled, like in the game.
+function PanelTemplates_SetNumTabs(frame, n) frame.numTabs = n end
+function PanelTemplates_SetTab(frame, id)
+	frame.selectedTab = id
+	for i = 1, frame.numTabs do frame.Tabs[i]:SetEnabled(i ~= id) end
+end
+-- Every frame and font string under f, each frame's font strings first.
+function M.descendants(f, list)
+	list = list or {}
+	for _, fs in ipairs(f.fontStrings or {}) do list[#list + 1] = fs end
+	for _, child in ipairs(f.children or {}) do
+		list[#list + 1] = child
+		M.descendants(child, list)
+	end
+	return list
+end
 function InCombatLockdown() return M.combat end
 
 function M.fire(event, ...)

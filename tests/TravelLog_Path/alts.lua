@@ -128,7 +128,7 @@ check(M.mapOverlay(2010).shown and #mine == 0 and #alts == today, "your trail of
 --------------------------------------------------------------------------------
 
 local function Button(w, text, n)
-	for _, child in ipairs(w.children) do
+	for _, child in ipairs(M.descendants(w)) do
 		if child.kind == "Button" and child:GetText() == text then
 			n = (n or 1) - 1
 			if n == 0 then return child end
@@ -136,8 +136,8 @@ local function Button(w, text, n)
 	end
 end
 local function Text(w, pattern, n)
-	for _, fs in ipairs(w.fontStrings) do
-		if fs:GetText():find(pattern) then
+	for _, fs in ipairs(M.descendants(w)) do
+		if fs.kind == "FontString" and fs:GetText():find(pattern) then
 			n = (n or 1) - 1
 			if n == 0 then return fs end
 		end
@@ -147,10 +147,14 @@ end
 SlashCmdList.TRAVELLOG("trail today")
 SlashCmdList.TRAVELLOG("window")
 local w = ns.window
-check(Text(w, "^Alts' trail$") and Text(w, "^Showing$", 2), "alts' rows")
-local alt = w.children[#w.children - 1]
-check(alt.kind == "CheckButton" and alt.Text:GetText() == "|cff3fc7ebRasmus-Forever|r, level 5" and alt:GetChecked(),
+check(Text(w, "^Your trail$") and Text(w, "^Alts' trail$"), "alts' rows")
+local alt
+for _, child in ipairs(M.descendants(w)) do
+	if child.kind == "CheckButton" and child.Text:GetText():find("Rasmus-Forever", 1, true) then alt = child end
+end
+check(alt and alt.Text:GetText() == "|cff3fc7ebRasmus-Forever|r, level 5" and alt:GetChecked(),
 	"a checkbox per alt, in its class color: " .. alt.Text:GetText())
+check(alt.point[2] == Button(w, "<", 2).point[2] - 4, "lined up under the alts' trail")
 check(Text(w, "^today$") and Text(w, "^latest session$"), "steppers show the ranges")
 
 -- Your day: back from today to yesterday and the day before, forward to today.
