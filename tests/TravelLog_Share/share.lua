@@ -213,6 +213,8 @@ local pins = M.shown(M.mapOverlay(2012).children)
 check(#pins == 2 and pins[1].from == "Rasmus-Forever" and pins[1].icon.color[4] == 0.6 and pins[1].w == 6, "shared pins, smaller and dimmer")
 pins[1].scripts.OnEnter(pins[1])
 check(GameTooltip.lines[1] == "Silverleaf" and GameTooltip.lines[2] == "Shared by Rasmus-Forever" and GameTooltip.lines[4] == "Looted 2 times", "shared pin tooltip: " .. table.concat(GameTooltip.lines, " / "))
+local miniPins = M.shown(M.ns("TravelLog_Nodes").minimapHolder.children)
+check(#miniPins == 2 and miniPins[1].from == "Rasmus-Forever" and miniPins[1].w == 6, "shared nodes on the minimap too")
 
 -- Bob's own herb shows beside them
 Herb("Earthroot", 2449, { 0.60, 0.60, -9400, -600 })

@@ -29,6 +29,11 @@ local function Check(w, text)
 		if r.kind == "CheckButton" and r.Text:GetText():find(text, 1, true) then return r end
 	end
 end
+local function ExactCheck(w, text)
+	for _, r in ipairs(M.descendants(w)) do
+		if r.kind == "CheckButton" and r.Text:GetText() == text then return r end
+	end
+end
 -- Runs OnUpdate for a bit more than the window's 1 s redraw interval.
 local function Wait()
 	for _ = 1, 70 do M.frame() end
@@ -87,10 +92,12 @@ check(ns.settings.trail == "week" and Button(w, "week").highlightLocked and not 
 check(Button(w, "2").highlightLocked, "interval 2")
 Button(w, "5"):Click()
 check(ns.settings.interval == 5 and Button(w, "5").highlightLocked, "interval 5")
-local nodes = Check(w, "Looted nodes")
-check(nodes:GetChecked(), "nodes on")
-nodes:Click()
-check(ns.settings.nodes == false, "nodes off")
+local miniNodes = ExactCheck(w, "Looted nodes on the minimap")
+local mapNodes = ExactCheck(w, "Looted nodes on the world map")
+check(miniNodes:GetChecked() and mapNodes:GetChecked(), "node pins on")
+miniNodes:Click()
+mapNodes:Click()
+check(ns.settings.nodeMinimap == false and ns.settings.nodes == false, "node pins off")
 
 -- A /kills map filter shows in the label; the checkbox goes back to all kills.
 SlashCmdList.TRAVELLOGKILLS("map kobold")
@@ -127,6 +134,7 @@ check(ns.minimapButton == nil, "button stays hidden")
 SlashCmdList.TRAVELLOG("window")
 w = ns.window
 check(w:IsShown() and w.point[1] == "TOPLEFT" and w.point[4] == 100, "position restored")
-check(Button(w, "week").highlightLocked and not Check(w, "Looted nodes"):GetChecked(), "settings kept")
+check(Button(w, "week").highlightLocked and not ExactCheck(w, "Looted nodes on the minimap"):GetChecked()
+	and not ExactCheck(w, "Looted nodes on the world map"):GetChecked(), "settings kept")
 Check(w, "Minimap button"):Click()
 check(ns.minimapButton:IsShown() and math.abs(ns.minimapButton.point[5] - 75) < 0.01, "shown again where it was dragged")

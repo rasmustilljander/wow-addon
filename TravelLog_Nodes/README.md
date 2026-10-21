@@ -1,6 +1,6 @@
 # TravelLog Nodes
 
-Remembers every chest, herb and ore spot your characters loot in WoW: Forever and pins it on the world map with when it was last looted and by whom. All characters on the account share the same nodes, like Gatherer. Needs [TravelLog](../TravelLog/), whose loot recording tells it what you looted, where and with which spell.
+Remembers every chest, herb and ore spot your characters loot in WoW: Forever and pins it on the minimap and world map with when it was last looted and by whom. All characters on the account share the same nodes, like Gatherer. Needs [TravelLog](../TravelLog/), whose loot recording tells it what you looted, where and with which spell.
 
 ## What it records
 
@@ -12,11 +12,11 @@ Per spot: what it was, when it was last looted, the five latest loot times with 
 | --- | --- |
 | `/tl nodes on\|off` | Pins on the world map (default on) |
 
-`/tl stats` and the [TravelLog window](../TravelLog/README.md#window) show how many herbs, ore, chests and other objects all characters have found. The window also has a **Looted nodes** checkbox for the pins.
+`/tl stats` and the [TravelLog window](../TravelLog/README.md#window) show how many herbs, ore, chests and other objects all characters have found. The window has separate **Looted nodes on the minimap** and **Looted nodes on the world map** checkboxes; both default on.
 
-## World map
+## Map pins
 
-Zone maps (not continent maps) show square pins: green herbs, orange ore, gold chests, grey other objects. Hover one for when it was last looted, how long ago and by whom, how many times (split by character when more than one looted it), and the times before:
+The minimap shows nearby nodes recorded on its current map and follows the minimap's range and rotation. Zone maps (not continent maps) show every node in the zone. Both use square pins: green herbs, orange ore, gold chests, grey other objects. Hover one for when it was last looted, how long ago and by whom, how many times (split by character when more than one looted it), and the times before:
 
 ```
 Peacebloom
@@ -30,6 +30,8 @@ Names are in the character's class color, with the realm when it isn't yours. No
 ## Where the data is
 
 `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Nodes.lua`, one file for every character on every realm. Nodes never rotate into the archive. Nodes from 0.1's per-character file, and from TravelLog's file before this addon existed, move into it at each character's first login; the same spot from two characters becomes one node.
+
+Pin settings are in `SavedVariables/TravelLog.lua`: `TravelLogDB.settings.nodeMinimap` controls the minimap and `TravelLogDB.settings.nodes` controls the world map.
 
 ```lua
 TravelLogNodesAccountDB = {

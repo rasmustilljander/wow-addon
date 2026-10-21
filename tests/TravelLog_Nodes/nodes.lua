@@ -3,6 +3,8 @@
 -- sharing them, wiping, and moving old per-character nodes into the
 -- account-wide file.
 local ns = M.Login()
+local nodeNS = M.ns("TravelLog_Nodes")
+check(ns.settings.nodeMinimap and ns.settings.nodes, "minimap and world map pins on by default")
 
 local function last(kind)
 	local log = TravelLogCharDB.log
@@ -17,7 +19,7 @@ local function Nodes(map)
 	return TravelLogNodesAccountDB.maps[map or 1429] or {}
 end
 local function Total(node)
-	return M.ns("TravelLog_Nodes").Total(node)
+	return nodeNS.Total(node)
 end
 local function Tooltip(node)
 	for _, pin in ipairs(M.shown(M.mapOverlay(2012).children)) do
@@ -104,6 +106,50 @@ M.loot = { { name = "Coin", link = "[Coin]", qty = 1, guid = "GameObject-0-1-0-1
 M.lootAll()
 check(last("loot").source == "Dusty Chest" and #Nodes() == 4, "dungeon loot logged but no node")
 M.x, M.y, M.wa, M.wb = 0.42, 0.65, -9000, -100
+
+--------------------------------------------------------------------------------
+-- Node pins on the minimap, following its range and rotation
+--------------------------------------------------------------------------------
+
+local function MiniPins()
+	M.frame()
+	return M.shown(nodeNS.minimapHolder.children)
+end
+local function MiniPin(node)
+	for _, pin in ipairs(MiniPins()) do
+		if pin.node == node then return pin end
+	end
+end
+
+M.x, M.y = 0.30, 0.40
+local miniPins = MiniPins()
+check(#miniPins == 2, "nearby herb and ore pinned on the minimap: " .. #miniPins)
+local miniHerb, miniOre = MiniPin(Nodes()[2]), MiniPin(Nodes()[3])
+check(miniHerb and miniHerb.w == 8 and miniHerb.icon.color[1] == 0.35, "minimap herb uses the node pin style")
+-- The ore is 3.47 yards east and 2.315 yards south; 70 pixels is 200 yards.
+check(miniOre and math.abs(miniOre.point[4] - 3.47 * 70 / 200) < 0.01
+	and math.abs(miniOre.point[5] + 2.315 * 70 / 200) < 0.01, "minimap pin at the node's relative position")
+M.script(miniHerb, "OnEnter")
+check(GameTooltip.lines[1] == "Peacebloom", "minimap pin has the node tooltip")
+
+M.cvars.rotateMinimap = { value = "1", default = "0" }
+M.facing = math.pi / 2
+miniOre = MiniPin(Nodes()[3])
+check(math.abs(miniOre.point[4] + 2.315 * 70 / 200) < 0.01
+	and math.abs(miniOre.point[5] + 3.47 * 70 / 200) < 0.01, "minimap pin follows rotation")
+M.cvars.rotateMinimap, M.facing = nil, 0
+
+M.x, M.y = 0.42, 0.65
+check(#MiniPins() == 1 and MiniPins()[1].node == crate, "minimap only shows nodes in range")
+M.x = nil
+check(#MiniPins() == 0, "no minimap pins without a position")
+M.x = 0.42
+ns.settings.nodeMinimap = false
+nodeNS.RefreshMinimap()
+check(#MiniPins() == 0, "minimap node setting hides pins")
+ns.settings.nodeMinimap = true
+nodeNS.RefreshMinimap()
+check(#MiniPins() == 1, "minimap node setting shows pins")
 
 --------------------------------------------------------------------------------
 -- Node pins on the map, with the last looted time in the tooltip

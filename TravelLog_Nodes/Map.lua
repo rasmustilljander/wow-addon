@@ -73,21 +73,33 @@ local function HideTooltip()
 	GameTooltip:Hide()
 end
 
-local function SetPin(i, node, x, y, size, from)
-	local pin = pins[i]
-	if not pin then
-		pin = CreateFrame("Frame", nil, overlay)
-		pin:EnableMouse(true)
-		pin:SetMouseClickEnabled(false) -- clicks still reach the map
-		pin:SetScript("OnEnter", NodeTooltip)
-		pin:SetScript("OnLeave", HideTooltip)
-		pin.icon = pin:CreateTexture(nil, "OVERLAY")
-		pin.icon:SetAllPoints()
-		pins[i] = pin
-	end
+-- Both the world map and minimap use the same pins and tooltip.
+function ns.NewNodePin(parent)
+	local pin = CreateFrame("Frame", nil, parent)
+	pin:EnableMouse(true)
+	pin:SetMouseClickEnabled(false) -- clicks still reach the map
+	pin:SetScript("OnEnter", NodeTooltip)
+	pin:SetScript("OnLeave", HideTooltip)
+	pin.icon = pin:CreateTexture(nil, "OVERLAY")
+	pin.icon:SetAllPoints()
+	return pin
+end
+
+function ns.SetNodePin(pin, node, from)
 	pin.node, pin.from = node, from
 	local color = NODE_COLORS[node.kind] or NODE_COLORS.object
 	pin.icon:SetColorTexture(color[1], color[2], color[3], from and 0.6 or 1)
+	pin:SetSize(from and SHARED_SIZE or NODE_SIZE, from and SHARED_SIZE or NODE_SIZE)
+	return pin
+end
+
+local function SetPin(i, node, x, y, size, from)
+	local pin = pins[i]
+	if not pin then
+		pin = ns.NewNodePin(overlay)
+		pins[i] = pin
+	end
+	ns.SetNodePin(pin, node, from)
 	pin:SetSize(size, size)
 	pin:ClearAllPoints()
 	pin:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)

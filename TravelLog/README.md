@@ -5,7 +5,7 @@ Records your travels in WoW: Forever so you can retrace them: loot, vendor trade
 Optional companions, each its own folder:
 
 - [TravelLog_Path](../TravelLog_Path/): your path and jumps, drawn on the world map. Needs TravelLog.
-- [TravelLog_Nodes](../TravelLog_Nodes/): looted chests, herbs and ore, pinned on the world map. Needs TravelLog.
+- [TravelLog_Nodes](../TravelLog_Nodes/): looted chests, herbs and ore, pinned on the minimap and world map. Needs TravelLog.
 - `TravelLog_Archive`: storage for older history (see [Where the data is](#where-the-data-is)). Install it with TravelLog.
 - [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
 - [TravelLog_NPCs](../TravelLog_NPCs/): NPCs you've talked to and what they sell, on the maps and item tooltips. Works on its own too.
@@ -31,7 +31,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 Click the map icon on the minimap, or type `/tl window`, for a window with these tabs:
 
 - **Totals**: this character's numbers under Travel, Loot, Life and Log.
-- **Settings**: the companions' World map options, then General (the **Minimap button** checkbox and Path's interval).
+- **Settings**: the companions' map options, then General (the **Minimap button** checkbox and Path's interval).
 - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.

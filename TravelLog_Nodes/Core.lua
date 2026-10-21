@@ -6,7 +6,8 @@ local _, ns = ...
 local tl = TravelLog
 
 tl.Defaults({
-	nodes = true, -- show looted chests, herbs and ore on the world map
+	nodes = true,        -- show looted chests, herbs and ore on the world map
+	nodeMinimap = true,  -- and on the minimap
 })
 
 local NODE_RADIUS = 10 -- yards; loot spots closer than this are the same node
@@ -221,18 +222,22 @@ tl.On("TL_STATS", function()
 end)
 
 tl.AddStat("Loot", "Nodes", Remembered)
-tl.AddSetting("World map", "Looted nodes", function() return tl.settings.nodes end, function(on)
+tl.AddSetting("World map", "Looted nodes on the minimap", function() return tl.settings.nodeMinimap end, function(on)
+	tl.settings.nodeMinimap = on
+	if ns.RefreshMinimap then ns.RefreshMinimap() end
+end)
+tl.AddSetting("World map", "Looted nodes on the world map", function() return tl.settings.nodes end, function(on)
 	tl.settings.nodes = on
 	ns.RefreshMap()
 end)
 
 tl.Command("nodes", function()
-	return "nodes on|off - looted chests and herbs/ore on the map (now: " .. (tl.settings.nodes and "on" or "off") .. ")"
+	return "nodes on|off - looted chests and herbs/ore on the world map (now: " .. (tl.settings.nodes and "on" or "off") .. ")"
 end, function(arg)
 	if arg ~= "on" and arg ~= "off" then
 		return false
 	end
 	tl.settings.nodes = arg == "on"
 	ns.RefreshMap()
-	tl.Print("chests and gathering nodes on the map: %s", arg)
+	tl.Print("chests and gathering nodes on the world map: %s", arg)
 end)

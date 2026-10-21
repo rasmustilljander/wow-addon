@@ -6,7 +6,7 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | --- | --- |
 | [TravelLog](TravelLog/) | Records loot, vendor trades, money, flights, deaths, quests and more, with a window from the minimap. |
 | [TravelLog_Path](TravelLog_Path/) | Records your path and jumps and draws the trail, and your alts', on the world map. Needs TravelLog. |
-| [TravelLog_Nodes](TravelLog_Nodes/) | Pins chests, herbs and ore any of your characters looted on the world map, with when and by whom. Needs TravelLog. |
+| [TravelLog_Nodes](TravelLog_Nodes/) | Pins chests, herbs and ore any of your characters looted on the minimap and world map, with when and by whom. Needs TravelLog. |
 | [TravelLog_Share](TravelLog_Share/) | Shares your nodes, and on request your log, with players you allow, and records who asked. Needs TravelLog. |
 | `TravelLog_Archive` | Load-on-demand storage for older TravelLog and TravelLog_Path history. Install it with TravelLog. |
 | [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where), with map pins and tooltip counts. TravelLog optional. |
