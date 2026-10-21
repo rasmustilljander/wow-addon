@@ -259,6 +259,12 @@ check(help:find("/tl trail [alts] session", 1, true) and help:find("/tl interval
 	and help:find("/tl jumps"), "help lists the companion addons' commands: " .. help)
 SlashCmdList.TRAVELLOG("jumps")
 SlashCmdList.TRAVELLOG("log 40")
+M.out = {}
+SlashCmdList.TRAVELLOG("log 5 deaths")
+local deathLog = table.concat(M.out, "\n")
+check(deathLog:find('Last 1 events matching "deaths"', 1, true)
+	and deathLog:find("Died fighting Defias Thug at level 5", 1, true)
+	and not deathLog:find("Looted", 1, true), "filtered /tl log: " .. deathLog)
 SlashCmdList.TRAVELLOG("interval 4")
 check(ns.settings.interval == 4, "interval set")
 SlashCmdList.TRAVELLOG("interval 9")

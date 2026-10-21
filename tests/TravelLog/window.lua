@@ -52,12 +52,13 @@ check(w and w:IsShown(), "click opens the window")
 check(w.TitleText:GetText() == "TravelLog", "title")
 check(w.who:GetText() == "Rasmus-Forever, level 5 Human Mage", "who: " .. w.who:GetText())
 
--- Totals and Settings, then TravelLog_Kills' tab; Totals open first, the
+-- Totals, Settings and Log, then TravelLog_Kills' tab; Totals open first, the
 -- other pages hidden.
-local totals, settings = w.pages[1], w.pages[2]
-check(#w.Tabs == 3 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings"
-	and w.Tabs[3]:GetText() == "Kills", "tabs")
-check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown() and not w.pages[3]:IsShown(), "totals tab open")
+local totals, settings, log = w.pages[1], w.pages[2], w.pages[3]
+check(#w.Tabs == 4 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings"
+	and w.Tabs[3]:GetText() == "Log" and w.Tabs[4]:GetText() == "Kills", "tabs")
+check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown() and not log:IsShown()
+	and not w.pages[4]:IsShown(), "totals tab open")
 check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disabled")
 
 -- Totals by section, each companion's rows in its section in load order.
@@ -74,11 +75,38 @@ check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
 JumpOrAscendStart()
 M.fire("PARTY_KILL", UnitGUID("player"), "Creature-0-1-2-3-257-1")
 M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 45 experience.")
+M.units.target = { name = "Defias Thug", hostile = true }
+M.dead = true
+M.fire("PLAYER_DEAD")
+M.dead = false
+M.units.target = nil
 Wait()
 check(Stat(w, "Jumps") == "1 (1 this session)", "jumps: " .. Stat(w, "Jumps"))
 check(Stat(w, "XP kills") == "1", "xp kills: " .. Stat(w, "XP kills"))
+check(Stat(w, "Deaths") == "1", "deaths: " .. Stat(w, "Deaths"))
 check(Stat(w, "All kills") == "1 of 1 mobs", "all kills: " .. Stat(w, "All kills"))
 check(Stat(w, "Most killed") == "Kobold Worker (1)", "most killed: " .. Stat(w, "Most killed"))
+
+-- Log: individual entries newest first, category buttons, and searches over
+-- both visible text and saved fields such as a death's level.
+w.Tabs[3]:Click()
+local function LogRows()
+	local out = {}
+	for _, row in ipairs(M.shown(log.events.rows)) do
+		out[#out + 1] = row.kind:GetText() .. ": " .. row.what:GetText()
+	end
+	return table.concat(out, ", ")
+end
+check(w.selectedTab == 3 and log:IsShown() and LogRows():find("^Death: Died fighting Defias Thug at level 5"),
+	"individual deaths, newest first: " .. LogRows())
+check(log.found:GetText() == "3 entries", "all log entries: " .. log.found:GetText())
+Button(log, "Life"):Click()
+check(log.found:GetText() == "2 of 3 entries" and LogRows():find("XP kill"), "life filter: " .. LogRows())
+log.search:SetText("deaths level 5")
+check(log.found:GetText() == "1 of 3 entries" and LogRows():find("Defias Thug"), "search saved death fields: " .. LogRows())
+log.search.clearButton:Click()
+Button(log, "All"):Click()
+check(log.found:GetText() == "3 entries", "log filters cleared: " .. log.found:GetText())
 
 -- Settings: choice buttons and checkboxes change what the commands change.
 w.Tabs[2]:Click()

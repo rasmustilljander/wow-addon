@@ -188,8 +188,8 @@ check(TravelLogKillsDB.mobs["Kobold Worker"].count == 7 and #TravelLogKillsDB.pl
 -- the zones it died in.
 check(Run("window") == "", "/kills window")
 local w = M.ns("TravelLog").window
-local page = w.pages[3]
-check(w:IsShown() and w.selectedTab == 3 and page:IsShown(), "opens on the Kills tab")
+local page = w.pages[4]
+check(w:IsShown() and w.selectedTab == 4 and page:IsShown(), "opens on the Kills tab")
 -- The shown rows of a list, as "name count".
 local function Rows(list)
 	local out = {}

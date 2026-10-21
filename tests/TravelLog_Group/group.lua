@@ -135,8 +135,8 @@ check(Run("nobody"):find("haven't grouped"), "/grouped with no match")
 Roster(ANNA)
 check(Run("window") == "", "/grouped window")
 local w = M.ns("TravelLog").window
-local page = w.pages[3]
-check(w:IsShown() and w.Tabs[3]:GetText() == "Players" and page:IsShown(), "opens on the Players tab")
+local page = w.pages[4]
+check(w:IsShown() and w.Tabs[4]:GetText() == "Players" and page:IsShown(), "opens on the Players tab")
 local function Rows(list, a, b)
 	local out = {}
 	for _, row in ipairs(M.shown(list.rows)) do out[#out + 1] = row[a]:GetText() .. " " .. row[b]:GetText() end

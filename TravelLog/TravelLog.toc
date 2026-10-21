@@ -16,4 +16,5 @@ Life.lua
 Progress.lua
 Commands.lua
 UI.lua
+LogUI.lua
 Minimap.lua

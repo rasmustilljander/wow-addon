@@ -129,7 +129,10 @@ local DESCRIBE = {
 	landed = function(e) return e.seconds and ("Landed after %d:%02d"):format(math.floor(e.seconds / 60), e.seconds % 60) or "Landed" end,
 	hearth = function(e) return ("Hearthed to %s"):format(e.to or "?") end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
-	death = function(e) return e.target and ("Died fighting %s"):format(e.target) or "Died" end,
+	death = function(e)
+		local text = e.target and ("Died fighting %s"):format(e.target) or "Died"
+		return e.level and ("%s at level %d"):format(text, e.level) or text
+	end,
 	release = function() return "Released spirit" end,
 	revive = function() return "Came back to life" end,
 	level = function(e) return ("Reached level %d"):format(e.level) end,
@@ -160,13 +163,105 @@ function ns.Describe(e)
 	return describe and describe(e) or e.type, where
 end
 
-local function ShowLog(n)
-	local log = ns.char.log
-	n = math.min(n, #log)
-	ns.Print("Last %d events:", n)
-	for i = #log - n + 1, #log do
-		local text, where = ns.Describe(log[i])
-		print(("  %s  %s  |cff999999%s|r"):format(date("%m-%d %H:%M", log[i].time), text, where))
+-- The Log tab and /tl log share these categories and labels. Every current
+-- event type belongs to one category; an unknown future type still appears
+-- under All and remains searchable by its saved fields.
+local LOG_GROUP = {
+	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
+	loot = "Loot", receive = "Loot",
+	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
+	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
+	questdone = "Life", kill = "Life", discover = "Life",
+	spell = "Progress", skill = "Progress", skillup = "Progress", taxipath = "Progress",
+	standing = "Progress", mount = "Progress",
+}
+local LOG_LABEL = {
+	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
+	buyback = "Buyback", repair = "Repair", money = "Money", flight = "Flight",
+	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", death = "Death",
+	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
+	questdone = "Quest completed", kill = "XP kill", discover = "Discovery", spell = "Spell",
+	skill = "Skill", skillup = "Skill-up", taxipath = "Flight path", standing = "Reputation",
+	mount = "Mount",
+}
+
+function ns.LogGroup(e)
+	return LOG_GROUP[e.type] or "Other"
+end
+
+function ns.LogTypeLabel(e)
+	return LOG_LABEL[e.type] or e.type or "Event"
+end
+
+-- Add every scalar saved in the entry, including nested loot items. This
+-- lets one search field match IDs and less prominent fields as well as the
+-- human-readable description.
+local function SearchValues(out, value, seen)
+	local kind = type(value)
+	if kind == "string" then
+		value = ns.Clean(value)
+		if value then out[#out + 1] = value end
+	elseif kind == "number" or kind == "boolean" then
+		out[#out + 1] = tostring(value)
+	elseif kind == "table" and not seen[value] then
+		seen[value] = true
+		for key, child in pairs(value) do
+			if type(key) == "string" then out[#out + 1] = key end
+			SearchValues(out, child, seen)
+		end
+	end
+end
+
+-- True when an entry is in group (nil means All) and every word in query
+-- occurs in its type, description, date, location or any saved field.
+function ns.LogMatches(e, query, group)
+	if group and ns.LogGroup(e) ~= group then
+		return false
+	end
+	query = (query or ""):lower()
+	if query == "" then
+		return true
+	end
+	local text, where = ns.Describe(e)
+	local values = { ns.LogTypeLabel(e), ns.LogGroup(e), text, where,
+		date("%Y-%m-%d %H:%M", e.time) }
+	SearchValues(values, e, {})
+	local haystack = table.concat(values, " "):lower()
+	for word in query:gmatch("%S+") do
+		local found = haystack:find(word, 1, true)
+		-- Natural plurals such as "deaths" and "quests" match their type.
+		if not found and word:sub(-1) == "s" then
+			found = haystack:find(word:sub(1, -2), 1, true)
+		end
+		if not found then
+			return false
+		end
+	end
+	return true
+end
+
+local function ShowLog(arg)
+	local number, query = arg:match("^(%d+)%s*(.-)%s*$")
+	local limit = tonumber(number) or 15
+	query = number and query or arg
+	local found = {}
+	if limit > 0 then
+		for i = #ns.char.log, 1, -1 do
+			local e = ns.char.log[i]
+			if ns.LogMatches(e, query) then
+				found[#found + 1] = e
+				if #found >= limit then break end
+			end
+		end
+	end
+	if query == "" then
+		ns.Print("Last %d events:", #found)
+	else
+		ns.Print("Last %d events matching \"%s\":", #found, query)
+	end
+	for i = #found, 1, -1 do
+		local text, where = ns.Describe(found[i])
+		print(("  %s  %s  |cff999999%s|r"):format(date("%m-%d %H:%M", found[i].time), text, where))
 	end
 end
 
@@ -177,7 +272,7 @@ end
 local function Help()
 	ns.Print("commands:")
 	print("  /tl stats - totals for this character")
-	print("  /tl log [n] - the last n recorded events (default 15)")
+	print("  /tl log [n] [search] - the last matching events (default 15)")
 	for _, name in ipairs(order) do
 		local help = commands[name].help
 		print("  /tl " .. (type(help) == "function" and help() or help))
@@ -196,7 +291,7 @@ SlashCmdList.TRAVELLOG = function(msg)
 	if command == "" or command == "stats" then
 		ShowStats()
 	elseif command == "log" then
-		ShowLog(tonumber(arg) or 15)
+		ShowLog(arg)
 	elseif command == "archive" then
 		ShowArchive(arg)
 	elseif command == "wipe" and arg == "confirm" then

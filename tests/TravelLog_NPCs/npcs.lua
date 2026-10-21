@@ -216,8 +216,8 @@ check(Run("add"):find("target an NPC"), "/npcs add without target")
 -- The NPCs tab in TravelLog's window.
 check(Run("window") == "", "/npcs window")
 local w = M.ns("TravelLog").window
-local page = w.pages[3]
-check(w.Tabs[3]:GetText() == "NPCs" and page:IsShown(), "NPCs tab open")
+local page = w.pages[4]
+check(w.Tabs[4]:GetText() == "NPCs" and page:IsShown(), "NPCs tab open")
 local function Rows(list)
 	local out = {}
 	for _, row in ipairs(M.shown(list.rows)) do out[#out + 1] = row.name:GetText() .. " " .. row.right:GetText() end

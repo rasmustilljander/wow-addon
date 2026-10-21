@@ -24,7 +24,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/loot.lua` | Loot sources (pickpockets too) and roll wins. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
-| `TravelLog/window.lua` | The window and minimap button with every companion's rows and tabs: sections, totals, settings, moving, hiding the button, a reload. |
+| `TravelLog/window.lua` | The window and minimap button: sections, totals, settings, the searchable event log, companion tabs, moving, hiding the button and a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, an alt's archive, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their minimap and world map pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
