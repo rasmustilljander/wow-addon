@@ -46,9 +46,60 @@ end)
 -- Levels
 --------------------------------------------------------------------------------
 
+-- The server tells time played only when asked (/played), so it's asked once
+-- per login and counted forward from there.
+local played -- { total, level, at }: seconds played in all and at this level, at GetTime() at
+
+-- Seconds played in all and at the current level, or nothing before the
+-- server has answered.
+function ns.Played()
+	if played then
+		local since = math.floor(GetTime() - played.at)
+		return played.total + since, played.level + since
+	end
+end
+
+-- Asking prints the answer in chat like /played, so the chat frames stop
+-- listening until it arrives.
+local muted = {}
+
+local function Unmute()
+	for frame in pairs(muted) do
+		frame:RegisterEvent("TIME_PLAYED_MSG")
+	end
+	muted = {}
+end
+
+ns.On("PLAYER_LOGIN", function()
+	if not RequestTimePlayed then
+		return
+	end
+	for _, name in ipairs(CHAT_FRAMES or {}) do
+		local frame = _G[name]
+		if frame and frame:IsEventRegistered("TIME_PLAYED_MSG") then
+			frame:UnregisterEvent("TIME_PLAYED_MSG")
+			muted[frame] = true
+		end
+	end
+	RequestTimePlayed()
+	C_Timer.After(10, Unmute) -- in case no answer comes
+end)
+
+ns.On("TIME_PLAYED_MSG", function(total, level)
+	C_Timer.After(0, Unmute)
+	total, level = ns.Clean(total), ns.Clean(level)
+	if total and level then
+		played = { total = total, level = level, at = GetTime() }
+	end
+end)
+
 ns.On("PLAYER_LEVEL_UP", function(level)
 	ns.profile.level = level
-	ns.Log("level", { level = level })
+	local total, took = ns.Played()
+	ns.Log("level", { level = level, played = total, took = took })
+	if total then
+		played = { total = total, level = 0, at = GetTime() }
+	end
 end)
 
 --------------------------------------------------------------------------------

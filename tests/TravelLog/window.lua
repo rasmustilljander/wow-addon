@@ -62,13 +62,14 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
 check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Jumps, Distance, Looted, Vendors, Nodes, "
-	.. "Quests done, Learned, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+	.. "Played, Quests done, Learned, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
+check(Stat(w, "Played") == "not known yet", "played before /played answers")
 
 -- They follow what happens while the window is open.
 JumpOrAscendStart()
@@ -80,6 +81,9 @@ M.fire("PLAYER_DEAD")
 M.dead = false
 M.units.target = nil
 Wait()
+M.tick(1)
+Wait()
+check(Stat(w, "Played") == "1d 1h, 1h 0m at this level", "played: " .. Stat(w, "Played"))
 check(Stat(w, "Jumps") == "1 (1 this session)", "jumps: " .. Stat(w, "Jumps"))
 check(Stat(w, "XP kills") == "1", "xp kills: " .. Stat(w, "XP kills"))
 check(Stat(w, "Deaths") == "1", "deaths: " .. Stat(w, "Deaths"))

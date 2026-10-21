@@ -15,7 +15,7 @@
 M = {
 	now = 1760000000, gametime = 1000.0, out = {}, errors = {},
 	player = { name = "Rasmus", realm = "Forever" },
-	money = 10000, level = 5, xp = 0, xpMax = 2800, rested = nil, maxLevel = 60, xpDisabled = false,
+	money = 10000, level = 5, played = 90000, playedLevel = 3600, xp = 0, xpMax = 2800, rested = nil, maxLevel = 60, xpDisabled = false,
 	instance = nil, group = {}, raid = false, mapID = 1429, x = 0.42, y = 0.65,
 	inst = 0, wa = -9000, wb = -100, zone = "Elwynn Forest", subzone = "Goldshire",
 	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false,
@@ -52,6 +52,7 @@ function GetTime() return M.gametime end
 function M.advance(seconds)
 	M.now = M.now + seconds
 	M.gametime = M.gametime + seconds
+	M.played, M.playedLevel = M.played + seconds, M.playedLevel + seconds
 end
 
 function print(...)
@@ -160,7 +161,7 @@ PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUN
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
-GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE]]):gmatch("%S+") do
+GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -224,6 +225,10 @@ function Region:RegisterEvent(e)
 	self.events = self.events or {}
 	self.events[e] = true
 end
+function Region:UnregisterEvent(e)
+	if self.events then self.events[e] = nil end
+end
+function Region:IsEventRegistered(e) return self.events ~= nil and self.events[e] == true end
 function Region:SetScript(k, fn)
 	self.scripts = self.scripts or {}
 	self.scripts[k] = fn
@@ -585,6 +590,12 @@ function UnitLevel(unit)
 	return u and u.level or 0
 end
 function UnitXP() return M.xp end
+-- /played: the server answers a second later with the time played then.
+M.playedAsks = 0
+function RequestTimePlayed()
+	M.playedAsks = M.playedAsks + 1
+	C_Timer.After(1, function() M.fire("TIME_PLAYED_MSG", M.played, M.playedLevel) end)
+end
 function UnitXPMax() return M.xpMax end
 function GetXPExhaustion() return M.rested end
 function GetMaxPlayerLevel() return M.maxLevel end
@@ -912,7 +923,16 @@ Minimap = CreateFrame("Frame", nil, UIParent)
 Minimap.w, Minimap.h, Minimap.center = 140, 140, { 1800, 900 }
 M.cursor = { 0, 0 }
 function GetCursorPosition() return M.cursor[1], M.cursor[2] end
-local blizzardFrames = { M.canvas, WorldMapFrame, UIParent, Minimap }
+-- The chat window. It shows the answer to /played (M.chatLines) when it
+-- gets TIME_PLAYED_MSG.
+ChatFrame1 = CreateFrame("Frame")
+CHAT_FRAMES = { "ChatFrame1" }
+M.chatLines = {}
+ChatFrame1:RegisterEvent("TIME_PLAYED_MSG")
+ChatFrame1:SetScript("OnEvent", function(_, event, total)
+	M.chatLines[#M.chatLines + 1] = ("Total time played: %d seconds"):format(total)
+end)
+local blizzardFrames = { M.canvas, WorldMapFrame, UIParent, Minimap, ChatFrame1 }
 
 -- The newest addon frame drawn on the map canvas, or the newest one at a
 -- frame level (each addon draws at its own).

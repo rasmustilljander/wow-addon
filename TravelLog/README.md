@@ -24,7 +24,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
 | **Trades and mail** | Money and items from a trade are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
-| **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted, completed and abandoned, kills that gave XP, discoveries. |
+| **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups (with how long the level took), quests accepted, completed and abandoned, kills that gave XP, discoveries. |
 | **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
 
@@ -32,10 +32,10 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
-- **Totals**: numbers under Travel, Loot, Life and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows kept only in a character's own file (log entries, and the Kills and Group rows) show for the character you're on.
+- **Totals**: numbers under Travel, Loot, Life (time played too) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options and Path's interval.
 - **History**: what's still in the character file, newest first, in views:
-  - **Events**: every event. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location.
+  - **Events**: every event. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location, or `level` for each level-up and how long it took.
   - **Sessions**: each session's length, levels, money and experience gained (per hour once it's 10 minutes long), and its quests, XP kills and deaths.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
@@ -50,7 +50,7 @@ Companions add their rows to the matching section.
 | Command | |
 | --- | --- |
 | `/tl` | Open or close the window |
-| `/tl stats [all\|name]` | Totals for this character, all of them added up, or another by `Name` or `Name-Realm` |
+| `/tl stats [all\|name]` | Totals (and time played) for this character, all of them added up, or another by `Name` or `Name-Realm` |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
@@ -94,7 +94,7 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
@@ -104,6 +104,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - A loot window combining several corpses is credited to the first one.
 - Objects are named from the cast that opened them. One that opens without a cast (some quest crates) gets its object ID but no name.
 - Addons get no coordinates in dungeons and raids. The Midnight-era client also hides some chat there, so crafted items, quest rewards, kills, discoveries and reputation standings may be missing. Loot windows and roll wins still work.
+- Time played comes from `/played`, which TravelLog asks for at each login and keeps out of chat. A `/played` you type before that answer arrives (usually within a second of login) doesn't show, and a level-up before the answer arrives gets no times.
 - Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.

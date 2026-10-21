@@ -58,10 +58,9 @@ function ns.MoneyText(copper)
 	return ("%s%dc"):format(sign, c)
 end
 
--- "3d 4h", "2h 13m", "5m": how long before `now` (default: the current
--- time) an epoch time was.
-function ns.Ago(t, now)
-	local s = math.max((now or time()) - t, 0)
+-- "3d 4h", "2h 13m", "5m": a number of seconds as text.
+function ns.Duration(s)
+	s = math.max(s, 0)
 	local d, h, m = math.floor(s / 86400), math.floor(s / 3600) % 24, math.floor(s / 60) % 60
 	if d > 0 then
 		return ("%dd %dh"):format(d, h)
@@ -71,6 +70,11 @@ function ns.Ago(t, now)
 		return ("%dm"):format(m)
 	end
 	return "under a minute"
+end
+
+-- How long before `now` (default: the current time) an epoch time was.
+function ns.Ago(t, now)
+	return ns.Duration((now or time()) - t)
 end
 
 -- Splits a GUID like "Creature-0-1-2-3-299-4" into its type and entry ID.
