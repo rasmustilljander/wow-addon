@@ -34,7 +34,7 @@ Click the map icon on the minimap, or type `/tl window`, for a window with this 
 | `/tl window` | Open or close the window |
 | `/tl log [n]` | The last n events (default 15) |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
-| `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' files |
+| `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' data |
 
 `/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`.
 
@@ -46,10 +46,11 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, the window's `point` and the minimap button's `minimap` and `minimapAngle`), each character's profile and totals |
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions and quests |
-| `<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`, `TravelLog_Nodes.lua` | The companions' data for that character |
+| `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
+| `<Realm>/<Character>/SavedVariables/TravelLog_Nodes.lua` | That character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
 
-**Rotation.** The path grows about 100 KB per hour of movement. When a character's log, sessions and path pass about 3 MB, the next login moves everything older than 10 days into the archive (nodes and totals stay). The archive is a separate load-on-demand addon because each addon gets only one account-wide file. It's read only for `/tl trail all`, `/tl archive now` and rotation, so its size doesn't slow down logins. Without it installed, history stays in the character files and TravelLog says so when it tries to rotate.
+**Rotation.** The path grows about 100 KB per hour of movement. When a character's log, sessions and path pass about 3 MB, the next login moves everything older than 10 days into the archive (nodes and totals stay). The archive is a separate load-on-demand addon because each addon gets only one account-wide file. It's read only for the `all` trail range, `/tl archive now` and rotation, so its size doesn't slow down logins. Without it installed, history stays in the character files and TravelLog says so when it tries to rotate.
 
 Before 0.3, the path and nodes lived in TravelLog's character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file.
 

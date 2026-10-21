@@ -3,6 +3,11 @@
 -- addon, and TravelLog with and without its companion addons.
 local DAY = 86400
 
+-- This character's TravelLog_Path data, or nil when it isn't loaded.
+local function PathDB()
+	return M.loaded.TravelLog_Path and M.ns("TravelLog_Path").db
+end
+
 local function said(pattern)
 	for _, line in ipairs(M.out) do
 		if line:find(pattern) then return true end
@@ -23,7 +28,7 @@ local function AddOldHistory(mb, ago, days)
 	local sessions, paths, log = {}, {}, {}
 	for d = 1, days do
 		local s = { start = start + d * DAY, stop = start + d * DAY + 3600 }
-		local p = TravelLogPathDB and { start = s.start, stop = s.stop } or s
+		local p = PathDB() and { start = s.start, stop = s.stop } or s
 		p.track, p.jumps = {}, {}
 		for _ = 1, perSession do p.track[#p.track + 1] = chunk end
 		sessions[#sessions + 1] = s
@@ -32,7 +37,7 @@ local function AddOldHistory(mb, ago, days)
 	end
 	local char = TravelLogCharDB
 	for i = #sessions, 1, -1 do table.insert(char.sessions, 1, sessions[i]) end
-	for i = #paths, 1, -1 do table.insert(TravelLogPathDB.sessions, 1, paths[i]) end
+	for i = #paths, 1, -1 do table.insert(PathDB().sessions, 1, paths[i]) end
 	for i = #log, 1, -1 do table.insert(char.log, 1, log[i]) end
 end
 
@@ -45,26 +50,27 @@ M.tick(1)
 for _ = 1, 10 do M.x = M.x + 0.001; M.wb = M.wb - 4; M.tick(1) end
 JumpOrAscendStart()
 M.Logout()
-check(M.savedSize("TravelLog", true) > 0 and M.savedSize("TravelLog_Path", true) > 0, "history saved in the per-character files")
+check(M.savedSize("TravelLog", true) > 0, "history saved in the per-character file")
+check(M.savedSize("TravelLog_Path") > 0 and M.savedSize("TravelLog_Path", true) == 0, "the path in the account-wide file")
 check(not M.saved.TravelLog:find('%["sessions"%]'), "account-wide file has no sessions")
 check(M.saved.TravelLog:find('%["Rasmus%-Forever"%]'), "account-wide file has the character's profile")
 
 M.player = { name = "Altie", realm = "Forever" }
 ns = M.Login()
-check(#TravelLogCharDB.sessions == 1 and #TravelLogCharDB.log <= 2 and #TravelLogPathDB.sessions == 1, "an alt starts with its own empty history")
+check(#TravelLogCharDB.sessions == 1 and #TravelLogCharDB.log <= 2 and #PathDB().sessions == 1, "an alt starts with its own empty history")
 check(TravelLogDB.chars["Rasmus-Forever"] and TravelLogDB.chars["Altie-Forever"], "both profiles in the account file")
 M.Logout()
 M.player = { name = "Rasmus", realm = "Forever" }
 ns = M.Login()
-check(#TravelLogCharDB.sessions == 2 and #TravelLogPathDB.sessions == 2 and ns.stats.jumps == 1, "back on the main, its history is back")
+check(#TravelLogCharDB.sessions == 2 and #PathDB().sessions == 2 and ns.stats.jumps == 1, "back on the main, its history is back")
 M.Logout()
 
 -- The size estimate used for rotation is in the right ballpark of the file
 ns = M.Login()
 AddOldHistory(0.5, 1, 5)
-local estimate = ns.Size(TravelLogPathDB)
+local estimate = ns.Size(TravelLogPathAccountDB)
 M.Logout()
-local ratio = M.savedSize("TravelLog_Path", true) / estimate
+local ratio = M.savedSize("TravelLog_Path") / estimate
 check(ratio > 0.7 and ratio < 1.5, ("size estimate within range of the real file: %.2f"):format(ratio))
 
 --------------------------------------------------------------------------------
@@ -89,8 +95,8 @@ TravelLogDB = {
 ]]
 ns = M.Login()
 check(TravelLogCharDB.log[1].level == 9 and #TravelLogCharDB.sessions == 2, "v1 log and sessions moved to the character file")
-check(#TravelLogPathDB.sessions == 2 and TravelLogPathDB.sessions[1].track[1]:find("^1,1429,40.00")
-	and TravelLogPathDB.sessions[1].start == 1750000000 and not TravelLogCharDB.sessions[1].track, "and the v1 path on to TravelLog_Path")
+check(#PathDB().sessions == 2 and PathDB().sessions[1].track[1]:find("^1,1429,40.00")
+	and PathDB().sessions[1].start == 1750000000 and not TravelLogCharDB.sessions[1].track, "and the v1 path on to TravelLog_Path")
 check(TravelLogCharDB.quests[54].title == "Report to Goldshire", "v1 quests moved")
 check(TravelLogDB.chars["Rasmus-Forever"].log == nil and TravelLogDB.version == 2, "account file cleaned up")
 check(ns.stats.jumps == 42 and ns.settings.interval == 3, "stats and settings kept")
@@ -107,7 +113,7 @@ ns = M.Login()
 AddOldHistory(4, 20, 30) -- 4 MB of history from 50 to 20 days ago
 TravelLogCharDB.log[#TravelLogCharDB.log + 1] = { type = "level", time = M.now - DAY, level = 6 }
 M.Logout()
-local before = M.savedSize("TravelLog_Path", true)
+local before = M.savedSize("TravelLog_Path")
 check(before > 3 * 1048576, ("path file is big before rotating: %.1f MB"):format(before / 1048576))
 
 M.out = {}
@@ -117,13 +123,13 @@ check(said("moved 30 sessions, 30 log entries and 30 paths older than 10 days to
 local recent = true
 for _, s in ipairs(TravelLogCharDB.sessions) do recent = recent and s.start >= M.now - 10 * DAY end
 for _, e in ipairs(TravelLogCharDB.log) do recent = recent and e.time >= M.now - 10 * DAY end
-for _, s in ipairs(TravelLogPathDB.sessions) do recent = recent and s.start >= M.now - 10 * DAY end
-check(recent and #TravelLogCharDB.sessions == 2 and #TravelLogPathDB.sessions == 2, "only recent history (last and current session) stays in the character files")
+for _, s in ipairs(PathDB().sessions) do recent = recent and s.start >= M.now - 10 * DAY end
+check(recent and #TravelLogCharDB.sessions == 2 and #PathDB().sessions == 2, "only recent history (last and current session) stays in the character files")
 local archived = TravelLogArchiveDB.chars["Rasmus-Forever"]
 check(#archived.sessions == 30 and #archived.log == 30 and #archived.path == 30, "old sessions, log and paths are in the archive")
 M.Logout()
-check(M.savedSize("TravelLog", true) < 100 * 1024 and M.savedSize("TravelLog_Path", true) < 100 * 1024,
-	("character files are small after rotating: %d and %d bytes"):format(M.savedSize("TravelLog", true), M.savedSize("TravelLog_Path", true)))
+check(M.savedSize("TravelLog", true) < 100 * 1024 and M.savedSize("TravelLog_Path") < 100 * 1024,
+	("character and path files are small after rotating: %d and %d bytes"):format(M.savedSize("TravelLog", true), M.savedSize("TravelLog_Path")))
 check(M.savedSize("TravelLog_Archive") > 3 * 1048576, "archive file holds the old history")
 
 ns = M.Login()
@@ -198,7 +204,7 @@ ns = M.Login()
 SlashCmdList.TRAVELLOG("wipe confirm")
 check(M.reloadRequested, "wipe reloads the UI")
 ns = M.Reload()
-check(#TravelLogCharDB.sessions == 1 and #TravelLogCharDB.log <= 1 and #TravelLogPathDB.sessions == 1, "character history wiped")
+check(#TravelLogCharDB.sessions == 1 and #TravelLogCharDB.log <= 1 and #PathDB().sessions == 1, "character history wiped")
 check(ns.stats.jumps == nil, "character stats wiped")
 ns.ArchivedHistory()
 check(TravelLogArchiveDB.chars["Rasmus-Forever"] == nil, "archive no longer holds the character")
@@ -234,17 +240,17 @@ SlashCmdList.TRAVELLOG("")
 SlashCmdList.TRAVELLOG("trail week")
 check(said("/tl log %[n%]") and not said("/tl trail"), "without TravelLog_Path, /tl trail isn't a command")
 SlashCmdList.TRAVELLOG("log")
-check(#M.errors == 0 and TravelLogPathDB == nil and TravelLogNodesDB == nil, "TravelLog works on its own")
+check(#M.errors == 0 and TravelLogPathAccountDB == nil and TravelLogNodesDB == nil, "TravelLog works on its own")
 check(TravelLogCharDB.log[#TravelLogCharDB.log].source == "Peacebloom" and not TravelLogCharDB.log[#TravelLogCharDB.log].lastHere, "loot recorded without nodes")
 check(TravelLogCharDB.sessions[1].track and TravelLogCharDB.nodes[1436], "the old path and nodes are left alone")
 M.Logout()
 
 M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }
 ns = M.Login()
-local moved = TravelLogPathDB.sessions[1]
+local moved = PathDB().sessions[1]
 check(not TravelLogCharDB.sessions[1].track and not TravelLogCharDB.nodes, "installing the companions moves the old data out of TravelLog's file")
 check(moved.start == 1759990000 and moved.stop == 1759993600 and moved.jumpCount == 2 and #moved.track == 1 and #moved.jumps == 1, "old path moved whole")
-check(#TravelLogPathDB.sessions == 2 and TravelLogPathDB.sessions[2].start == TravelLogCharDB.sessions[3].start, "path sessions in order, the new one last (none for the login without it)")
+check(#PathDB().sessions == 2 and PathDB().sessions[2].start == TravelLogCharDB.sessions[3].start, "path sessions in order, the new one last (none for the login without it)")
 check(TravelLogNodesDB.maps[1436][1].kind == "ore", "old nodes moved")
 SlashCmdList.TRAVELLOG("trail week")
 M.viewMap = 1436

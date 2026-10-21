@@ -1,14 +1,11 @@
--- Path's part of /tl: jumps, the map trail, the recording interval and its
--- lines in /tl stats, and the same in the TravelLog window.
+-- Path's part of /tl: jumps, the map trail (yours and alts'), the recording
+-- interval and its lines in /tl stats, and the same in the TravelLog window.
 local _, ns = ...
 local tl = TravelLog
 
 local YARDS_PER_MILE = 1760
-local TRAIL_CHOICES = { "session", "today", "week", "all", "off" }
-local TRAIL_RANGES = {}
-for _, range in ipairs(TRAIL_CHOICES) do
-	TRAIL_RANGES[range] = true
-end
+-- The window's buttons; /tl trail takes any range (see Range.lua).
+local TRAIL_CHOICES = { "session", "today", "24h", "week", "all", "off" }
 
 local function Sum(t)
 	local total = 0
@@ -64,14 +61,27 @@ local function SetTrail(range)
 	ns.RefreshTrail()
 end
 
+local function SetAltTrail(range)
+	tl.settings.altTrail = range
+	ns.RefreshTrail()
+end
+
 tl.Command("trail", function()
-	return "trail session|today|week|all|off - how far back the map trail goes (now: " .. tl.settings.trail .. ")"
+	return ("trail [alts] session|today|week|all|off|<n>h|<n>d|yesterday|<yyyy-mm-dd> - how far back the map trail goes (now: %s, alts: %s)")
+		:format(ns.DescribeTrail(tl.settings.trail), ns.DescribeTrail(tl.settings.altTrail))
 end, function(arg)
-	if not TRAIL_RANGES[arg] then
+	local alts, text = arg:match("^(alts)%s+(%S+)$")
+	local range = ns.ParseTrail(text or arg)
+	if not range then
 		return false
 	end
-	SetTrail(arg)
-	tl.Print("map trail: %s", arg)
+	if alts then
+		SetAltTrail(range)
+		tl.Print("alts' map trail: %s", ns.DescribeTrail(range))
+	else
+		SetTrail(range)
+		tl.Print("map trail: %s", ns.DescribeTrail(range))
+	end
 end)
 
 tl.Command("interval", function()
@@ -96,6 +106,29 @@ tl.AddStat("Distance", function()
 	return ("%.1f miles"):format(Sum(tl.stats.distance) / YARDS_PER_MILE)
 end)
 tl.AddSetting("Map trail", function() return tl.settings.trail end, SetTrail, TRAIL_CHOICES)
+tl.AddStepper("Showing", function() return ns.DescribeTrail(tl.settings.trail) end, function(step)
+	SetTrail(ns.StepDay(tl.settings.trail, step))
+end)
 tl.AddSetting("Path interval (s)", function() return tl.settings.interval end, function(seconds)
 	tl.settings.interval = seconds
 end, { 1, 2, 3, 4, 5 })
+
+-- Alts are known once the saved data is loaded, so their rows come last.
+tl.On("PLAYER_LOGIN", function()
+	local alts = ns.Alts()
+	if #alts == 0 then
+		return
+	end
+	tl.AddSetting("Alts' trail", function() return tl.settings.altTrail end, SetAltTrail, TRAIL_CHOICES)
+	tl.AddStepper("Showing", function() return ns.DescribeTrail(tl.settings.altTrail) end, function(step)
+		SetAltTrail(ns.StepDay(tl.settings.altTrail, step))
+	end)
+	for _, alt in ipairs(alts) do
+		local _, _, _, color = GetClassColor(alt.profile.class)
+		local label = ("|c%s%s|r, level %s"):format(color, alt.key, alt.profile.level or "?")
+		tl.AddSetting(label, function() return not tl.settings.hiddenAlts[alt.key] end, function(shown)
+			tl.settings.hiddenAlts[alt.key] = not shown or nil
+			ns.RefreshTrail()
+		end)
+	end
+end)

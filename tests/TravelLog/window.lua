@@ -46,7 +46,7 @@ check(w.who:GetText() == "Rasmus-Forever, level 5 Human Mage", "who: " .. w.who:
 
 -- Totals: TravelLog's, then each companion's in load order.
 check(Labels(w) == "Loot, Vendors, Quests done, Flights, Deaths, XP kills, Places visited, Log, Jumps, Distance, "
-	.. "Nodes, All kills, Most killed, Map trail, Path interval (s)", "rows: " .. Labels(w))
+	.. "Nodes, All kills, Most killed, Map trail, Showing, Path interval (s)", "rows: " .. Labels(w))
 check(Stat(w, "Loot") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Loot"))
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")

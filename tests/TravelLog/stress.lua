@@ -3,7 +3,7 @@
 
 -- Only the declared globals may be created while loading.
 local leaked = {}
-local allowed = { TravelLog = true, TravelLogDB = true, TravelLogCharDB = true, TravelLogPathDB = true,
+local allowed = { TravelLog = true, TravelLogDB = true, TravelLogCharDB = true, TravelLogPathDB = true, TravelLogPathAccountDB = true,
 	TravelLogNodesDB = true, SLASH_TRAVELLOG1 = true, SLASH_TRAVELLOG2 = true, TravelLogMinimapButton = true }
 setmetatable(_G, { __newindex = function(t, k, v)
 	if not allowed[k] then leaked[#leaked + 1] = k end
@@ -39,7 +39,7 @@ check(cpu < 10, "recording stays cheap")
 check(points == 6 * 3600, "a point every second while moving")
 
 M.Logout()
-local size = M.savedSize("TravelLog_Path", true)
+local size = M.savedSize("TravelLog_Path")
 io.write(("  path file after 6 h: %.0f KB, TravelLog's own: %.1f KB\n"):format(size / 1024, M.savedSize("TravelLog", true) / 1024))
 check(size < 1.5 * 1048576, "file stays compact")
 

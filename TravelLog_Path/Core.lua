@@ -1,12 +1,14 @@
--- TravelLog Path core: this character's path and jumps, one set per session
+-- TravelLog Path core: each character's path and jumps, one set per session
 -- (login or reload), packed into compact strings. Needs TravelLog, whose
 -- helpers, events and settings it uses.
 local _, ns = ...
 local tl = TravelLog
 
 tl.Defaults({
-	interval = 2,     -- seconds between recorded path points while moving (1-5)
-	trail = "today",  -- what the world map trail shows: session/today/week/all/off
+	interval = 2,       -- seconds between recorded path points while moving (1-5)
+	trail = "today",    -- how far back the world map trail goes (see Range.lua)
+	altTrail = "off",   -- the same for alts' trails
+	hiddenAlts = {},    -- alts whose trail isn't shown, by "Name-Realm"
 })
 
 -- Path points and jumps are packed this many records per string, which keeps
@@ -84,21 +86,39 @@ end
 -- Saved data
 --------------------------------------------------------------------------------
 
--- TravelLogPathDB = {
---   sessions = {   -- oldest first, one per login or reload
---     { start = 1760000000, stop = 1760007200, jumpCount = 12,
---       track = { "...", ... }, jumps = { "...", ... } },
+-- TravelLogPathAccountDB = {
+--   chars = {
+--     ["Name-Realm"] = {
+--       sessions = {   -- oldest first, one per login or reload
+--         { start = 1760000000, stop = 1760007200, jumpCount = 12,
+--           track = { "...", ... }, jumps = { "...", ... } },
+--       },
+--     },
 --   },
 -- }
--- start is the same as the TravelLog session's.
+-- start is the same as the TravelLog session's. Every character's path is
+-- in the account-wide file so the map can show alts' trails.
 
 local function Init()
-	TravelLogPathDB = TravelLogPathDB or {}
-	local db = TravelLogPathDB
+	TravelLogPathAccountDB = TravelLogPathAccountDB or {}
+	local account = TravelLogPathAccountDB
+	account.chars = account.chars or {}
+	local db = account.chars[tl.charKey] or {}
+	account.chars[tl.charKey] = db
 	db.sessions = db.sessions or {}
 
-	-- TravelLog kept the path in its own sessions before this addon existed.
+	-- Version 0.1 kept the path in the character's own file, where alts
+	-- couldn't read it.
 	local moved = false
+	if TravelLogPathDB then
+		for _, s in ipairs(TravelLogPathDB.sessions or {}) do
+			db.sessions[#db.sessions + 1] = s
+			moved = true
+		end
+		TravelLogPathDB = nil
+	end
+
+	-- TravelLog kept the path in its own sessions before this addon existed.
 	for _, s in ipairs(tl.char.sessions) do
 		if s.track then
 			db.sessions[#db.sessions + 1] = { start = s.start, stop = s.stop, jumpCount = s.jumpCount,
@@ -113,7 +133,7 @@ local function Init()
 
 	local session = { start = tl.session.start, track = {}, jumps = {} }
 	db.sessions[#db.sessions + 1] = session
-	ns.db, ns.session = db, session
+	ns.account, ns.db, ns.session = account, db, session
 	ns.track = ns.NewStream(session.track)
 	ns.jumps = ns.NewStream(session.jumps)
 end
@@ -127,8 +147,21 @@ tl.On("PLAYER_LOGOUT", function()
 end)
 
 tl.On("TL_WIPE", function()
-	TravelLogPathDB = nil
+	ns.account.chars[tl.charKey] = nil
 end)
+
+-- The other characters with a recorded path, sorted by "Name-Realm". Each
+-- is { key, sessions, profile }, profile being TravelLog's (class, level).
+function ns.Alts()
+	local list = {}
+	for key, char in pairs(ns.account.chars) do
+		if key ~= tl.charKey and char.sessions and #char.sessions > 0 then
+			list[#list + 1] = { key = key, sessions = char.sessions, profile = tl.db.chars[key] or {} }
+		end
+	end
+	table.sort(list, function(a, b) return a.key < b.key end)
+	return list
+end
 
 -- Old sessions move into TravelLog_Archive along with TravelLog's own.
 tl.Rotates("path", "paths",

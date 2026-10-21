@@ -166,6 +166,7 @@ function Region:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
 function Region:SetVertexColor(r, g, b, a) self.color = { r, g, b, a } end
 function Region:SetTexture(t) self.texture = t end
 function Region:SetThickness(t) self.thickness = t end
+function Region:SetDrawLayer(layer, sublevel) self.layer, self.sublevel = layer, sublevel end
 function Region:SetStartPoint(p, rel, x, y) assert(type(p) == "string" and rel); self.start = { x, y } end
 function Region:SetEndPoint(p, rel, x, y) assert(type(p) == "string" and rel); self.stop = { x, y } end
 function Region:SetSize(w, h) self.w, self.h = w, h end
@@ -459,7 +460,18 @@ function UnitClassification(unit) local u = M.units[unit]; return u and u.classi
 function UnitIsTapDenied(unit) local u = M.units[unit]; return u and u.tapped or false end
 function UnitIsTrivial(unit) local u = M.units[unit]; return u and u.trivial or false end
 function GetRealmName() return M.player.realm end
-function UnitClass() return "Mage", "MAGE" end
+-- M.player.class is the class file name, MAGE by default.
+function UnitClass()
+	local class = M.player.class or "MAGE"
+	return class:sub(1, 1) .. class:sub(2):lower(), class
+end
+-- A few of RAID_CLASS_COLORS; unknown classes are white, as in the game.
+local CLASS_COLORS = { MAGE = { 0.25, 0.78, 0.92, "ff3fc7eb" }, WARRIOR = { 0.78, 0.61, 0.43, "ffc69b6d" } }
+function GetClassColor(class)
+	local c = CLASS_COLORS[class]
+	if c then return c[1], c[2], c[3], c[4] end
+	return 1, 1, 1, "ffffffff"
+end
 function UnitRace() return "Human", "Human" end
 function UnitFactionGroup() return "Alliance" end
 function UnitLevel(unit)

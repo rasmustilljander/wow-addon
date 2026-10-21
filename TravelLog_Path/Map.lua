@@ -1,12 +1,14 @@
 -- Draws your recorded path on the world map, with markers for jumps, and for
--- loot, deaths and level-ups from TravelLog's log. "/tl trail" picks how far
--- back it shows.
+-- loot, deaths and level-ups from TravelLog's log, and your alts' paths in
+-- their class color. "/tl trail" picks how far back each shows.
 local _, ns = ...
 local tl = TravelLog
 
 local MAX_LINES = 5000
 local MAX_DOTS = 3000
 local LINE_WIDTH = 2.5   -- screen pixels
+local ALT_LINE_WIDTH = 1.5
+local ALT_ALPHA = 0.7
 local MIN_SEGMENT = 4    -- screen pixels between drawn trail points
 local MAX_STEP = 300     -- yards between consecutive points; more is a teleport
 local REFRESH = 3        -- seconds between adding new points while the map is open
@@ -39,20 +41,6 @@ local function ModeOf(flags)
 	if tl.HasFlag(flags, F.swimming) then return "swim" end
 	if tl.HasFlag(flags, F.mounted) then return "mount" end
 	return "foot"
-end
-
-local function TrailStart(range)
-	if range == "session" then
-		return ns.session.start
-	elseif range == "today" then
-		local d = date("*t")
-		d.hour, d.min, d.sec = 0, 0, 0
-		return time(d)
-	elseif range == "week" then
-		return time() - 7 * 86400
-	elseif range == "all" then
-		return 0
-	end
 end
 
 --------------------------------------------------------------------------------
@@ -177,12 +165,14 @@ end
 -- Drawing
 --------------------------------------------------------------------------------
 
-local function SetLine(i, x1, y1, x2, y2, color, thickness)
+-- Alts' lines go on sublevel -1, below yours.
+local function SetLine(i, x1, y1, x2, y2, color, thickness, sublevel)
 	local line = lines[i]
 	if not line then
 		line = overlay:CreateLine(nil, "OVERLAY")
 		lines[i] = line
 	end
+	line:SetDrawLayer("OVERLAY", sublevel)
 	line:SetColorTexture(color[1], color[2], color[3], color[4])
 	line:SetThickness(thickness)
 	line:SetStartPoint("TOPLEFT", overlay, x1, -y1)
@@ -230,12 +220,16 @@ local function Dot(x, y, kind)
 	SetDot(view.dots, x, y, marker, size)
 end
 
-local function DrawSession(s, data, progress)
-	local since, map, w, h = view.since, view.map, view.w, view.h
+-- Draws a session's points not drawn yet. source is the history it's from
+-- (see Sources).
+local function DrawSession(s, data, progress, source)
+	local since, before, map, w, h = source.since, source.before or math.huge, view.map, view.w, view.h
+	local color, thickness, sublevel = source.color, source.width / view.scale, source.color and -1 or 0
 	local p, lastX, lastY = data.path, progress.x, progress.y
 	for i = progress.path, #p, PATH_STRIDE do
 		local x, y
-		if s.start + p[i] >= since then
+		local t = s.start + p[i]
+		if t >= since and t < before then
 			x, y = Project(p[i + 1], p[i + 2], p[i + 3], map)
 		end
 		if not x then
@@ -245,7 +239,7 @@ local function DrawSession(s, data, progress)
 			if lastX and p[i + 5] then
 				if (x - lastX) ^ 2 + (y - lastY) ^ 2 >= view.minSegment and view.lines < MAX_LINES then
 					view.lines = view.lines + 1
-					SetLine(view.lines, lastX, lastY, x, y, COLORS[ModeOf(p[i + 4])], view.thickness)
+					SetLine(view.lines, lastX, lastY, x, y, color or COLORS[ModeOf(p[i + 4])], thickness, sublevel)
 					lastX, lastY = x, y
 				end
 			else
@@ -254,10 +248,14 @@ local function DrawSession(s, data, progress)
 		end
 	end
 	progress.path, progress.x, progress.y = #p + 1, lastX, lastY
+	if not source.jumps then
+		return
+	end
 
 	local j = data.jumps
 	for i = progress.jumps, #j, JUMP_STRIDE do
-		if s.start + j[i] >= since then
+		local t = s.start + j[i]
+		if t >= since and t < before then
 			local x, y = Project(j[i + 1], j[i + 2], j[i + 3], map)
 			if x then
 				Dot(x * w, y * h, "jump")
@@ -267,27 +265,59 @@ local function DrawSession(s, data, progress)
 	progress.jumps = #j + 1
 end
 
--- Where history comes from: this character's files, plus the archive when
--- the whole history is asked for. Oldest first. Each is { sessions, log }:
--- path sessions, and TravelLog's log for the markers.
-local function Sources()
-	local list = {}
-	if tl.settings.trail == "all" then
-		for _, archived in ipairs(tl.ArchivedHistory()) do
+-- Adds a character's history in a range to the list, the archive's too
+-- when the whole history is asked for. alt is an entry of ns.Alts(), or nil
+-- for this character.
+local function AddSources(list, range, alt)
+	local sessions = alt and alt.sessions or ns.db.sessions
+	local since, before = ns.TrailSpan(range, sessions)
+	if not since then
+		return
+	end
+	local style = { since = since, before = before, width = LINE_WIDTH, jumps = true }
+	if alt then
+		local r, g, b = GetClassColor(alt.profile.class)
+		style = { since = since, before = before, width = ALT_LINE_WIDTH, color = { r, g, b, ALT_ALPHA } }
+	end
+	local function Add(history)
+		for key, value in pairs(style) do
+			history[key] = value
+		end
+		list[#list + 1] = history
+	end
+
+	if range == "all" then
+		for _, archived in ipairs(tl.ArchivedHistory(alt and alt.key)) do
 			-- Sessions archived before TravelLog_Path existed carry their path.
-			local sessions = {}
+			local old = {}
 			for _, s in ipairs(archived.sessions or {}) do
 				if s.track then
-					sessions[#sessions + 1] = s
+					old[#old + 1] = s
 				end
 			end
 			for _, s in ipairs(archived.path or {}) do
-				sessions[#sessions + 1] = s
+				old[#old + 1] = s
 			end
-			list[#list + 1] = { sessions = sessions, log = archived.log or {} }
+			Add({ sessions = old, log = not alt and archived.log or nil })
 		end
 	end
-	list[#list + 1] = { sessions = ns.db.sessions, log = tl.char.log }
+	Add({ sessions = sessions, log = not alt and tl.char.log or nil })
+end
+
+-- Where the trails come from, each { sessions, log, since, before, width,
+-- color, jumps }: path sessions, TravelLog's log for the markers (yours
+-- only), the time range, and how to draw them. Yours come first so they
+-- get the line budget; alts' lines are drawn below them anyway.
+local function Sources()
+	local list = {}
+	AddSources(list, tl.settings.trail)
+	if tl.settings.altTrail ~= "off" then
+		for _, alt in ipairs(ns.Alts()) do
+			if not tl.settings.hiddenAlts[alt.key] then
+				AddSources(list, tl.settings.altTrail, alt)
+			end
+		end
+	end
 	return list
 end
 
@@ -299,13 +329,13 @@ end
 local function DrawNew()
 	drawnVersion = tl.version
 	drawnAt = GetTime()
-	if not view.since or not view.map then
+	if not view.map then
 		return
 	end
 	local now = time()
 	for _, history in ipairs(view.sources) do
 		for _, s in ipairs(history.sessions) do
-			if (s.stop or now) >= view.since then
+			if (s.stop or now) >= history.since and (not history.before or s.start < history.before) then
 				local data = SessionData(s)
 				if ShowsOn(data.maps, view.map) then
 					local progress = view.progress[s]
@@ -313,22 +343,24 @@ local function DrawNew()
 						progress = { path = 1, jumps = 1 }
 						view.progress[s] = progress
 					end
-					DrawSession(s, data, progress)
+					DrawSession(s, data, progress, history)
 				end
 			end
 		end
 
 		local log = history.log
-		for i = view.logNext[log] or 1, #log do
-			local e = log[i]
-			if MARKERS[e.type] and e.map and e.x then
-				local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
-				if x then
-					Dot(x * view.w, y * view.h, e.type)
+		if log then
+			for i = view.logNext[log] or 1, #log do
+				local e = log[i]
+				if MARKERS[e.type] and e.map and e.x and (not history.before or e.time < history.before) then
+					local x, y = Project(e.map, e.x / 100, e.y / 100, view.map)
+					if x then
+						Dot(x * view.w, y * view.h, e.type)
+					end
 				end
 			end
+			view.logNext[log] = #log + 1
 		end
-		view.logNext[log] = #log + 1
 	end
 end
 
@@ -337,23 +369,24 @@ local function Redraw()
 	drawnScale = WorldMapFrame:GetCanvasScale() or 1
 
 	view.map, view.scale = drawnMap, drawnScale
-	view.since = TrailStart(tl.settings.trail)
 	view.w, view.h = overlay:GetSize()
-	view.thickness = LINE_WIDTH / view.scale
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
 	view.lines, view.dots = 0, 0
-	view.sources = view.since and Sources() or {}
+	view.sources = Sources()
 	view.logNext = {}
 	wipe(view.progress)
 	wipe(view.cells)
 
 	-- Logs are in time order: start each at its first event inside the range.
 	for _, history in ipairs(view.sources) do
-		local log, i = history.log, #history.log + 1
-		while i > 1 and log[i - 1].time >= view.since do
-			i = i - 1
+		local log = history.log
+		if log then
+			local i = #log + 1
+			while i > 1 and log[i - 1].time >= history.since do
+				i = i - 1
+			end
+			view.logNext[log] = i
 		end
-		view.logNext[log] = i
 	end
 
 	DrawNew()
@@ -372,7 +405,7 @@ local function OnUpdate()
 end
 
 local function Shown()
-	return tl.settings.trail ~= "off"
+	return tl.settings.trail ~= "off" or tl.settings.altTrail ~= "off"
 end
 
 local function Create()
@@ -391,7 +424,7 @@ local function Create()
 	overlay:SetShown(Shown())
 end
 
--- Applies a changed "/tl trail" setting, or moved history.
+-- Applies changed trail settings, or moved history.
 function ns.RefreshTrail()
 	if not overlay then
 		return

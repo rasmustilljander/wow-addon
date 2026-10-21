@@ -133,15 +133,16 @@ function ns.Rotate(force)
 	return count
 end
 
--- This character's archived history in a list, loading the archive if
--- needed. Empty when nothing is archived. Its fields are the names lists
--- were registered under ({ sessions, log, path, ... }); any may be missing.
-function ns.ArchivedHistory()
+-- A character's archived history (this one's unless key is given) in a
+-- list, loading the archive if needed. Empty when nothing is archived. Its
+-- fields are the names lists were registered under ({ sessions, log, path,
+-- ... }); any may be missing.
+function ns.ArchivedHistory(key)
 	if not State().size then
 		return {}
 	end
 	local archive = Open()
-	local mine = archive and archive.chars[ns.charKey]
+	local mine = archive and archive.chars[key or ns.charKey]
 	return mine and { mine } or {}
 end
 

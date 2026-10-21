@@ -25,6 +25,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
 | `TravelLog/window.lua` | The window and minimap button with every companion's rows: totals, settings, moving, hiding the button, a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
+| `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, an alt's archive, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their pins and tooltips, migration from TravelLog, wiping. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, and a reload. |
@@ -51,6 +52,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.tick(n)`, `M.advance(s)`, `M.frame()` | Run `C_Timer` tickers and timers for n seconds, move the clock, run one `OnUpdate` frame. |
 | `M.cast(spellID, target)`, `M.lootAll(take)` | Cast a spell (SENT, then SUCCEEDED); loot the window in `M.loot`. |
 | `M.x`, `M.y`, `M.wa`, `M.wb`, `M.mapID`, `M.zone`, `M.subzone`, `M.mounted`, `M.taxi`, `M.money`, ... | Player state read by the fake API. `M.x = nil` means inside a dungeon. |
+| `M.player = { name, realm, class }` | Who logs in; `class` is the class file name (default `MAGE`). Change it between logins to play an alt. |
 | `M.units.target = { name, guid, hostile, level, ... }` | Other units (also `classification`, `dead`, `tapped`, `trivial`, `player`, `pet`). |
 | `M.hover(unit)` | Show a unit's tooltip, running addons' post-calls; returns its lines without color codes. |
 | `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, other group members' units, instance type. |

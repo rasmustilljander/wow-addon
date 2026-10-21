@@ -1,9 +1,10 @@
 -- The TravelLog window: this character's totals and the settings, opened
 -- from the minimap button or /tl window. Companion addons add their own
--- rows with ns.AddStat and ns.AddSetting while loading.
+-- rows with ns.AddStat, ns.AddSetting and ns.AddStepper while loading, or
+-- at login.
 local _, ns = ...
 
-local WIDTH = 420
+local WIDTH = 460
 local LABEL_WIDTH = 110
 local ROW_HEIGHT = 18
 local REFRESH = 1 -- seconds between redraws while the window is open
@@ -21,6 +22,12 @@ end
 -- string, or a function returning one.
 function ns.AddSetting(label, get, set, choices)
 	settings[#settings + 1] = { label = label, get = get, set = set, choices = choices }
+end
+
+-- Adds a row with < and > buttons around a value. get() returns the text
+-- shown; the buttons call step(-1) and step(1).
+function ns.AddStepper(label, get, step)
+	settings[#settings + 1] = { label = label, get = get, step = step }
 end
 
 local function Text(label)
@@ -64,7 +71,9 @@ local function Refresh()
 	end
 	for _, setting in ipairs(settings) do
 		local value = setting.get()
-		if setting.choices then
+		if setting.step then
+			setting.text:SetText(value)
+		elseif setting.choices then
 			for _, button in ipairs(setting.buttons) do
 				if button.value == value then
 					button:LockHighlight()
@@ -124,6 +133,27 @@ local function AddChoices(f, setting, y)
 	end
 end
 
+local function AddStepper(f, setting, y)
+	Label(f, Text(setting.label), y)
+	local x = 18 + LABEL_WIDTH
+	local function Arrow(text, step, left)
+		local button = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		button:SetSize(24, 20)
+		button:SetPoint("TOPLEFT", left, y + 3)
+		button:SetText(text)
+		button:SetScript("OnClick", function()
+			setting.step(step)
+			Refresh()
+		end)
+	end
+	Arrow("<", -1, x)
+	setting.text = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	setting.text:SetPoint("TOPLEFT", x + 24, y)
+	setting.text:SetWidth(120)
+	setting.text:SetJustifyH("CENTER")
+	Arrow(">", 1, x + 144)
+end
+
 local function CreateWindow()
 	local f = CreateFrame("Frame", "TravelLogFrame", UIParent, "BasicFrameTemplateWithInset")
 	f:SetFrameStrata("HIGH")
@@ -177,7 +207,9 @@ local function CreateWindow()
 
 	y = Heading(f, "Settings", y - 10)
 	for _, setting in ipairs(settings) do
-		if setting.choices then
+		if setting.step then
+			AddStepper(f, setting, y)
+		elseif setting.choices then
 			AddChoices(f, setting, y)
 		else
 			setting.check = Check(f, y)

@@ -1,6 +1,6 @@
 # TravelLog Path
 
-Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, and draws the trail on the world map. Needs [TravelLog](../TravelLog/).
+Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, and draws the trail on the world map, along with your alts' trails if you want them. Needs [TravelLog](../TravelLog/).
 
 ## What it records
 
@@ -15,14 +15,25 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | Command | |
 | --- | --- |
 | `/tl jumps` | Jumps per zone |
-| `/tl trail session\|today\|week\|all\|off` | How far back the map trail goes (default `today`). `all` reads the archive too. |
+| `/tl trail <range>` | How far back your map trail goes (default `today`) |
+| `/tl trail alts <range>` | The same for alts' trails (default `off`) |
 | `/tl interval 1-5` | Seconds between path points (default 2) |
 
-`/tl stats` adds jumps, distance and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance and has buttons for the trail and interval.
+| Range | Shows |
+| --- | --- |
+| `session` | The latest session: your current one, an alt's last one |
+| `today` | Since midnight |
+| `week` | The last 7 days |
+| `6h`, `3d` | The last 6 hours, 3 days, or any number of hours (`h`) or days (`d`) |
+| `yesterday`, `2025-10-19` | That calendar day only. `yesterday` is saved as its date. |
+| `all` | Everything, the archive included |
+| `off` | Nothing |
+
+`/tl stats` adds jumps, distance and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance, and has buttons for the interval and for both trails: `session`, `today`, `24h`, `week`, `all` and `off`, plus `<` and `>` to step one calendar day back or forward. Below them is a checkbox for each alt with a recorded path, to hide or show that alt's trail.
 
 ## World map
 
-Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths and level-ups.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths and level-ups. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
 
 | Trail | | Marker | |
 | --- | --- | --- | --- |
@@ -34,12 +45,18 @@ Zone and continent maps show your trail, broken at teleports (hearthstone, porta
 
 ## Where the data is
 
-`WTF/Account/<ACCOUNT>/<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`, about 100 KB per hour of movement. Sessions older than 10 days rotate into `TravelLog_Archive` with TravelLog's history ([details](../TravelLog/README.md#where-the-data-is)). Path data TravelLog kept before this addon existed moves here at the first login.
+`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Path.lua`, every character's path, about 100 KB per hour of movement. It's account-wide so alts can see each other's trails. Sessions older than 10 days rotate into `TravelLog_Archive` with TravelLog's history ([details](../TravelLog/README.md#where-the-data-is)).
+
+Before 0.2 each character's path was in `<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`. It moves to the account-wide file at that character's first login with 0.2, so an alt's trail appears once you've logged in on it. Path data TravelLog kept before this addon existed moves too.
 
 ```lua
-TravelLogPathDB = {
-  sessions = {   -- one per login or reload, oldest first
-    { start = 1760000000, stop = 1760007200, jumpCount = 12, track = { "..." }, jumps = { "..." } },
+TravelLogPathAccountDB = {
+  chars = {
+    ["Name-Realm"] = {
+      sessions = {   -- one per login or reload, oldest first
+        { start = 1760000000, stop = 1760007200, jumpCount = 12, track = { "..." }, jumps = { "..." } },
+      },
+    },
   },
 }
 ```
@@ -59,4 +76,5 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 ## Limits
 
 - No path in dungeons and raids, since addons get no position there. Jumps are still recorded, without coordinates.
+- Every login loads all characters' paths. An alt's old sessions rotate into the archive only when that alt logs in, so an alt you no longer play keeps its last 10 days or more in the file. `/tl wipe confirm` on that alt removes them.
 - Untested in the live game; tested against a fake client ([tests](../tests/README.md)).

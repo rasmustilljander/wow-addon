@@ -255,7 +255,7 @@ check(stats:find("Jumps: 3 ") and stats:find("Distance: ") and stats:find("Path:
 M.out = {}
 SlashCmdList.TRAVELLOG("help")
 local help = table.concat(M.out, "\n")
-check(help:find("/tl trail session") and help:find("/tl interval 1%-5") and help:find("/tl nodes on|off", 1, true)
+check(help:find("/tl trail [alts] session", 1, true) and help:find("/tl interval 1%-5") and help:find("/tl nodes on|off", 1, true)
 	and help:find("/tl jumps"), "help lists the companion addons' commands: " .. help)
 SlashCmdList.TRAVELLOG("jumps")
 SlashCmdList.TRAVELLOG("log 40")
@@ -276,12 +276,12 @@ check(ns.On("SOME_EVENT_THAT_DOES_NOT_EXIST", function() end) == false, "unknown
 local buffered, jumps = #path.track.buffer, ns.stats.jumps
 ns = M.Reload()
 path = M.ns("TravelLog_Path")
-local first = TravelLogPathDB.sessions[1]
+local first = path.db.sessions[1]
 check(first.stop and #first.track == 1, "path flushed into the session on logout")
 check(first.start == TravelLogCharDB.sessions[1].start and not TravelLogCharDB.sessions[1].track, "path kept in its own file, matched to TravelLog's session")
 check(path.CountRecords(first.track) == buffered, "all points saved")
 check(path.CountRecords(first.jumps) == 3, "all jumps saved")
-check(#TravelLogCharDB.sessions == 2 and #TravelLogPathDB.sessions == 2 and ns.stats.jumps == jumps, "second session keeps history")
+check(#TravelLogCharDB.sessions == 2 and #path.db.sessions == 2 and ns.stats.jumps == jumps, "second session keeps history")
 
 M.viewMap = 1429
 M.frame()
