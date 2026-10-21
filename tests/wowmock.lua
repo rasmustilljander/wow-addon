@@ -628,7 +628,7 @@ end
 C_QuestLog = {}
 function C_QuestLog.GetTitleForQuestID(id) return M.quests[id] end
 C_Spell = {}
-M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball" }
+M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball", [921] = "Pick Pocket" }
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
 M.spellRanks = {}
 function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end

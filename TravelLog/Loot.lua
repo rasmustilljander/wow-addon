@@ -1,6 +1,6 @@
--- Loot: what you took from corpses, chests, herbs, ore, fishing and
--- containers (with the source), plus items that arrive without a loot window:
--- quest rewards, crafts, roll wins and other pickups.
+-- Loot: what you took from corpses, pickpockets, chests, herbs, ore, fishing
+-- and containers (with the source), plus items that arrive without a loot
+-- window: quest rewards, crafts, roll wins and other pickups.
 local _, ns = ...
 
 local MONEY_SLOT = Enum and Enum.LootSlotType and Enum.LootSlotType.Money or 2
@@ -36,10 +36,10 @@ local function SpellName(spellID)
 	return spellID and C_Spell.GetSpellName(spellID)
 end
 
-local function NameOfUnitWithGUID(guid)
+local function UnitWithGUID(guid)
 	for _, unit in ipairs({ "target", "mouseover" }) do
 		if ns.Clean(UnitGUID(unit)) == guid then
-			return ns.Clean(UnitName(unit))
+			return unit
 		end
 	end
 end
@@ -49,7 +49,8 @@ end
 local function Describe(e, guid, fromItem)
 	local kind, id = ns.ParseGUID(guid)
 	e.sourceType, e.sourceID = kind, id
-	e.source = guid and NameOfUnitWithGUID(guid)
+	local unit = guid and UnitWithGUID(guid)
+	e.source = unit and ns.Clean(UnitName(unit))
 
 	-- Herb Gathering, Mining, Opening, Skinning... finish right before the
 	-- loot window opens. Combat spells usually finish well before.
@@ -65,8 +66,12 @@ local function Describe(e, guid, fromItem)
 		e.source = e.source or cast.target
 		e.via = SpellName(cast.spellID)
 	elseif kind == "Creature" and guid then
+		-- A creature that's still alive is being pickpocketed. Its corpse,
+		-- if it comes, is still its first loot.
+		if unit and ns.Clean(UnitIsDead(unit)) == false then
+			e.via = cast and SpellName(cast.spellID)
 		-- Looting a corpse a second time means skinning (or mining, herbing) it.
-		if cast and looted[guid] then
+		elseif cast and looted[guid] then
 			e.via = SpellName(cast.spellID)
 		elseif not looted[guid] then
 			if lootedCount >= 500 then
