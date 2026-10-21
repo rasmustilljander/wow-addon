@@ -116,6 +116,7 @@ COMBATLOG_XPGAIN_EXHAUSTION1 = "%s dies, you gain %d experience. (%s exp %s bonu
 COMBATLOG_XPGAIN_FIRSTPERSON_GROUP = "%s dies, you gain %d experience. (+%d group bonus)"
 ERR_ZONE_EXPLORED = "Discovered: %s"
 ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained"
+ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17, Auctioneer = 21 },
@@ -125,6 +126,9 @@ Enum = {
 	ConsoleCategory = { Debug = 0, Graphics = 1, Console = 2, Combat = 3, Game = 4, Default = 5, Net = 6, Sound = 7, Gm = 8, Reveal = 9, None = 10 },
 	ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
 	BagIndex = { Backpack = 0 },
+	SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
+		NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10,
+		AddOnMessageLockdown = 11, TargetOffline = 12 },
 }
 
 --------------------------------------------------------------------------------
@@ -142,7 +146,7 @@ UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_O
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
 QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
-PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED]]):gmatch("%S+") do
+PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED CHAT_MSG_ADDON]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -464,6 +468,7 @@ function UnitClassification(unit) local u = M.units[unit]; return u and u.classi
 function UnitIsTapDenied(unit) local u = M.units[unit]; return u and u.tapped or false end
 function UnitIsTrivial(unit) local u = M.units[unit]; return u and u.trivial or false end
 function GetRealmName() return M.player.realm end
+function GetNormalizedRealmName() return (M.player.realm:gsub("[%s%-]", "")) end
 -- M.player.class is the class file name, MAGE by default.
 function UnitClass()
 	local class = M.player.class or "MAGE"
@@ -716,6 +721,48 @@ end
 SlashCmdList = {}
 function ReloadUI() M.reloadRequested = true end
 
+-- Addon messages. Sent ones go to M.sent as { prefix, text, chatType,
+-- target }; M.sendResult(prefix, text, chatType, target) can return another
+-- Enum.SendAddonMessageResult (throttled, offline...). M.addonMessage
+-- delivers a whisper from another player to the registered prefixes.
+M.prefixes, M.sent = {}, {}
+C_ChatInfo = {}
+function C_ChatInfo.RegisterAddonMessagePrefix(prefix)
+	assert(#prefix <= 16, "prefix too long")
+	M.prefixes[prefix] = true
+	return 0
+end
+function C_ChatInfo.SendAddonMessage(prefix, text, chatType, target)
+	assert(#text <= 255, "addon message longer than 255 bytes: " .. #text)
+	assert(not text:find("[%z\n]"), "addon message with a NUL or newline")
+	local result = M.sendResult and M.sendResult(prefix, text, chatType, target) or 0
+	if result == 0 then
+		M.sent[#M.sent + 1] = { prefix = prefix, text = text, chatType = chatType, target = target }
+	end
+	return result
+end
+function M.addonMessage(sender, prefix, text)
+	if M.prefixes[prefix] then
+		M.fire("CHAT_MSG_ADDON", prefix, text, "WHISPER", sender, M.player.name, 0, 0, "", 0)
+	end
+end
+
+-- Chat frame message filters. M.chat(event, text) sends a chat event and
+-- returns whether the chat frame would show it.
+M.chatFilters = {}
+ChatFrameUtil = {}
+function ChatFrameUtil.AddMessageEventFilter(event, fn)
+	M.chatFilters[event] = M.chatFilters[event] or {}
+	table.insert(M.chatFilters[event], fn)
+end
+function M.chat(event, text, ...)
+	M.fire(event, text, ...)
+	for _, fn in ipairs(M.chatFilters[event] or {}) do
+		if fn(nil, event, text, ...) then return false end
+	end
+	return true
+end
+
 --------------------------------------------------------------------------------
 -- Addons and SavedVariables
 --------------------------------------------------------------------------------
@@ -866,6 +913,7 @@ function M.Logout()
 	namedFrames, UISpecialFrames, M.focus, M.cursorItem = {}, {}, nil, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
+	M.chatFilters, M.prefixes = {}, {}
 	M.reloadRequested = nil
 end
 

@@ -16,7 +16,7 @@ Per spot: what it was, when you last looted it, how many times, and the five lat
 
 ## World map
 
-Zone maps (not continent maps) show square pins: green herbs, orange ore, gold chests, grey other objects. Hover one for when you last looted it, how long ago, how many times, and the times before.
+Zone maps (not continent maps) show square pins: green herbs, orange ore, gold chests, grey other objects. Hover one for when you last looted it, how long ago, how many times, and the times before. Nodes other players share through [TravelLog_Share](../TravelLog_Share/) are smaller and dimmer.
 
 ## Where the data is
 

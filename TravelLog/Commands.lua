@@ -136,19 +136,23 @@ local DESCRIBE = {
 	discover = function(e) return ("Discovered %s"):format(e.place) end,
 }
 
+-- A log entry as text, and where it happened. TravelLog_Share sends these.
+function ns.Describe(e)
+	local describe = DESCRIBE[e.type]
+	local where = e.subzone or e.zone or "?"
+	if e.x then
+		where = ("%s (%.1f, %.1f)"):format(where, e.x, e.y)
+	end
+	return describe and describe(e) or e.type, where
+end
+
 local function ShowLog(n)
 	local log = ns.char.log
 	n = math.min(n, #log)
 	ns.Print("Last %d events:", n)
 	for i = #log - n + 1, #log do
-		local e = log[i]
-		local describe = DESCRIBE[e.type]
-		local where = e.subzone or e.zone or "?"
-		if e.x then
-			where = ("%s (%.1f, %.1f)"):format(where, e.x, e.y)
-		end
-		print(("  %s  %s  |cff999999%s|r"):format(date("%m-%d %H:%M", e.time),
-			describe and describe(e) or e.type, where))
+		local text, where = ns.Describe(log[i])
+		print(("  %s  %s  |cff999999%s|r"):format(date("%m-%d %H:%M", log[i].time), text, where))
 	end
 end
 
