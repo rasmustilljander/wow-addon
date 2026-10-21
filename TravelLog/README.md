@@ -16,7 +16,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 | | |
 | --- | --- |
-| **Loot** | Corpses, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the opening spell for herbs, ore, chests and skinning). |
+| **Loot** | Corpses, pickpockets, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the spell for herbs, ore, chests, skinning and Pick Pocket). |
 | **Other items** | Quest rewards, crafts, roll wins (with your roll) and other items that arrive without a loot window. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
