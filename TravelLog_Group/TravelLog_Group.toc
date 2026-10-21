@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: TravelLog Group
+## Notes: Records the players you group with: how often, when, for how long and where.
+## Author: rasmustilljander
+## Version: 0.1.0
+## OptionalDeps: TravelLog
+## SavedVariablesPerCharacter: TravelLogGroupDB
+
+Core.lua
+Commands.lua
+Window.lua
