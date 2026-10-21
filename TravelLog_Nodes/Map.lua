@@ -3,7 +3,8 @@
 local _, ns = ...
 local tl = TravelLog
 
-local NODE_SIZE = 8 -- screen pixels
+local NODE_SIZE = 8   -- screen pixels
+local SHARED_SIZE = 6 -- other players' nodes, which are also dimmer
 local NODE_COLORS = {
 	herb = { 0.35, 0.95, 0.35 },
 	ore = { 0.95, 0.6, 0.3 },
@@ -20,10 +21,13 @@ local function NodeTooltip(pin)
 	local node = pin.node
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	GameTooltip:AddLine(node.name or NODE_LABELS[node.kind])
+	if pin.from then
+		GameTooltip:AddLine("Shared by " .. pin.from, 0.6, 0.8, 1)
+	end
 	GameTooltip:AddLine(("Last looted %s (%s ago)"):format(date("%Y-%m-%d %H:%M", node.last), tl.Ago(node.last)), 1, 1, 1)
 	if node.count > 1 then
-		GameTooltip:AddLine(("Looted %d times. Before that:"):format(node.count), 0.8, 0.8, 0.8)
-		for i = 2, #node.times do
+		GameTooltip:AddLine(("Looted %d times."):format(node.count) .. (node.times and " Before that:" or ""), 0.8, 0.8, 0.8)
+		for i = 2, #(node.times or {}) do
 			GameTooltip:AddLine("  " .. date("%Y-%m-%d %H:%M", node.times[i]), 0.8, 0.8, 0.8)
 		end
 	end
@@ -34,7 +38,7 @@ local function HideTooltip()
 	GameTooltip:Hide()
 end
 
-local function SetPin(i, node, x, y, size)
+local function SetPin(i, node, x, y, size, from)
 	local pin = pins[i]
 	if not pin then
 		pin = CreateFrame("Frame", nil, overlay)
@@ -46,9 +50,9 @@ local function SetPin(i, node, x, y, size)
 		pin.icon:SetAllPoints()
 		pins[i] = pin
 	end
-	pin.node = node
+	pin.node, pin.from = node, from
 	local color = NODE_COLORS[node.kind] or NODE_COLORS.object
-	pin.icon:SetColorTexture(color[1], color[2], color[3], 1)
+	pin.icon:SetColorTexture(color[1], color[2], color[3], from and 0.6 or 1)
 	pin:SetSize(size, size)
 	pin:ClearAllPoints()
 	pin:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)
@@ -62,13 +66,17 @@ local function Draw()
 	drawnScale = WorldMapFrame:GetCanvasScale() or 1
 	drawnVersion = ns.version
 	local n = 0
-	local list = drawnMap and ns.db.maps[drawnMap]
-	if list then
-		local w, h = overlay:GetSize()
-		local size = NODE_SIZE / drawnScale
-		for _, node in ipairs(list) do
-			n = n + 1
-			SetPin(n, node, node.x / 100 * w, node.y / 100 * h, size)
+	local w, h = overlay:GetSize()
+	local function Add(node, from)
+		n = n + 1
+		SetPin(n, node, node.x / 100 * w, node.y / 100 * h, (from and SHARED_SIZE or NODE_SIZE) / drawnScale, from)
+	end
+	if drawnMap then
+		for _, get in ipairs(ns.sources) do
+			get(drawnMap, Add)
+		end
+		for _, node in ipairs(ns.db.maps[drawnMap] or {}) do
+			Add(node)
 		end
 	end
 	for i = n + 1, #pins do

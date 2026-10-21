@@ -8,6 +8,7 @@ Optional companions, each its own folder:
 - [TravelLog_Nodes](../TravelLog_Nodes/): looted chests, herbs and ore, pinned on the world map. Needs TravelLog.
 - `TravelLog_Archive`: storage for older history (see [Where the data is](#where-the-data-is)). Install it with TravelLog.
 - [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
+- [TravelLog_Share](../TravelLog_Share/): your nodes, and on request your log, for players you allow. Needs TravelLog.
 
 ## What it records
 
@@ -36,7 +37,7 @@ Click the map icon on the minimap, or type `/tl window`, for a window with this 
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
 | `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' data |
 
-`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`.
+`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`.
 
 ## Where the data is
 

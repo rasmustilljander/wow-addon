@@ -14,6 +14,19 @@ local NODE_TIMES = 5   -- loot times kept per node
 -- Bumped whenever a node changes, so the map knows when to redraw.
 ns.version = 0
 
+-- Other addons' nodes for the map (TravelLog_Share's, from other players).
+-- get(mapID, add) calls add(node, from) for each node on that map, from
+-- being who it came from. Call tl.NodesChanged() when they change.
+ns.sources = {}
+
+function tl.AddNodeSource(get)
+	ns.sources[#ns.sources + 1] = get
+end
+
+function tl.NodesChanged()
+	ns.version = ns.version + 1
+end
+
 --------------------------------------------------------------------------------
 -- Saved data
 --------------------------------------------------------------------------------
@@ -80,7 +93,7 @@ end
 -- Finds or adds the node at this spot and notes the loot. Spawn points are
 -- matched by kind and place rather than by object, because the same spot can
 -- grow different herbs. Notes on the loot entry when the node was last
--- looted before, for /tl log.
+-- looted before, for /tl log. Fires TL_NODE(mapID, index, node) after.
 local function Remember(e)
 	if e.sourceType ~= "GameObject" or not (e.map and e.x) then
 		return
@@ -90,10 +103,10 @@ local function Remember(e)
 	local maps = ns.db.maps
 	maps[e.map] = maps[e.map] or {}
 	local list = maps[e.map]
-	local node
-	for _, n in ipairs(list) do
+	local node, index
+	for i, n in ipairs(list) do
 		if n.kind == kind and IsNear(n, e, inst, a, b) then
-			node = n
+			node, index = n, i
 			break
 		end
 	end
@@ -102,7 +115,8 @@ local function Remember(e)
 		if a then
 			node.inst, node.a, node.b = inst, tl.Round(a, 1), tl.Round(b, 1)
 		end
-		list[#list + 1] = node
+		index = #list + 1
+		list[index] = node
 		tl.Add(1, "nodes", kind)
 	end
 	e.lastHere = node.last
@@ -113,6 +127,7 @@ local function Remember(e)
 	table.insert(node.times, 1, e.time)
 	node.times[NODE_TIMES + 1] = nil
 	ns.version = ns.version + 1
+	tl.Fire("TL_NODE", e.map, index, node)
 end
 
 tl.On("TL_LOOT", Remember)
