@@ -60,7 +60,7 @@ local before = LineColors()
 check(before["1,0.82,0,0.9"] and before["1,0.5,0.1,0.9"], "default foot and mount colors")
 check(DotColors()["1,1,1,0.8"], "default jump marker")
 
-SlashCmdList.TRAVELLOG("window")
+SlashCmdList.TRAVELLOG("")
 local w = ns.window
 check(w.Tabs[4]:GetText() == "Colors", "Colors tab after Log")
 w.Tabs[4]:Click()
@@ -110,7 +110,7 @@ M.viewMap = 1429
 check(LineColors()["0.2,0.6,0.2,1"] and DotColors()["1,0,1,1"], "colors kept after reload")
 
 -- Default resets one, All defaults the rest.
-SlashCmdList.TRAVELLOG("window")
+SlashCmdList.TRAVELLOG("")
 w = ns.window
 w.Tabs[4]:Click()
 page = w.pages[4]

@@ -139,19 +139,19 @@ w:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -80)
 M.script(w, "OnDragStop")
 check(ns.settings.point[1] == "TOPLEFT" and ns.settings.point[3] == 100, "position saved")
 
--- The compartment entry and /tl window close it.
+-- The compartment entry and /tl close it.
 M.compartment.TravelLog:Click()
 check(not w:IsShown(), "click closes the window")
-SlashCmdList.TRAVELLOG("window")
-check(w:IsShown(), "/tl window opens")
-SlashCmdList.TRAVELLOG("window")
-check(not w:IsShown(), "/tl window closes")
+SlashCmdList.TRAVELLOG("")
+check(w:IsShown(), "/tl opens")
+SlashCmdList.TRAVELLOG("")
+check(not w:IsShown(), "/tl closes")
 
 -- Everything survives a reload; the minimap button's old settings are dropped.
 TravelLogDB.settings.minimap, TravelLogDB.settings.minimapAngle = false, 90
 ns = M.Reload()
 check(ns.settings.minimap == nil and ns.settings.minimapAngle == nil, "old minimap settings dropped")
-SlashCmdList.TRAVELLOG("window")
+SlashCmdList.TRAVELLOG("")
 w = ns.window
 check(w:IsShown() and w.point[1] == "TOPLEFT" and w.point[4] == 100, "position restored")
 check(Button(w, "week").highlightLocked and not ExactCheck(w, "Looted nodes on the minimap"):GetChecked()

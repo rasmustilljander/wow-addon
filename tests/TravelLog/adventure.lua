@@ -257,7 +257,7 @@ check(#M.shown(overlay.lines) == 0, "nothing drawn on an unrelated map")
 
 -- Slash commands
 M.out = {}
-SlashCmdList.TRAVELLOG("")
+SlashCmdList.TRAVELLOG("stats")
 local stats = table.concat(M.out, "\n")
 check(stats:find("Jumps: 3 ") and stats:find("Distance: ") and stats:find("Path: %d+ points in 1 sessions")
 	and stats:find("Nodes remembered: 1 herbs"), "companion addons add their lines to /tl stats: " .. stats)

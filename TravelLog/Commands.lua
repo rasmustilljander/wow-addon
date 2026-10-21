@@ -1,4 +1,4 @@
--- Slash commands: /tl (or /travellog).
+-- Slash commands: /tl (or /travellog). /tl alone opens or closes the window.
 local _, ns = ...
 
 function ns.Count(n)
@@ -271,6 +271,7 @@ end
 
 local function Help()
 	ns.Print("commands:")
+	print("  /tl - open or close the TravelLog window")
 	print("  /tl stats - totals for this character")
 	print("  /tl log [n] [search] - the last matching events (default 15)")
 	for _, name in ipairs(order) do
@@ -288,7 +289,9 @@ SlashCmdList.TRAVELLOG = function(msg)
 		return
 	end
 	local command, arg = msg:lower():match("^%s*(%S*)%s*(.-)%s*$")
-	if command == "" or command == "stats" then
+	if command == "" then
+		ns.Toggle()
+	elseif command == "stats" then
 		ShowStats()
 	elseif command == "log" then
 		ShowLog(arg)

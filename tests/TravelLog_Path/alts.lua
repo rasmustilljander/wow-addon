@@ -145,7 +145,7 @@ local function Text(w, pattern, n)
 end
 
 SlashCmdList.TRAVELLOG("trail today")
-SlashCmdList.TRAVELLOG("window")
+SlashCmdList.TRAVELLOG("")
 local w = ns.window
 check(Text(w, "^Your trail$") and Text(w, "^Alts' trail$"), "alts' rows")
 local alt

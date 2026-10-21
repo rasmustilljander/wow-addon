@@ -236,7 +236,7 @@ JumpOrAscendStart()
 M.cast(2366, "Peacebloom")
 M.loot = { { name = "Peacebloom", link = "[Peacebloom]", qty = 1, guid = "GameObject-0-1-0-1-1618-00F00D" } }
 M.lootAll()
-SlashCmdList.TRAVELLOG("")
+SlashCmdList.TRAVELLOG("stats")
 SlashCmdList.TRAVELLOG("trail week")
 check(said("/tl log %[n%]") and not said("/tl trail"), "without TravelLog_Path, /tl trail isn't a command")
 SlashCmdList.TRAVELLOG("log")
