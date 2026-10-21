@@ -55,18 +55,19 @@ end)
 -- Quests
 --------------------------------------------------------------------------------
 
-local function QuestTitle(questID)
-	local quest = ns.char.quests[questID]
-	return ns.Clean(C_QuestLog.GetTitleForQuestID(questID)) or (quest and quest.title)
+-- Notes when something happened to a quest and returns its title, which the
+-- client may have forgotten by the time you turn the quest in.
+local function Note(questID, field)
+	local quest = ns.char.quests[questID] or {}
+	ns.char.quests[questID] = quest
+	quest.title = ns.Clean(C_QuestLog.GetTitleForQuestID(questID)) or quest.title
+	quest[field] = time()
+	return quest.title
 end
 
 ns.On("QUEST_ACCEPTED", function(a, b)
 	local questID = b or a -- older clients sent (questLogIndex, questID)
-	local title = QuestTitle(questID)
-	local quest = ns.char.quests[questID] or {}
-	ns.char.quests[questID] = quest
-	quest.title = title or quest.title
-	quest.accepted = time()
+	local title = Note(questID, "accepted")
 	ns.Log("quest", { id = questID, title = title })
 	ns.Add(1, "quests", "accepted")
 end)
@@ -81,13 +82,34 @@ end
 
 ns.On("QUEST_TURNED_IN", function(questID, xp, money)
 	ns.Mark("questdone")
-	local title = QuestTitle(questID)
-	local quest = ns.char.quests[questID] or {}
-	ns.char.quests[questID] = quest
-	quest.title = title or quest.title
-	quest.done = time()
+	local title = Note(questID, "done")
 	ns.Log("questdone", { id = questID, title = title, xp = xp, money = money })
 	ns.Add(1, "quests", "completed")
+end)
+
+-- The quest log's Abandon button calls SetAbandonQuest, which picks the
+-- selected quest, and its confirmation calls AbandonQuest. The quest then
+-- leaves the log with QUEST_REMOVED, which also fires on turn-ins, so only
+-- the quest you just abandoned counts.
+local abandoning, abandoned
+
+if C_QuestLog.SetAbandonQuest and C_QuestLog.GetAbandonQuest and C_QuestLog.AbandonQuest then
+	hooksecurefunc(C_QuestLog, "SetAbandonQuest", function()
+		abandoning = ns.Clean(C_QuestLog.GetAbandonQuest())
+	end)
+	hooksecurefunc(C_QuestLog, "AbandonQuest", function()
+		abandoned = abandoning
+	end)
+end
+
+ns.On("QUEST_REMOVED", function(questID)
+	if not questID or questID ~= abandoned then
+		return
+	end
+	abandoned = nil
+	local title = Note(questID, "abandoned")
+	ns.Log("questabandon", { id = questID, title = title })
+	ns.Add(1, "quests", "abandoned")
 end)
 
 --------------------------------------------------------------------------------
