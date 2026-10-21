@@ -21,7 +21,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
 | `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, mail, owned auctions, loot windows, merchants, flights, the world map and world positions, the minimap's range and facing, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
-| `TravelLog/loot.lua` | Loot sources and roll wins. |
+| `TravelLog/loot.lua` | Loot sources (pickpockets too) and roll wins. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
 | `TravelLog/window.lua` | The window and minimap button with every companion's rows and tabs: sections, totals, settings, moving, hiding the button, a reload. |
@@ -33,6 +33,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
 | `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, a reload. |
 | `ItemCount/count.lua` | Bags, bank and account bank, mail and mail to alts, auctions running out, equipped items, tooltip lines, commands, a reload. |
+| `TravelLog_Group/group.lua` | Groups from the roster, other realms, kills together, unreadable names, raids, reloads and long logouts while grouped, tooltips, commands, the Players tab. |
 | `TravelLog_Kills/kills.lua` | Kills from `PARTY_KILL` and the XP chat line, party and pet kills, secret GUIDs, tooltips, map pins, commands, the Kills tab, a reload. |
 | `TravelLog_NPCs/npcs.lua` | NPCs from each kind of window, vendors' stock and filters, item tooltips, minimap pins (range, rotation, other maps), world map pins, hiding, commands, the NPCs tab, a reload and an alt. |
 
@@ -58,9 +59,9 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.cast(spellID, target)`, `M.lootAll(take)` | Cast a spell (SENT, then SUCCEEDED); loot the window in `M.loot`. |
 | `M.x`, `M.y`, `M.wa`, `M.wb`, `M.mapID`, `M.zone`, `M.subzone`, `M.mounted`, `M.taxi`, `M.money`, ... | Player state read by the fake API. `M.x = nil` means inside a dungeon. |
 | `M.player = { name, realm, class }` | Who logs in; `class` is the class file name (default `MAGE`). Change it between logins to play an alt. |
-| `M.units.target = { name, guid, hostile, level, ... }` | Other units (also `classification`, `dead`, `tapped`, `trivial`, `player`, `pet`, and `title` for the tooltip line under an NPC's name). `M.units.npc` is who you're talking to. |
+| `M.units.target = { name, guid, hostile, level, ... }` | Other units (also `realm` for another realm, `class`, `classification`, `dead`, `tapped`, `trivial`, `player`, `pet`, and `title` for the tooltip line under an NPC's name). `M.units.npc` is who you're talking to. |
 | `M.hover(unit)`, `M.hoverItem(itemID)` | Show a unit's or item's tooltip, running addons' post-calls; returns its lines without color codes. |
-| `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.instance` | Experience, rested pool, other group members' units, instance type. |
+| `M.xp`, `M.xpMax`, `M.rested`, `M.group`, `M.raid`, `M.instance` | Experience, rested pool, other group members' units (`party1`, ... or `raid1`, ...), raid or party, instance type. |
 | `M.skills`, `M.spellNames[id]`, `M.spellRanks[id]` | Skill lines (`{ skillID, name, rank, isHeader }`), spell names and rank text. |
 | `M.trainerServices[i] = { name, rank, cost }` | The open trainer's list (`GetTrainerServiceInfo`, `GetTrainerServiceCost`). |
 | `M.guidNames[guid] = name` | Units the client still knows by GUID (`UnitNameFromGUID`) after they're gone. |

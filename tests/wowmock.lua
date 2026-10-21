@@ -113,6 +113,7 @@ LOOT_ITEM_CREATED_SELF = "You create: %s."
 LOOT_ITEM_CREATED_SELF_MULTIPLE = "You create: %sx%d."
 COMBATLOG_XPGAIN_FIRSTPERSON = "%s dies, you gain %d experience."
 COMBATLOG_XPGAIN_EXHAUSTION1 = "%s dies, you gain %d experience. (%s exp %s bonus)"
+UNKNOWNOBJECT = "Unknown"
 COMBATLOG_XPGAIN_FIRSTPERSON_GROUP = "%s dies, you gain %d experience. (+%d group bonus)"
 ERR_ZONE_EXPLORED = "Discovered: %s"
 ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained"
@@ -157,7 +158,8 @@ QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED
 PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
-NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE]]):gmatch("%S+") do
+NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
+GROUP_ROSTER_UPDATE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -495,10 +497,11 @@ end
 -- Player and world
 --------------------------------------------------------------------------------
 
+-- A unit's realm is only returned when it's another realm, as in the game.
 function UnitName(unit)
 	if unit == "player" then return M.player.name end
 	local u = M.units[unit]
-	return u and u.name
+	if u then return u.name, u.realm end
 end
 function UnitGUID(unit)
 	if unit == "player" then return "Player-1-" .. M.player.name end
@@ -534,9 +537,11 @@ function UnitIsTapDenied(unit) local u = M.units[unit]; return u and u.tapped or
 function UnitIsTrivial(unit) local u = M.units[unit]; return u and u.trivial or false end
 function GetRealmName() return M.player.realm end
 function GetNormalizedRealmName() return (M.player.realm:gsub("[%s%-]", "")) end
--- M.player.class is the class file name, MAGE by default.
-function UnitClass()
-	local class = M.player.class or "MAGE"
+-- M.player.class (or M.units[unit].class) is the class file name, MAGE by
+-- default.
+function UnitClass(unit)
+	local u = M.units[unit]
+	local class = u and u.class or M.player.class or "MAGE"
 	return class:sub(1, 1) .. class:sub(2):lower(), class
 end
 -- A few of RAID_CLASS_COLORS; unknown classes are white, as in the game.
@@ -663,7 +668,7 @@ end
 C_QuestLog = {}
 function C_QuestLog.GetTitleForQuestID(id) return M.quests[id] end
 C_Spell = {}
-M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball" }
+M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball", [921] = "Pick Pocket" }
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
 M.spellRanks = {}
 function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end

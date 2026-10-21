@@ -9,6 +9,7 @@ Optional companions, each its own folder:
 - `TravelLog_Archive`: storage for older history (see [Where the data is](#where-the-data-is)). Install it with TravelLog.
 - [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
 - [TravelLog_NPCs](../TravelLog_NPCs/): NPCs you've talked to and what they sell, on the maps and item tooltips. Works on its own too.
+- [TravelLog_Group](../TravelLog_Group/): every player you group with, and when. Works on its own too.
 - [TravelLog_Share](../TravelLog_Share/): your nodes, and on request your log, for players you allow. Needs TravelLog.
 
 ## What it records
@@ -17,7 +18,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 | | |
 | --- | --- |
-| **Loot** | Corpses, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the opening spell for herbs, ore, chests and skinning). |
+| **Loot** | Corpses, pickpockets, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the spell for herbs, ore, chests, skinning and Pick Pocket). |
 | **Other items** | Quest rewards, crafts, roll wins (with your roll) and other items that arrive without a loot window. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
@@ -33,6 +34,7 @@ Click the map icon on the minimap, or type `/tl window`, for a window with these
 - **Settings**: the companions' World map options, then General (the **Minimap button** checkbox and Path's interval).
 - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
+- **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
 
 Companions add their rows to the matching section. Drag the minimap icon to move it around the minimap.
 

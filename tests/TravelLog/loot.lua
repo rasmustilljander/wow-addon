@@ -1,5 +1,5 @@
--- Loot sources and roll wins. Remembered chests and gathering nodes are
--- TravelLog_Nodes' (tests/TravelLog_Nodes).
+-- Loot sources (pickpockets too) and roll wins. Remembered chests and
+-- gathering nodes are TravelLog_Nodes' (tests/TravelLog_Nodes).
 local ns = M.Login()
 
 local function last(kind)
@@ -20,7 +20,7 @@ end
 
 -- A combat spell that finished seconds before looting a corpse isn't "via"
 local WOLF = "Creature-0-1-0-1-299-0000AAAA"
-M.units.target = { name = "Young Wolf", guid = WOLF, hostile = true }
+M.units.target = { name = "Young Wolf", guid = WOLF, hostile = true, dead = true }
 M.cast(133, "Young Wolf") -- Fireball
 M.advance(3)
 M.loot = { { name = "Ruined Pelt", link = "[Ruined Pelt]", qty = 1, guid = WOLF } }
@@ -32,6 +32,30 @@ M.cast(8613, "Young Wolf")
 M.loot = { { name = "Light Leather", link = "[Light Leather]", qty = 1, guid = WOLF } }
 M.lootAll()
 check(last("loot").via == "Skinning", "second loot of a corpse after a cast is skinning")
+M.units.target = nil
+
+-- Pick Pocket loots a living creature
+local THUG = "Creature-0-1-0-1-116-0000BBBB"
+M.units.target = { name = "Defias Thug", guid = THUG, hostile = true }
+M.cast(921, "Defias Thug")
+M.loot = { { name = "Coins", qty = 1, type = 2, guid = THUG } }
+M.fire("LOOT_READY", true)
+M.fire("LOOT_OPENED", true, false)
+M.fire("LOOT_SLOT_CLEARED", 1)
+M.money = M.money + 14
+M.fire("PLAYER_MONEY")
+M.fire("LOOT_CLOSED")
+local pocket = last("loot")
+check(pocket.source == "Defias Thug" and pocket.sourceType == "Creature" and pocket.sourceID == 116
+	and pocket.via == "Pick Pocket" and pocket.money == 14, "pickpocket recorded with its spell")
+
+-- Its corpse, looted right after a killing spell, is a plain kill, not skinning
+M.advance(10)
+M.units.target.dead = true
+M.cast(133, "Defias Thug")
+M.loot = { { name = "Linen Cloth", link = "[Linen Cloth]", qty = 1, guid = THUG } }
+M.lootAll()
+check(last("loot") ~= pocket and last("loot").via == nil, "corpse after a pickpocket isn't skinning")
 M.units.target = nil
 
 -- A crate that opens without a cast gets no stale name from an old cast
