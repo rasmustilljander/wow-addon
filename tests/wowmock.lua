@@ -123,6 +123,8 @@ Enum = {
 	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
 	ConsoleCommandType = { Cvar = 0, Command = 1, Macro = 2, Script = 3 },
 	ConsoleCategory = { Debug = 0, Graphics = 1, Console = 2, Combat = 3, Game = 4, Default = 5, Net = 6, Sound = 7, Gm = 8, Reveal = 9, None = 10 },
+	ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
+	BagIndex = { Backpack = 0 },
 }
 
 --------------------------------------------------------------------------------
@@ -193,6 +195,7 @@ end
 function Region:SetFrameLevel(l) self.level = l end
 function Region:RegisterForClicks(...) self.clicks = { ... } end
 function Region:SetHighlightTexture(t) self.highlightTexture = t end
+function Region:SetNormalTexture(t) self.normalTexture = t end
 function Region:SetChecked(v) self.checked = v and true or false end
 function Region:GetChecked() return self.checked or false end
 function Region:GetFrameLevel() return self.level or 1 end
@@ -396,6 +399,7 @@ GameTooltip = { lines = {} }
 function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit = owner, {}, nil end
 function GameTooltip:AddLine(text) self.lines[#self.lines + 1] = text end
 function GameTooltip:SetText(text) self.lines = { text } end
+function GameTooltip:SetHyperlink(link) self.lines = { link } end
 function GameTooltip:AddDoubleLine(a, b) self.lines[#self.lines + 1] = a .. "  " .. b end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
@@ -568,9 +572,69 @@ function C_QuestLog.GetTitleForQuestID(id) return M.quests[id] end
 C_Spell = {}
 M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball" }
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
+-- Bags: M.bags["bag:slot"] is an item link, or { link, count, locked }.
+-- M.bagSlots[bag] is each bag's size and M.items[itemID] = { quality, price,
+-- icon, noValue, uncached } what the client knows about an item (uncached:
+-- GetItemInfo returns nothing yet).
+NUM_BAG_SLOTS, NUM_TOTAL_EQUIPPED_BAG_SLOTS = 4, 5
+M.bagSlots, M.items = { [0] = 16 }, {}
+local function BagItem(key)
+	local entry = M.bags[key]
+	if type(entry) == "string" then return { link = entry, count = 1 } end
+	return entry
+end
+local function LinkID(link) return tonumber(link:match("item:(%d+)")) end
 C_Container = {}
 function C_Container.UseContainerItem() end
-function C_Container.GetContainerItemLink(bag, slot) return M.bags[bag .. ":" .. slot] end
+function C_Container.GetContainerItemLink(bag, slot) local e = BagItem(bag .. ":" .. slot); return e and e.link end
+function C_Container.GetContainerNumSlots(bag) return M.bagSlots[bag] or 0 end
+function C_Container.GetContainerItemInfo(bag, slot)
+	local key = bag .. ":" .. slot
+	local e = BagItem(key)
+	if not e then return nil end
+	local id = LinkID(e.link)
+	local item = M.items[id] or {}
+	return {
+		iconFileID = item.icon or 134400, stackCount = e.count or 1, isLocked = e.locked or M.cursorItem == key,
+		quality = item.quality or 1, isReadable = false, hasLoot = false, hyperlink = e.link, isFiltered = false,
+		hasNoValue = item.noValue or false, itemID = id, isBound = false, itemName = e.link:match("%[(.-)%]"),
+	}
+end
+-- The cursor holds a bag slot's item (M.cursorItem = "bag:slot", which stays
+-- locked) until it's put down, cleared or deleted.
+function C_Container.PickupContainerItem(bag, slot)
+	local key = bag .. ":" .. slot
+	if M.cursorItem then
+		M.bags[M.cursorItem], M.bags[key] = M.bags[key], M.bags[M.cursorItem]
+		M.cursorItem = nil
+	elseif M.bags[key] then
+		M.cursorItem = key
+	end
+end
+function GetCursorInfo()
+	if M.cursorItem then
+		local link = BagItem(M.cursorItem).link
+		return "item", LinkID(link), link
+	end
+end
+function CursorHasItem() return M.cursorItem ~= nil end
+function ClearCursor() M.cursorItem = nil end
+function DeleteCursorItem()
+	if M.cursorItem then M.bags[M.cursorItem], M.cursorItem = nil, nil end
+end
+C_Item = {}
+function C_Item.GetItemInfo(item)
+	local id = tonumber(item) or LinkID(item)
+	local it = M.items[id]
+	if not it or it.uncached then return nil end
+	local link = it.link or ("|cff9d9d9d|Hitem:" .. id .. "::::|h[Item " .. id .. "]|h|r")
+	return link:match("%[(.-)%]"), link, it.quality or 1, 1, 1, "Junk", "Junk", 20, "", it.icon or 134400,
+		it.price or 0, 15, 0, 0, 0, nil, false, ""
+end
+function C_Item.GetItemInfoInstant(item)
+	local id = tonumber(item) or LinkID(item)
+	return id, "Junk", "Junk", "", (M.items[id] or {}).icon or 134400, 15, 0
+end
 
 -- Casting: fires SENT then SUCCEEDED like the client does.
 function M.cast(spellID, target)
@@ -799,7 +863,7 @@ function M.Logout()
 	M.canvas.children, Minimap.children = nil, nil
 	UIParent.children = { Minimap }
 	for _, name in ipairs(namedFrames) do _G[name] = nil end
-	namedFrames, UISpecialFrames, M.focus = {}, {}, nil
+	namedFrames, UISpecialFrames, M.focus, M.cursorItem = {}, {}, nil, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
 	M.reloadRequested = nil
