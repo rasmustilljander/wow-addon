@@ -4,8 +4,9 @@
 ## Author: rasmustilljander
 ## Version: 0.1.0
 ## SavedVariables: CVarBrowserDB
+## IconTexture: Interface\Icons\INV_Misc_Gear_01
+## AddonCompartmentFunc: CVarBrowser_OnAddonCompartmentClick
 
 Known.lua
 CVarBrowser.lua
 UI.lua
-Minimap.lua

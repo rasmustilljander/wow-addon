@@ -455,6 +455,31 @@ function GameTooltip:GetItem()
 	if self.item then local name, link = C_Item.GetItemInfo(self.item); return name, link, self.item end
 end
 
+-- The color picker. M.pickColor drags it to a color, which calls swatchFunc
+-- and opacityFunc like the game; Okay and Cancel close it.
+ColorPickerFrame = {}
+function ColorPickerFrame:SetupColorPickerAndShow(info)
+	self.info, self.shown = info, true
+	self.color = { info.r, info.g, info.b, info.hasOpacity and info.opacity or 1 }
+end
+function ColorPickerFrame:GetColorRGB() return self.color[1], self.color[2], self.color[3] end
+function ColorPickerFrame:GetColorAlpha() return self.color[4] end
+function M.pickColor(r, g, b, a)
+	ColorPickerFrame.color = { r, g, b, a or ColorPickerFrame.color[4] }
+	ColorPickerFrame.info.swatchFunc()
+	if ColorPickerFrame.info.opacityFunc then ColorPickerFrame.info.opacityFunc() end
+end
+function M.closeColorPicker(okay)
+	local info = ColorPickerFrame.info
+	if okay then
+		info.swatchFunc()
+		if info.opacityFunc then info.opacityFunc() end
+	elseif info.cancelFunc then
+		info.cancelFunc({ r = info.r, g = info.g, b = info.b, a = info.opacity })
+	end
+	ColorPickerFrame.shown = false
+end
+
 -- Tooltip post-calls added by addons, by tooltip data type.
 M.tooltipPostCalls = {}
 TooltipDataProcessor = { AllTypes = "ALL" }
@@ -815,8 +840,10 @@ function C_AuctionHouse.HasFullOwnedAuctionResults() return true end
 function C_AuctionHouse.GetOwnedAuctions() return M.ownedAuctions end
 
 -- Merchant: M.merchantItems[i] is C_MerchantFrame.GetItemInfo's table plus
--- the item's link. M.merchantFilter is the list's filter (all by default).
-LE_LOOT_FILTER_ALL, LE_LOOT_FILTER_CLASS = 1, 2
+-- the item's link and cost: { { count, link = ..., currency = ... } }, what
+-- GetMerchantItemCostItem returns. M.merchantFilter is the list's filter (all
+-- by default).
+LE_LOOT_FILTER_ALL, LE_LOOT_FILTER_CLASS, MAX_ITEM_COST = 1, 2, 3
 C_MerchantFrame = {}
 function C_MerchantFrame.GetItemInfo(i) return M.merchantItems[i] end
 function GetMerchantNumItems() return #M.merchantItems end
@@ -824,6 +851,12 @@ function GetMerchantItemID(i) local it = M.merchantItems[i]; return it and LinkI
 function GetMerchantFilter() return M.merchantFilter or LE_LOOT_FILTER_ALL end
 function CanMerchantRepair() return M.canRepair end
 function GetMerchantItemLink(i) local it = M.merchantItems[i]; return it and it.link end
+function GetMerchantItemCostInfo(i) local it = M.merchantItems[i]; return it and it.cost and #it.cost or 0 end
+function GetMerchantItemCostItem(i, c)
+	local it = M.merchantItems[i]
+	local cost = it and it.cost and it.cost[c]
+	if cost then return 134400, cost[1], cost.link, cost.currency end
+end
 function BuyMerchantItem() end
 function GetNumBuybackItems() return #M.buyback end
 function GetBuybackItemInfo(i) local b = M.buyback[i]; if b then return b.name, 1, b.price, b.count end end
@@ -933,10 +966,13 @@ local function ReadToc(name)
 	local path = REPO .. "/" .. name .. "/" .. name .. ".toc"
 	local f = io.open(path)
 	if not f then return nil end
-	local toc = { name = name, files = {}, saved = {}, perChar = {} }
+	local toc = { name = name, files = {}, saved = {}, perChar = {}, meta = {} }
 	for line in f:lines() do
 		line = line:gsub("\r$", "")
 		local key, value = line:match("^##%s*([%w%-]+):%s*(.-)%s*$")
+		if key then
+			toc.meta[key] = value
+		end
 		if key == "SavedVariables" then
 			for var in value:gmatch("[^,%s]+") do toc.saved[#toc.saved + 1] = var end
 		elseif key == "SavedVariablesPerCharacter" then
@@ -1049,6 +1085,18 @@ function M.Login()
 	end
 	M.fire("PLAYER_LOGIN")
 	M.fire("PLAYER_ENTERING_WORLD", true, false)
+	-- The addon compartment (the minimap's addons dropdown) lists the addons
+	-- whose .toc names an AddonCompartmentFunc. Clicking an entry calls that
+	-- global with the addon's name and the mouse button.
+	M.compartment = {}
+	for name, addon in pairs(M.loaded) do
+		local meta = addon.toc.meta
+		if meta.AddonCompartmentFunc then
+			M.compartment[name] = { text = meta.Title, icon = meta.IconTexture, Click = function(_, button)
+				_G[meta.AddonCompartmentFunc](name, button or "LeftButton")
+			end }
+		end
+	end
 	return M.ns()
 end
 

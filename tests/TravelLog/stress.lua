@@ -4,7 +4,7 @@
 -- Only the declared globals may be created while loading.
 local leaked = {}
 local allowed = { TravelLog = true, TravelLogDB = true, TravelLogCharDB = true, TravelLogPathDB = true, TravelLogPathAccountDB = true,
-	TravelLogNodesDB = true, TravelLogNodesAccountDB = true, SLASH_TRAVELLOG1 = true, SLASH_TRAVELLOG2 = true, TravelLogMinimapButton = true }
+	TravelLogNodesDB = true, TravelLogNodesAccountDB = true, SLASH_TRAVELLOG1 = true, SLASH_TRAVELLOG2 = true, TravelLog_OnAddonCompartmentClick = true }
 setmetatable(_G, { __newindex = function(t, k, v)
 	if not allowed[k] then leaked[#leaked + 1] = k end
 	rawset(t, k, v)

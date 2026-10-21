@@ -311,6 +311,8 @@ local function Init()
 			db.settings[key] = value
 		end
 	end
+	-- Left over from the minimap button, before the addon compartment.
+	db.settings.minimap, db.settings.minimapAngle = nil, nil
 	db.chars = db.chars or {}
 
 	-- Who each character is and their totals live in the account-wide file.
