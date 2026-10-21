@@ -225,7 +225,6 @@ local function Help()
 end
 
 SLASH_TRAVELLOGKILLS1 = "/kills"
-SLASH_TRAVELLOGKILLS2 = "/tlk"
 SlashCmdList.TRAVELLOGKILLS = function(msg)
 	if not ns.db then
 		return

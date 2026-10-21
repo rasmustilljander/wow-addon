@@ -1,6 +1,6 @@
 -- The TravelLog window: this character's totals on one tab and the settings
 -- on another, each under section headings. Opened from the addon compartment
--- (the minimap's addons dropdown) or /tl window. Companion addons add their
+-- (the minimap's addons dropdown) or /tl. Companion addons add their
 -- own rows with ns.AddStat, ns.AddSetting and ns.AddStepper, and whole tabs
 -- with ns.AddTab, while loading or at login.
 local _, ns = ...
@@ -366,6 +366,3 @@ function ns.ShowTab(name)
 	end
 end
 
-ns.Command("window", "window - open or close the TravelLog window", function()
-	ns.Toggle()
-end)

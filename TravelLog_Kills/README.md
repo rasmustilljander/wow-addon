@@ -39,8 +39,6 @@ The window's Totals tab also shows your total and most-killed mob, and Settings 
 | `/kills map <name>` | Pin only that mob's kills (`/kills map target` for your target; `on` shows all again) |
 | `/kills wipe confirm` | Delete every kill for this character |
 
-`/tlk` works too.
-
 ```
 /kills kobold worker
 TravelLog Kills Kobold Worker: killed 54 times.

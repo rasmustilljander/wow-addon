@@ -28,7 +28,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 ## Window
 
-Pick TravelLog from the addons dropdown on the minimap, or type `/tl window`, for a window with these tabs:
+Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
 - **Totals**: this character's numbers under Travel, Loot, Life and Log.
 - **Settings**: the companions' map options and Path's interval.
@@ -45,8 +45,8 @@ Companions add their rows to the matching section.
 
 | Command | |
 | --- | --- |
-| `/tl` or `/tl stats` | Totals for this character |
-| `/tl window` | Open or close the window |
+| `/tl` | Open or close the window |
+| `/tl stats` | Totals for this character |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
 | `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' data |
