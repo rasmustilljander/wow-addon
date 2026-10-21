@@ -131,6 +131,30 @@ M.fire("QUEST_TURNED_IN", 54, 250, 75)
 check(last("questdone").title == "Report to Goldshire", "turn-in remembers the title")
 check(last("money").reason == "quest" and last("money").amount == 75, "quest money reason")
 check(last("receive").how == "quest", "quest reward item")
+M.fire("QUEST_REMOVED", 54, false)
+check(count("questabandon") == 0, "a turned-in quest leaving the log isn't abandoned")
+
+-- Abandon: a cancelled dialog doesn't count, a confirmed one does
+M.quests[60], M.quests[61] = "The Fargodeep Mine", "Kobold Candles"
+M.fire("QUEST_ACCEPTED", 60)
+M.fire("QUEST_ACCEPTED", 61)
+C_QuestLog.SetSelectedQuest(60)
+C_QuestLog.SetAbandonQuest() -- dialog shown, then cancelled
+M.fire("QUEST_TURNED_IN", 60, 300, 0)
+M.fire("QUEST_REMOVED", 60, false)
+check(count("questabandon") == 0, "a cancelled abandon isn't recorded")
+C_QuestLog.SetSelectedQuest(61)
+C_QuestLog.SetAbandonQuest()
+C_QuestLog.AbandonQuest()
+M.quests[61] = nil
+M.fire("QUEST_REMOVED", 61, false)
+check(count("questabandon") == 1 and last("questabandon").title == "Kobold Candles", "abandoned quest logged with title")
+check(TravelLogCharDB.quests[61].abandoned and not TravelLogCharDB.quests[61].done, "abandoned quest marked")
+check(ns.Describe(last("questabandon")) == "Abandoned quest: Kobold Candles", "abandon described")
+check(ns.LogMatches(last("questabandon"), "abandon", "Life"), "abandon found under Life")
+check(ns.stats.quests.abandoned == 1, "abandon counted")
+M.fire("QUEST_REMOVED", 61, false)
+check(count("questabandon") == 1, "abandon recorded once")
 
 -- Kill and discovery messages
 M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 45 experience. (+22 exp Rested bonus)")

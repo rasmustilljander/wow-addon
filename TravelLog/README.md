@@ -23,7 +23,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
-| **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted and completed, kills that gave XP, discoveries. |
+| **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted, completed and abandoned, kills that gave XP, discoveries. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
 
 ## Window
@@ -82,13 +82,13 @@ TravelLogCharDB = {
   sessions = {   -- one per login or reload
     { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500 },
   },
-  quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ... } },
+  quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ... } },  -- last time of each
   skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
