@@ -455,6 +455,31 @@ function GameTooltip:GetItem()
 	if self.item then local name, link = C_Item.GetItemInfo(self.item); return name, link, self.item end
 end
 
+-- The color picker. M.pickColor drags it to a color, which calls swatchFunc
+-- and opacityFunc like the game; Okay and Cancel close it.
+ColorPickerFrame = {}
+function ColorPickerFrame:SetupColorPickerAndShow(info)
+	self.info, self.shown = info, true
+	self.color = { info.r, info.g, info.b, info.hasOpacity and info.opacity or 1 }
+end
+function ColorPickerFrame:GetColorRGB() return self.color[1], self.color[2], self.color[3] end
+function ColorPickerFrame:GetColorAlpha() return self.color[4] end
+function M.pickColor(r, g, b, a)
+	ColorPickerFrame.color = { r, g, b, a or ColorPickerFrame.color[4] }
+	ColorPickerFrame.info.swatchFunc()
+	if ColorPickerFrame.info.opacityFunc then ColorPickerFrame.info.opacityFunc() end
+end
+function M.closeColorPicker(okay)
+	local info = ColorPickerFrame.info
+	if okay then
+		info.swatchFunc()
+		if info.opacityFunc then info.opacityFunc() end
+	elseif info.cancelFunc then
+		info.cancelFunc({ r = info.r, g = info.g, b = info.b, a = info.opacity })
+	end
+	ColorPickerFrame.shown = false
+end
+
 -- Tooltip post-calls added by addons, by tooltip data type.
 M.tooltipPostCalls = {}
 TooltipDataProcessor = { AllTypes = "ALL" }

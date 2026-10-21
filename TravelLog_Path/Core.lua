@@ -9,6 +9,8 @@ tl.Defaults({
 	trail = "today",    -- how far back the world map trail goes (see Range.lua)
 	altTrail = "off",   -- the same for alts' trails
 	hiddenAlts = {},    -- alts whose trail isn't shown, by "Name-Realm"
+	trailColors = {},   -- trail colors changed in the Colors tab, by how you moved: { r, g, b, a }
+	markerColors = {},  -- the same for map markers, by kind
 })
 
 -- Path points and jumps are packed this many records per string, which keeps

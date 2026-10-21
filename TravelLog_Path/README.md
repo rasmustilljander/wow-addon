@@ -35,6 +35,8 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 
 Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups and other milestones. Hover a death marker to see its date and what you were fighting. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
 
+The colors below are the defaults. To change one, click its swatch in the TravelLog window's **Colors** tab and pick a color and opacity; the map follows as you drag. **Default** puts one back, **All defaults** all of them. They're saved in TravelLog's settings as `trailColors` and `markerColors`, `{ r, g, b, a }` by kind.
+
 | Trail | | Marker | |
 | --- | --- | --- | --- |
 | yellow | on foot | small white dot | jump |
