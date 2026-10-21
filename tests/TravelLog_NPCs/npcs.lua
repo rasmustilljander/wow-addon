@@ -127,7 +127,8 @@ local function Names(list)
 	return table.concat(out, ", ")
 end
 check(Names(ns.Search("WATER")) == "Brog Hamfist[Refreshing Spring Water], Innkeeper Farley[Refreshing Spring Water]", "search items: " .. Names(ns.Search("WATER")))
-check(Names(ns.Search("goldshire")) == "Brog Hamfist, Innkeeper Farley, Llane Beshere, Ariena Stormfeather" or #ns.Search("goldshire") == 4, "search places")
+check(Names(ns.Search("goldshire")) == "Ariena Stormfeather, Brog Hamfist, Innkeeper Farley, Llane Beshere",
+	"search places: " .. Names(ns.Search("goldshire")))
 check(Names(ns.Search("supplies")) == "Brog Hamfist", "search titles")
 check(#ns.Search("") == 6, "empty search lists all")
 

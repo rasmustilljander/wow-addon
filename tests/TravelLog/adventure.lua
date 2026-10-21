@@ -274,6 +274,11 @@ local deathLog = table.concat(M.out, "\n")
 check(deathLog:find('Last 1 events matching "deaths"', 1, true)
 	and deathLog:find("Died fighting Defias Thug at level 5", 1, true)
 	and not deathLog:find("Looted", 1, true), "filtered /tl log: " .. deathLog)
+M.out = {}
+SlashCmdList.TRAVELLOG("log " .. date("%Y-%m-%d"))
+local shown = tonumber(M.out[1]:match("Last (%d+) events matching \"" .. date("%Y%%-%m%%-%d") .. "\""))
+check(shown and shown > 0 and shown <= 15 and #M.out == shown + 1,
+	"/tl log searches a date instead of taking its year as the count: " .. M.out[1])
 SlashCmdList.TRAVELLOG("interval 4")
 check(ns.settings.interval == 4, "interval set")
 SlashCmdList.TRAVELLOG("interval 9")

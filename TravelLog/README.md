@@ -49,7 +49,7 @@ Companions add their rows to the matching section.
 | `/tl stats` | Totals for this character |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
-| `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' data |
+| `/tl wipe confirm` | Delete everything for this character, including its archive and its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
 `/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
 
