@@ -123,6 +123,10 @@ local function ShowStats(arg)
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
 		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited(st)))
+	local instances = st.instances or {}
+	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
+		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
+		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, flight paths found %s, mounts %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.flightPaths), Count(st.mounts))
 
@@ -174,6 +178,16 @@ local function Items(items)
 	return table.concat(parts, ", ")
 end
 
+-- "4:05": seconds as minutes and seconds.
+local function MinSec(seconds)
+	return ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60)
+end
+
+-- Adds what got you there, e.g. " (Teleport: Stormwind)".
+local function Via(text, e)
+	return e.via and ("%s (%s)"):format(text, e.via) or text
+end
+
 local DESCRIBE = {
 	area = function(e)
 		return (e.first and "First visit to %s" or "Entered %s"):format(e.subzone or e.zone or "?")
@@ -205,8 +219,26 @@ local DESCRIBE = {
 		return ("%s %s (%s%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), e.reason, who)
 	end,
 	flight = function(e) return ("Flew from %s to %s for %s"):format(e.from or "?", e.to or "?", ns.MoneyText(e.price)) end,
-	landed = function(e) return e.seconds and ("Landed after %d:%02d"):format(math.floor(e.seconds / 60), e.seconds % 60) or "Landed" end,
-	hearth = function(e) return ("Hearthed to %s"):format(e.to or "?") end,
+	landed = function(e) return e.seconds and ("Landed after %s"):format(MinSec(e.seconds)) or "Landed" end,
+	hearth = function(e)
+		local text = e.from and ("Hearthed from %s to %s"):format(e.from, e.to or "?") or ("Hearthed to %s"):format(e.to or "?")
+		return Via(text, e)
+	end,
+	teleport = function(e) return Via(("Teleported from %s to %s"):format(e.from or "?", e.to or "?"), e) end,
+	summon = function(e)
+		local text = ("Summoned from %s to %s"):format(e.from or "?", e.to or "?")
+		return e.by and ("%s by %s"):format(text, e.by) or text
+	end,
+	board = function(e) return ("Boarded a boat or zeppelin at %s"):format(e.subzone or e.zone or "?") end,
+	disembark = function(e)
+		local text = ("Rode a boat or zeppelin from %s to %s"):format(e.from or "?", e.to or "?")
+		return e.seconds and ("%s in %s"):format(text, MinSec(e.seconds)) or text
+	end,
+	instance = function(e)
+		local about = e.difficulty and e.kind .. ", " .. e.difficulty or e.kind
+		return ("Entered %s (%s)"):format(e.name or "?", about or "instance")
+	end,
+	instanceleave = function(e) return ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0)) end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	death = function(e)
 		local text = e.target and ("Died fighting %s"):format(e.target) or "Died"
@@ -251,6 +283,8 @@ end
 -- under All and remains searchable by its saved fields.
 local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
+	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
+	instance = "Travel", instanceleave = "Travel",
 	loot = "Loot", receive = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
@@ -261,7 +295,9 @@ local LOG_GROUP = {
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", money = "Money", flight = "Flight",
-	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", death = "Death",
+	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
+	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
+	instanceleave = "Instance left", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", kill = "XP kill", discover = "Discovery", spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", taxipath = "Flight path", standing = "Reputation",
