@@ -111,7 +111,8 @@ local DESCRIBE = {
 		end
 		local text = ("Looted %s from %s"):format(what, e.source or e.sourceType or "?")
 		if e.lastHere then
-			text = text .. (" (looted here %s before)"):format(ns.Ago(e.lastHere, e.time))
+			local by = e.lastBy and " by " .. e.lastBy or ""
+			text = text .. (" (looted here %s before%s)"):format(ns.Ago(e.lastHere, e.time), by)
 		end
 		return text
 	end,

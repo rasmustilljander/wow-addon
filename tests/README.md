@@ -27,7 +27,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/window.lua` | The window and minimap button with every companion's rows and tabs: sections, totals, settings, moving, hiding the button, a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, an alt's archive, wiping. |
-| `TravelLog_Nodes/nodes.lua` | Remembered nodes, their pins and tooltips, migration from TravelLog, wiping. |
+| `TravelLog_Nodes/nodes.lua` | Remembered nodes, their pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
