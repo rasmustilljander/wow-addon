@@ -125,7 +125,7 @@ tl.Command("share", "share - share nodes and your log with other players (/tl sh
 	end
 end)
 
-tl.AddStat("Sharing", function()
+tl.AddStat("Log", "Sharing", function()
 	local allowed, follow = 0, 0
 	for _ in pairs(ns.db.allowed) do allowed = allowed + 1 end
 	for _ in pairs(ns.db.follow) do follow = follow + 1 end

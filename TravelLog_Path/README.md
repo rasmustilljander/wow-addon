@@ -29,7 +29,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `all` | Everything, the archive included |
 | `off` | Nothing |
 
-`/tl stats` adds jumps, distance and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance, and has buttons for the interval and for both trails: `session`, `today`, `24h`, `week`, `all` and `off`, plus `<` and `>` to step one calendar day back or forward. Below them is a checkbox for each alt with a recorded path, to hide or show that alt's trail.
+`/tl stats` adds jumps, distance and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the interval.
 
 ## World map
 

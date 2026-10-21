@@ -142,12 +142,12 @@ tl.On("TL_STATS", function()
 		Count(nodes.herb), Count(nodes.ore), Count(nodes.chest), Count(nodes.object))
 end)
 
-tl.AddStat("Nodes", function()
+tl.AddStat("Loot", "Nodes", function()
 	local nodes, Count = tl.stats.nodes or {}, tl.Count
 	return ("%s herbs, %s ore, %s chests, %s other"):format(Count(nodes.herb), Count(nodes.ore),
 		Count(nodes.chest), Count(nodes.object))
 end)
-tl.AddSetting("Looted nodes on the world map", function() return tl.settings.nodes end, function(on)
+tl.AddSetting("World map", "Looted nodes", function() return tl.settings.nodes end, function(on)
 	tl.settings.nodes = on
 	ns.RefreshMap()
 end)
