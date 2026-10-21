@@ -10,6 +10,7 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | [TravelLog_Share](TravelLog_Share/) | Shares your nodes, and on request your log, with players you allow, and records who asked. Needs TravelLog. |
 | `TravelLog_Archive` | Load-on-demand storage for older TravelLog and TravelLog_Path history. Install it with TravelLog. |
 | [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where), with map pins and tooltip counts. TravelLog optional. |
+| [TravelLog_Group](TravelLog_Group/) | Records every player you group with (how often, when, how long, where), searchable in a window tab. TravelLog optional. |
 | [KillXP](KillXP/) | Shows a mob's kill XP (rested and party bonus included) and kills to level on its tooltip. |
 | [CVarBrowser](CVarBrowser/) | A window to search, bookmark and change CVars, with descriptions of well-known ones. |
 | [JunkToss](JunkToss/) | Right-click its minimap button to throw away the cheapest grey, or anything on its allowlist. |
