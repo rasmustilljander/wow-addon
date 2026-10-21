@@ -18,7 +18,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `/tl trail session\|today\|week\|all\|off` | How far back the map trail goes (default `today`). `all` reads the archive too. |
 | `/tl interval 1-5` | Seconds between path points (default 2) |
 
-`/tl stats` adds jumps, distance and stored path points.
+`/tl stats` adds jumps, distance and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance and has buttons for the trail and interval.
 
 ## World map
 

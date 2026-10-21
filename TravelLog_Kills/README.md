@@ -32,7 +32,7 @@ Zone maps (not continent maps) show red pins where you've killed things. Kills w
 | `/kills map <name>` | Pin only that mob's kills (`/kills map target` for your target; `on` shows all again) |
 | `/kills wipe confirm` | Delete every kill for this character |
 
-`/tlk` works too.
+`/tlk` works too. With TravelLog installed, [its window](../TravelLog/README.md#window) shows your total and most-killed mob and has a checkbox for the pins (checking it shows all kills again).
 
 ```
 /kills kobold worker

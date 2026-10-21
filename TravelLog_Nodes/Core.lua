@@ -118,13 +118,23 @@ end
 tl.On("TL_LOOT", Remember)
 
 --------------------------------------------------------------------------------
--- /tl nodes, and a line in /tl stats
+-- /tl nodes, and a line in /tl stats and the TravelLog window
 --------------------------------------------------------------------------------
 
 tl.On("TL_STATS", function()
 	local nodes, Count = tl.stats.nodes or {}, tl.Count
 	tl.Print("Nodes remembered: %s herbs, %s ore, %s chests, %s other",
 		Count(nodes.herb), Count(nodes.ore), Count(nodes.chest), Count(nodes.object))
+end)
+
+tl.AddStat("Nodes", function()
+	local nodes, Count = tl.stats.nodes or {}, tl.Count
+	return ("%s herbs, %s ore, %s chests, %s other"):format(Count(nodes.herb), Count(nodes.ore),
+		Count(nodes.chest), Count(nodes.object))
+end)
+tl.AddSetting("Looted nodes on the world map", function() return tl.settings.nodes end, function(on)
+	tl.settings.nodes = on
+	ns.RefreshMap()
 end)
 
 tl.Command("nodes", function()

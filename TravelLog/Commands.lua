@@ -25,6 +25,17 @@ end
 -- /tl stats
 --------------------------------------------------------------------------------
 
+-- Subzones visited, counted across zones.
+function ns.PlacesVisited()
+	local places = 0
+	for _, subzones in pairs(ns.stats.places or {}) do
+		for _ in pairs(subzones) do
+			places = places + 1
+		end
+	end
+	return places
+end
+
 local function ShowStats()
 	local char, st = ns.char, ns.stats
 	ns.Print("%s, level %d %s %s", ns.charKey, ns.profile.level or 0, UnitRace("player"), UnitClass("player"))
@@ -38,15 +49,9 @@ local function ShowStats()
 		Count(v.bought), Count(v.sold), Count(v.repairs),
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 
-	local places = 0
-	for _, subzones in pairs(st.places or {}) do
-		for _ in pairs(subzones) do
-			places = places + 1
-		end
-	end
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
-		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(places))
+		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited()))
 
 	-- Companion addons add their own lines here.
 	ns.Fire("TL_STATS")

@@ -1,10 +1,14 @@
 -- Path's part of /tl: jumps, the map trail, the recording interval and its
--- lines in /tl stats.
+-- lines in /tl stats, and the same in the TravelLog window.
 local _, ns = ...
 local tl = TravelLog
 
 local YARDS_PER_MILE = 1760
-local TRAIL_RANGES = { session = true, today = true, week = true, all = true, off = true }
+local TRAIL_CHOICES = { "session", "today", "week", "all", "off" }
+local TRAIL_RANGES = {}
+for _, range in ipairs(TRAIL_CHOICES) do
+	TRAIL_RANGES[range] = true
+end
 
 local function Sum(t)
 	local total = 0
@@ -55,14 +59,18 @@ tl.Command("jumps", "jumps - jumps per zone", function()
 	end
 end)
 
+local function SetTrail(range)
+	tl.settings.trail = range
+	ns.RefreshTrail()
+end
+
 tl.Command("trail", function()
 	return "trail session|today|week|all|off - how far back the map trail goes (now: " .. tl.settings.trail .. ")"
 end, function(arg)
 	if not TRAIL_RANGES[arg] then
 		return false
 	end
-	tl.settings.trail = arg
-	ns.RefreshTrail()
+	SetTrail(arg)
 	tl.Print("map trail: %s", arg)
 end)
 
@@ -76,3 +84,18 @@ end, function(arg)
 	tl.settings.interval = seconds
 	tl.Print("recording a path point every %s seconds while moving", arg)
 end)
+
+--------------------------------------------------------------------------------
+-- The TravelLog window
+--------------------------------------------------------------------------------
+
+tl.AddStat("Jumps", function()
+	return ("%s (%s this session)"):format(tl.Count(tl.stats.jumps), tl.Count(ns.session.jumpCount))
+end)
+tl.AddStat("Distance", function()
+	return ("%.1f miles"):format(Sum(tl.stats.distance) / YARDS_PER_MILE)
+end)
+tl.AddSetting("Map trail", function() return tl.settings.trail end, SetTrail, TRAIL_CHOICES)
+tl.AddSetting("Path interval (s)", function() return tl.settings.interval end, function(seconds)
+	tl.settings.interval = seconds
+end, { 1, 2, 3, 4, 5 })

@@ -1,4 +1,5 @@
--- Slash commands (/kills) and the kill count on mob tooltips.
+-- Slash commands (/kills), rows in the TravelLog window, and the kill count on
+-- mob tooltips.
 local _, ns = ...
 
 local function Count(n)
@@ -204,6 +205,39 @@ local function SetMap(arg)
 	end
 	ns.RefreshMap()
 	ns.Print("kill spots on the world map: %s", MapStatus())
+end
+
+--------------------------------------------------------------------------------
+-- The TravelLog window, when TravelLog is installed
+--------------------------------------------------------------------------------
+
+local tl = TravelLog
+if tl and tl.AddStat then
+	tl.AddStat("All kills", function()
+		local mobs = 0
+		for _ in pairs(ns.db.mobs) do
+			mobs = mobs + 1
+		end
+		return ("%s of %s mobs"):format(Count(ns.db.total), Count(mobs))
+	end)
+	tl.AddStat("Most killed", function()
+		local best
+		for _, mob in pairs(ns.db.mobs) do
+			if not best or mob.count > best.count then
+				best = mob
+			end
+		end
+		return best and ("%s (%s)"):format(best.name, Count(best.count)) or "nothing yet"
+	end)
+	tl.AddSetting(function()
+		return "Kills on the world map" .. (ns.db.settings.mapFilter and ns.db.settings.map
+			and (": only %s"):format(ns.db.settings.mapFilter) or "")
+	end, function()
+		return ns.db.settings.map
+	end, function(on)
+		ns.db.settings.map, ns.db.settings.mapFilter = on, nil
+		ns.RefreshMap()
+	end)
 end
 
 --------------------------------------------------------------------------------

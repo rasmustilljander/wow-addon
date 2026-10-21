@@ -22,11 +22,16 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
 | **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups, quests accepted and completed, kills that gave XP, discoveries. |
 
+## Window
+
+Click the map icon on the minimap, or type `/tl window`, for a window with this character's totals and the settings. Companions add their totals and settings to it. Drag the icon to move it around the minimap; the **Minimap button** checkbox in the window hides or shows it.
+
 ## Commands
 
 | Command | |
 | --- | --- |
 | `/tl` or `/tl stats` | Totals for this character |
+| `/tl window` | Open or close the window |
 | `/tl log [n]` | The last n events (default 15) |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
 | `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' files |
@@ -39,7 +44,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
-| `SavedVariables/TravelLog.lua` | Settings (the companions' too), each character's profile and totals |
+| `SavedVariables/TravelLog.lua` | Settings (the companions' too, the window's `point` and the minimap button's `minimap` and `minimapAngle`), each character's profile and totals |
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions and quests |
 | `<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`, `TravelLog_Nodes.lua` | The companions' data for that character |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |

@@ -23,6 +23,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests, a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources and roll wins. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone, moving old path and nodes into the companions. |
+| `TravelLog/window.lua` | The window and minimap button with every companion's rows: totals, settings, moving, hiding the button, a reload. |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their pins and tooltips, migration from TravelLog, wiping. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |

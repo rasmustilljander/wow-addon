@@ -14,3 +14,5 @@ Vendor.lua
 Money.lua
 Life.lua
 Commands.lua
+UI.lua
+Minimap.lua
