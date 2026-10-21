@@ -19,9 +19,9 @@ M = {
 	instance = nil, group = {}, raid = false, mapID = 1429, x = 0.42, y = 0.65,
 	inst = 0, wa = -9000, wb = -100, zone = "Elwynn Forest", subzone = "Goldshire",
 	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false,
-	combat = false, indoors = false, secrets = {}, viewMap = 1429,
+	combat = false, indoors = false, secrets = {}, viewMap = 1429, facing = 0, minimapRadius = 200,
 	loot = {}, buyback = {}, merchantItems = {}, units = {}, taxiNodes = {},
-	quests = {}, bind = "Goldshire", bags = {}, repairCost = 0,
+	quests = {}, bind = "Goldshire", bags = {}, repairCost = 0, canRepair = false,
 	installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }, -- addon folders the fake client knows about
 	disabled = {},                 -- addon name -> true
 }
@@ -124,7 +124,8 @@ FACTION_STANDING_CHANGED = "You are now %s with %s."
 ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 
 Enum = {
-	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17, Auctioneer = 21 },
+	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17,
+		Binder = 20, Auctioneer = 21, StableMaster = 22 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
 	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
 	ConsoleCommandType = { Cvar = 0, Command = 1, Macro = 2, Script = 3 },
@@ -156,7 +157,7 @@ QUEST_TURNED_IN PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED
 PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
-NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED]]):gmatch("%S+") do
+NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -440,6 +441,7 @@ function GameTooltip:SetOwner(owner) self.owner, self.lines, self.unit, self.ite
 function GameTooltip:AddLine(text) self.lines[#self.lines + 1] = text end
 function GameTooltip:SetText(text) self.lines = { text } end
 function GameTooltip:SetHyperlink(link) self.lines = { link } end
+function GameTooltip:SetItemByID(id) self.lines, self.item = { C_Item.GetItemInfo(id) or ("Item " .. id) }, id end
 function GameTooltip:AddDoubleLine(a, b) self.lines[#self.lines + 1] = a .. "  " .. b end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
@@ -511,6 +513,16 @@ function UnitNameFromGUID(guid)
 		if u.guid == guid then return u.name end
 	end
 	return M.guidNames[guid]
+end
+-- A unit's tooltip lines: its name, then u.title if it has one, then its level.
+C_TooltipInfo = {}
+function C_TooltipInfo.GetUnit(unit)
+	local u = M.units[unit]
+	if not u then return nil end
+	local lines = { { leftText = u.name } }
+	if u.title then lines[#lines + 1] = { leftText = u.title } end
+	lines[#lines + 1] = { leftText = "Level " .. (u.level or 1) }
+	return { lines = lines }
 end
 function UnitExists(unit) return unit == "player" or M.units[unit] ~= nil end
 function UnitCanAttack(_, unit) local u = M.units[unit]; return u and u.hostile or false end
@@ -585,6 +597,29 @@ function C_Map.GetMapRectOnMap(map, top)
 	local r = M.rects[map .. ":" .. top]
 	if r then return r[1], r[2], r[3], r[4] end
 end
+-- Where maps lie in the world: { continent, left, top, width, height } in
+-- yards. Stormwind (84) is inside Elwynn's top left, Westfall west of it,
+-- Teldrassil (1438) on another continent. World positions here are { x = east,
+-- y = south }; the real client's axes differ, but addons only pass them back.
+M.world = {
+	[1429] = { 0, 0, 0, 3470, 2315 }, [84] = { 0, 300, 100, 1340, 890 },
+	[1436] = { 0, -3500, 1000, 3500, 2333 }, [1438] = { 1, 0, 0, 5090, 3393 },
+}
+function CreateVector2D(x, y) return { x = x, y = y, GetXY = function(v) return v.x, v.y end } end
+function C_Map.GetMapWorldSize(map) local w = M.world[map]; if w then return w[4], w[5] end return 0, 0 end
+function C_Map.GetWorldPosFromMapPos(map, pos)
+	local w = M.world[map]
+	if w then return w[1], CreateVector2D(w[2] + pos.x * w[4], w[3] + pos.y * w[5]) end
+end
+function C_Map.GetMapPosFromWorldPos(continent, pos, map)
+	local w = M.world[map]
+	if w and w[1] == continent then return map, CreateVector2D((pos.x - w[2]) / w[4], (pos.y - w[3]) / w[5]) end
+end
+-- The minimap: how many yards its radius shows, and which way you face
+-- (radians, counterclockwise from north) for a rotating one.
+C_Minimap = {}
+function C_Minimap.GetViewRadius() return M.minimapRadius end
+function GetPlayerFacing() return M.facing end
 
 -- CVars: M.cvars[name] = { value, default, help, category, secure, readOnly,
 -- account, character, unlisted, max }. Names are case-insensitive, as in the
@@ -771,9 +806,15 @@ function C_AuctionHouse.QueryOwnedAuctions(sorts) assert(type(sorts) == "table")
 function C_AuctionHouse.HasFullOwnedAuctionResults() return true end
 function C_AuctionHouse.GetOwnedAuctions() return M.ownedAuctions end
 
--- Merchant
+-- Merchant: M.merchantItems[i] is C_MerchantFrame.GetItemInfo's table plus
+-- the item's link. M.merchantFilter is the list's filter (all by default).
+LE_LOOT_FILTER_ALL, LE_LOOT_FILTER_CLASS = 1, 2
 C_MerchantFrame = {}
 function C_MerchantFrame.GetItemInfo(i) return M.merchantItems[i] end
+function GetMerchantNumItems() return #M.merchantItems end
+function GetMerchantItemID(i) local it = M.merchantItems[i]; return it and LinkID(it.link) end
+function GetMerchantFilter() return M.merchantFilter or LE_LOOT_FILTER_ALL end
+function CanMerchantRepair() return M.canRepair end
 function GetMerchantItemLink(i) local it = M.merchantItems[i]; return it and it.link end
 function BuyMerchantItem() end
 function GetNumBuybackItems() return #M.buyback end

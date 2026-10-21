@@ -1,0 +1,14 @@
+## Interface: 16001
+## Title: TravelLog NPCs
+## Notes: Remembers the NPCs you talk to, where they stand and what they sell, with minimap and world map pins and vendors on item tooltips.
+## Author: rasmustilljander
+## Version: 0.1.0
+## OptionalDeps: TravelLog
+## SavedVariables: TravelLogNPCsDB
+
+Core.lua
+Minimap.lua
+Map.lua
+Tooltip.lua
+Commands.lua
+Window.lua

@@ -8,6 +8,7 @@ Optional companions, each its own folder:
 - [TravelLog_Nodes](../TravelLog_Nodes/): looted chests, herbs and ore, pinned on the world map. Needs TravelLog.
 - `TravelLog_Archive`: storage for older history (see [Where the data is](#where-the-data-is)). Install it with TravelLog.
 - [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
+- [TravelLog_NPCs](../TravelLog_NPCs/): NPCs you've talked to and what they sell, on the maps and item tooltips. Works on its own too.
 - [TravelLog_Share](../TravelLog_Share/): your nodes, and on request your log, for players you allow. Needs TravelLog.
 
 ## What it records
@@ -31,6 +32,7 @@ Click the map icon on the minimap, or type `/tl window`, for a window with these
 - **Totals**: this character's numbers under Travel, Loot, Life and Log.
 - **Settings**: the companions' World map options, then General (the **Minimap button** checkbox and Path's interval).
 - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
+- **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 
 Companions add their rows to the matching section. Drag the minimap icon to move it around the minimap.
 
