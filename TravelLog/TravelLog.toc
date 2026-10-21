@@ -19,3 +19,4 @@ Progress.lua
 Commands.lua
 UI.lua
 LogUI.lua
+Sessions.lua

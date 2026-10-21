@@ -23,7 +23,8 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests (one abandoned), a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources (pickpockets too), roll wins, and the partner or sender of trades and mail. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
-| `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History without view buttons), moving old path and nodes into the companions. |
+| `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History with only Events and Sessions), moving old path and nodes into the companions. |
+| `TravelLog/sessions.lua` | Experience gained per session (across a level-up), money and what happened in each, `/tl sessions`, the Sessions view, a reload. |
 | `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the History tab's searchable event log and Kills view, companion tabs, moving, a reload, and an alt's view of other characters' and everyone's totals (`/tl stats all`/`name` too). |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
