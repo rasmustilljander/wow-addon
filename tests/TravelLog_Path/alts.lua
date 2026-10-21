@@ -154,20 +154,20 @@ for _, child in ipairs(M.descendants(w)) do
 end
 check(alt and alt.Text:GetText() == "|cff3fc7ebRasmus-Forever|r, level 5" and alt:GetChecked(),
 	"a checkbox per alt, in its class color: " .. alt.Text:GetText())
-check(alt.point[2] == Button(w, "<", 2).point[2] - 4, "lined up under the alts' trail")
+check(alt.point[2] == Button(w.pages[2], "<", 2).point[2] - 4, "lined up under the alts' trail")
 check(Text(w, "^today$") and Text(w, "^latest session$"), "steppers show the ranges")
 
 -- Your day: back from today to yesterday and the day before, forward to today.
-Button(w, "<", 1):Click()
+Button(w.pages[2], "<", 1):Click()
 check(ns.settings.trail == YESTERDAY and Text(w, "^" .. os.date("%a %d %b", M.now - DAY) .. "$"), "< steps to yesterday")
-Button(w, "<", 1):Click()
+Button(w.pages[2], "<", 1):Click()
 check(ns.settings.trail == os.date("%Y-%m-%d", M.now - 2 * DAY), "and the day before")
-Button(w, ">", 1):Click()
-Button(w, ">", 1):Click()
+Button(w.pages[2], ">", 1):Click()
+Button(w.pages[2], ">", 1):Click()
 check(ns.settings.trail == "today", "> back to today")
-Button(w, ">", 1):Click()
+Button(w.pages[2], ">", 1):Click()
 check(ns.settings.trail == "today", "not past today")
-Button(w, "<", 2):Click()
+Button(w.pages[2], "<", 2):Click()
 check(ns.settings.altTrail == YESTERDAY and ns.settings.trail == "today", "alts' stepper changes only theirs")
 _, alts = Lines()
 check(#alts == 1, "Rasmus's day yesterday")

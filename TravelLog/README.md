@@ -30,7 +30,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
-- **Totals**: this character's numbers under Travel, Loot, Life and Log.
+- **Totals**: numbers under Travel, Loot, Life and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows kept only in a character's own file (log entries, and the Kills and Group rows) show for the character you're on.
 - **Settings**: the companions' map options and Path's interval.
 - **History**: individual events still in the character file, newest first. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location. With [TravelLog_Kills](../TravelLog_Kills/README.md#window), **Events** and **Kills** buttons switch between these events and every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
@@ -45,7 +45,7 @@ Companions add their rows to the matching section.
 | Command | |
 | --- | --- |
 | `/tl` | Open or close the window |
-| `/tl stats` | Totals for this character |
+| `/tl stats [all\|name]` | Totals for this character, all of them added up, or another by `Name` or `Name-Realm` |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
 | `/tl wipe confirm` | Delete everything for this character, including its archive and the companions' data |

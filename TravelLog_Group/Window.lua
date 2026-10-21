@@ -27,11 +27,11 @@ tl.AddStat("Life", "Grouped with", function()
 		players = players + 1
 	end
 	return ("%s players, %s times"):format(Count(players), Count(ns.db.total))
-end)
+end, true)
 tl.AddStat("Life", "Most grouped", function()
 	local best = ns.SortedPlayers()[1]
 	return best and ("%s (%s)"):format(ns.Display(best), Count(best.count)) or "nobody yet"
-end)
+end, true)
 
 --------------------------------------------------------------------------------
 -- The Players tab

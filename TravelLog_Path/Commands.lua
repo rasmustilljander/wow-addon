@@ -25,11 +25,16 @@ local function Top(t)
 	return best, bestCount
 end
 
-tl.On("TL_STATS", function()
-	local st, Count = tl.stats, tl.Count
+-- "12 (3 this session)", the session only for the character you're on.
+local function Jumps(st, key)
+	local jumps = tl.Count(st.jumps)
+	return key == tl.charKey and ("%s (%s this session)"):format(jumps, tl.Count(ns.session.jumpCount)) or jumps
+end
+
+tl.On("TL_STATS", function(st, key)
+	local Count = tl.Count
 	local zone, zoneJumps = Top(st.jumpsByZone)
-	tl.Print("Jumps: %s (%s this session)%s", Count(st.jumps), Count(ns.session.jumpCount),
-		zone and (", most in %s (%s)"):format(zone, Count(zoneJumps)) or "")
+	tl.Print("Jumps: %s%s", Jumps(st, key), zone and (", most in %s (%s)"):format(zone, Count(zoneJumps)) or "")
 
 	local d = st.distance or {}
 	local total = Sum(d)
@@ -37,6 +42,9 @@ tl.On("TL_STATS", function()
 		Count(total), total / YARDS_PER_MILE, Count(d.foot), Count(d.mount), Count(d.flight),
 		Count(d.swim), Count(d.ghost))
 
+	if key ~= tl.charKey then
+		return
+	end
 	local points = 0
 	for _, s in ipairs(ns.db.sessions) do
 		points = points + ns.CountRecords(s.track, s == ns.session and ns.track.buffer)
@@ -99,11 +107,9 @@ end)
 -- The TravelLog window
 --------------------------------------------------------------------------------
 
-tl.AddStat("Travel", "Jumps", function()
-	return ("%s (%s this session)"):format(tl.Count(tl.stats.jumps), tl.Count(ns.session.jumpCount))
-end)
-tl.AddStat("Travel", "Distance", function()
-	return ("%.1f miles"):format(Sum(tl.stats.distance) / YARDS_PER_MILE)
+tl.AddStat("Travel", "Jumps", Jumps)
+tl.AddStat("Travel", "Distance", function(st)
+	return ("%.1f miles"):format(Sum(st.distance) / YARDS_PER_MILE)
 end)
 tl.AddSetting("World map", "Your trail", function() return tl.settings.trail end, SetTrail, TRAIL_CHOICES)
 tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.trail) end, function(step)
