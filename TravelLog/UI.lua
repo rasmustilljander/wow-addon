@@ -5,7 +5,7 @@
 -- with ns.AddTab, while loading or at login.
 local _, ns = ...
 
-local WIDTH = 460
+local WIDTH = 600
 local LEFT = 18                        -- labels
 local LABEL_WIDTH = 110
 local VALUE_X = LEFT + LABEL_WIDTH     -- values, buttons and indented checkboxes
