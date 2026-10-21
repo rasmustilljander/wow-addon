@@ -101,6 +101,10 @@ local function ShowStats(arg)
 	local st = ns.StatsFor(key)
 	if key == ns.charKey then
 		ns.Print("%s, level %d %s %s", key, ns.profile.level or 0, UnitRace("player"), UnitClass("player"))
+		local total, level = ns.Played()
+		if total then
+			ns.Print("Played %s, %s at this level", ns.Duration(total), ns.Duration(level))
+		end
 	elseif key then
 		ns.Print("%s, level %d", key, ns.db.chars[key].level or 0)
 	else
@@ -210,7 +214,10 @@ local DESCRIBE = {
 	end,
 	release = function() return "Released spirit" end,
 	revive = function() return "Came back to life" end,
-	level = function(e) return ("Reached level %d"):format(e.level) end,
+	level = function(e)
+		local text = ("Reached level %d"):format(e.level)
+		return e.took and ("%s after %s at level %d"):format(text, ns.Duration(e.took), e.level - 1) or text
+	end,
 	quest = function(e) return ("Accepted quest: %s"):format(e.title or e.id) end,
 	questdone = function(e) return ("Completed quest: %s"):format(e.title or e.id) end,
 	questabandon = function(e) return ("Abandoned quest: %s"):format(e.title or e.id) end,
