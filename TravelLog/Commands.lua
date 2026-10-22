@@ -128,6 +128,36 @@ function ns.ChallengesText(st)
 	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
 end
 
+-- Where experience came from, largest first: "quests 2,000, kills 1,000,
+-- other 300", or "" with none. xp is { total, quests, kills, discoveries };
+-- other is what the XP bar gained beyond those.
+local XP_SOURCES = { "quests", "kills", "discoveries" }
+function ns.XPSources(xp)
+	xp = xp or {}
+	local list, known = {}, 0
+	for _, source in ipairs(XP_SOURCES) do
+		local amount = xp[source] or 0
+		list[#list + 1] = { source = source, amount = amount }
+		known = known + amount
+	end
+	list[#list + 1] = { source = "other", amount = math.max((xp.total or 0) - known, 0) }
+	table.sort(list, function(a, b) return a.amount > b.amount end)
+	local parts = {}
+	for _, s in ipairs(list) do
+		if s.amount > 0 then
+			parts[#parts + 1] = ("%s %s"):format(s.source, Count(s.amount))
+		end
+	end
+	return table.concat(parts, ", ")
+end
+
+-- "3,300: quests 2,000, kills 1,000, other 300"
+function ns.XPText(xp)
+	local sources = ns.XPSources(xp)
+	local total = Count(math.max((xp or {}).total or 0, 0))
+	return sources ~= "" and ("%s: %s"):format(total, sources) or total
+end
+
 -- Money gained or spent ("gained" or "spent") with its reasons, largest
 -- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
 function ns.MoneyByReason(st, way)
@@ -198,6 +228,7 @@ local function ShowStats(arg)
 	ns.Print("Deaths %s, kills %s, bosses killed %s, wipes %s, quests done %s, failed %s, flights %s, places visited %s",
 		ns.DeathsText(st), Count(st.kills), Count(bosses.kill), Count(bosses.wipe), Count(quests.completed),
 		Count(quests.failed), Count(st.flights), Count(ns.PlacesVisited(st)))
+	ns.Print("XP: %s", ns.XPText(st.experience))
 	ns.Print("Came back: %s", ns.RevivalsText(st))
 	local duels = st.duels or {}
 	local bgs = st.battlegrounds or {}

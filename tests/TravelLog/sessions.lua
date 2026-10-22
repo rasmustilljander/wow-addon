@@ -63,7 +63,7 @@ M.out = {}
 SlashCmdList.TRAVELLOG("sessions")
 check(Said("Last 1 session:"), "sessions heading")
 local line = Said("Now")
-check(line == "  " .. loggedIn .. "  |cff20ff20Now|r, 2h 0m (1h 0m AFK), level 5 to 6, Goldshire to Trade District  +1g 20s 0c (1g 20s 0c/h), 3,300 xp (3,300/h)  1 quest, 1 XP kill, 1 death",
+check(line == "  " .. loggedIn .. "  |cff20ff20Now|r, 2h 0m (1h 0m AFK), level 5 to 6, Goldshire to Trade District  +1g 20s 0c (1g 20s 0c/h), 3,300 xp (3,300/h): other 3,005, quests 250, kills 45  1 quest, 1 XP kill, 1 death",
 	"current session, rates without AFK: " .. tostring(line))
 ns.settings.ratesSkipAFK = false
 M.out = {}
@@ -92,7 +92,7 @@ M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 45 experience.")
 
 M.out = {}
 SlashCmdList.TRAVELLOG("sessions 1")
-check(Said("Last 1 session:") and Said("Now|r, 3m %(1m AFK%), level 6, Trade District  100 xp  2 XP kills$"),
+check(Said("Last 1 session:") and Said("Now|r, 3m %(1m AFK%), level 6, Trade District  100 xp: kills 90, other 10  2 XP kills$"),
 	"short sessions show no rates: " .. tostring(Said("Now")))
 M.out = {}
 SlashCmdList.TRAVELLOG("sessions")

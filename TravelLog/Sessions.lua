@@ -41,6 +41,7 @@ ns.On("PLAYER_XP_UPDATE", function(unit)
 	lastXP, lastMax = xp, max
 	if gained > 0 then
 		ns.session.xp = (ns.session.xp or 0) + gained
+		ns.Add(gained, "experience", "total")
 		ns.version = ns.version + 1
 	end
 end)
@@ -90,6 +91,9 @@ end)
 -- Summaries
 --------------------------------------------------------------------------------
 
+-- The log entries that say how much XP they gave, and their source.
+local XP_SOURCES = { questdone = "quests", kill = "kills", discover = "discoveries" }
+
 -- Every session in this character's file, newest first, with what its log
 -- entries add up to. The current session runs until now.
 function ns.SessionSummaries()
@@ -108,6 +112,7 @@ function ns.SessionSummaries()
 			levelEnd = current and UnitLevel("player") or s.levelEnd,
 			money = moneyEnd and s.money and moneyEnd - s.money,
 			xp = s.xp,
+			experience = { total = s.xp or 0, quests = 0, kills = 0, discoveries = 0 },
 			afk = (s.afk or 0) + (current and afkSince and now - afkSince or 0),
 			from = s.subzone or s.zone,
 			to = current and (here.subzone or here.zone) or s.subzoneEnd or s.zoneEnd,
@@ -123,6 +128,10 @@ function ns.SessionSummaries()
 		end
 		local sum = list[j]
 		if sum and (not sum.stop or e.time <= sum.stop) then
+			local source = XP_SOURCES[e.type]
+			if source then
+				sum.experience[source] = sum.experience[source] + (tonumber(e.xp) or 0)
+			end
 			if e.type == "questdone" then
 				sum.quests = sum.quests + 1
 			elseif e.type == "questfail" then
@@ -141,6 +150,25 @@ function ns.SessionSummaries()
 	end
 	return newest
 end
+
+-- The totals' XP by source needs the XP bar's total, which only sessions
+-- recorded before. A character from before then counts it once, from the
+-- sessions in its file that have it and the log entries in them; its old
+-- kill XP counter, which covered more, is dropped.
+ns.On("PLAYER_LOGIN", function()
+	if ns.stats.experience then
+		return
+	end
+	local xp = { total = 0, quests = 0, kills = 0, discoveries = 0 }
+	for _, sum in ipairs(ns.SessionSummaries()) do
+		if sum.xp then
+			for key, n in pairs(sum.experience) do
+				xp[key] = xp[key] + n
+			end
+		end
+	end
+	ns.stats.experience, ns.stats.xp = xp, nil
+end)
 
 local function Plural(n, one)
 	return ("%s %s%s"):format(Count(n), one, n == 1 and "" or "s")
@@ -177,8 +205,9 @@ local function Headline(sum)
 	return sum.current and "|cff20ff20Now|r, " .. text or text
 end
 
--- "+1g 20s 0c (54s 0c/h), 12,345 xp (5,600/h)"
-local function Gains(sum)
+-- "+1g 20s 0c (54s 0c/h), 12,345 xp (5,600/h)", and with sources, ": quests
+-- 6,000, kills 4,000, other 2,345" after it.
+local function Gains(sum, sources)
 	local seconds = Seconds(sum)
 	if seconds and ns.settings.ratesSkipAFK then
 		seconds = seconds - sum.afk
@@ -196,6 +225,9 @@ local function Gains(sum)
 		local text = Count(sum.xp) .. " xp"
 		if hours then
 			text = ("%s (%s/h)"):format(text, Count(sum.xp / hours))
+		end
+		if sources then
+			text = text .. ": " .. ns.XPSources(sum.experience)
 		end
 		parts[#parts + 1] = text
 	end
@@ -229,7 +261,7 @@ ns.Command("sessions", "sessions [n] - the last n sessions (default 10)", functi
 	for i = #found, 1, -1 do
 		local sum = found[i]
 		local parts = { date("%m-%d %H:%M", sum.start), Headline(sum) }
-		for _, text in ipairs({ Gains(sum), Happenings(sum) }) do
+		for _, text in ipairs({ Gains(sum, true), Happenings(sum) }) do
 			if text ~= "" then parts[#parts + 1] = text end
 		end
 		print("  " .. table.concat(parts, "  "))
@@ -245,6 +277,13 @@ local drawn
 
 local function SessionTexts(sum)
 	return Headline(sum), date("%Y-%m-%d %H:%M", sum.start), Gains(sum), Happenings(sum)
+end
+
+-- Hovering a session shows where its XP came from.
+local function SessionTooltip(sum)
+	if sum.xp and sum.xp > 0 then
+		return { ("%s xp: %s"):format(Count(sum.xp), ns.XPSources(sum.experience)) }
+	end
 end
 
 -- Redrawn when something is recorded, and each minute for the current
@@ -272,7 +311,7 @@ local function Build(f)
 	f.found = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	f.found:SetPoint("TOPRIGHT", -18, -4)
 	f.found:SetJustifyH("RIGHT")
-	f.sessions = ns.HistoryList(f, SessionTexts)
+	f.sessions = ns.HistoryList(f, SessionTexts, SessionTooltip)
 	f.sessions:SetPoint("TOPLEFT", 14, -24)
 	f.sessions:SetPoint("BOTTOMLEFT", 14, 8)
 	f.sessions:SetWidth(LIST_WIDTH)

@@ -133,6 +133,7 @@ ns.AddStat("Life", "Learned", function(st)
 end)
 ns.AddStat("Life", "New gear", function(st) return Count(st.gear) end)
 ns.AddStat("Life", "Legacy Challenges", ns.ChallengesText)
+ns.AddStat("Life", "XP", function(st) return ns.XPText(st.experience) end)
 ns.AddStat("Life", "XP kills", function(st) return Count(st.kills) end)
 ns.AddStat("Life", "Bosses", function(st)
 	local b = st.bosses or {}
