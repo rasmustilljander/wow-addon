@@ -1,6 +1,6 @@
--- Sessions: one per login or reload, with how long it lasted, where it
--- started and ended, levels, money and experience gained, and what happened
--- in it. Shown in the History tab's
+-- Sessions: one per login or reload, with how long it lasted and how much
+-- of it you were AFK, where it started and ended, levels, money and
+-- experience gained, and what happened in it. Shown in the History tab's
 -- Sessions view and by /tl sessions.
 local _, ns = ...
 
@@ -8,7 +8,10 @@ local Count = ns.Count
 
 local HEIGHT = 320
 local LIST_WIDTH = 410
-local RATE_AFTER = 600 -- seconds a session must last before per-hour rates show
+local RATE_AFTER = 600 -- seconds a session must last (AFK left out, by default) before per-hour rates show
+
+-- Per-hour rates leave out time spent AFK unless this is turned off.
+ns.Defaults({ ratesSkipAFK = true })
 
 --------------------------------------------------------------------------------
 -- Experience gained this session
@@ -43,6 +46,47 @@ ns.On("PLAYER_XP_UPDATE", function(unit)
 end)
 
 --------------------------------------------------------------------------------
+-- Time AFK this session
+--------------------------------------------------------------------------------
+
+local afkSince -- time() you went AFK, while you are
+
+local function CheckAFK()
+	-- Unreadable (secret) means unknown: keep what we had.
+	local afk = ns.Clean(UnitIsAFK("player"))
+	if afk and not afkSince then
+		afkSince = time()
+	elseif afk == false and afkSince then
+		ns.session.afk = (ns.session.afk or 0) + time() - afkSince
+		afkSince = nil
+		ns.version = ns.version + 1
+	end
+end
+
+ns.On("PLAYER_LOGIN", CheckAFK)
+
+ns.On("PLAYER_FLAGS_CHANGED", function(unit)
+	if unit == "player" then
+		CheckAFK()
+	end
+end)
+
+-- Runs before the session is closed, at the same time().
+ns.On("PLAYER_LOGOUT", function()
+	if afkSince then
+		ns.session.afk = (ns.session.afk or 0) + time() - afkSince
+		afkSince = nil
+	end
+end)
+
+ns.AddSetting("General", "Leave AFK time out of gold and XP per hour", function()
+	return ns.settings.ratesSkipAFK
+end, function(on)
+	ns.settings.ratesSkipAFK = on
+	ns.version = ns.version + 1
+end)
+
+--------------------------------------------------------------------------------
 -- Summaries
 --------------------------------------------------------------------------------
 
@@ -64,6 +108,7 @@ function ns.SessionSummaries()
 			levelEnd = current and UnitLevel("player") or s.levelEnd,
 			money = moneyEnd and s.money and moneyEnd - s.money,
 			xp = s.xp,
+			afk = (s.afk or 0) + (current and afkSince and now - afkSince or 0),
 			from = s.subzone or s.zone,
 			to = current and (here.subzone or here.zone) or s.subzoneEnd or s.zoneEnd,
 			quests = 0, failed = 0, kills = 0, deaths = 0,
@@ -113,11 +158,14 @@ local function Route(sum)
 	return sum.from and "from " .. sum.from or sum.to and "to " .. sum.to
 end
 
--- "2h 12m, level 12 to 13, Goldshire to Old Town", or "Now, 45m, level 13,
--- Goldshire" for the current one.
+-- "2h 12m (20m AFK), level 12 to 13, Goldshire to Old Town", or "Now, 45m,
+-- level 13, Goldshire" for the current one.
 local function Headline(sum)
 	local seconds = Seconds(sum)
 	local length = seconds and ns.Ago(sum.start, sum.stop) or "length unknown"
+	if seconds and sum.afk >= 60 then
+		length = ("%s (%s AFK)"):format(length, ns.Duration(sum.afk))
+	end
 	local level
 	if sum.levelEnd and sum.level and sum.levelEnd ~= sum.level then
 		level = ("level %d to %d"):format(sum.level, sum.levelEnd)
@@ -132,6 +180,9 @@ end
 -- "+1g 20s 0c (54s 0c/h), 12,345 xp (5,600/h)"
 local function Gains(sum)
 	local seconds = Seconds(sum)
+	if seconds and ns.settings.ratesSkipAFK then
+		seconds = seconds - sum.afk
+	end
 	local hours = seconds and seconds >= RATE_AFTER and seconds / 3600
 	local parts = {}
 	if sum.money and sum.money ~= 0 then

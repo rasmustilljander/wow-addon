@@ -18,7 +18,7 @@ M = {
 	money = 10000, level = 5, played = 90000, playedLevel = 3600, xp = 0, xpMax = 2800, rested = nil, maxLevel = 60, xpDisabled = false,
 	instance = nil, group = {}, raid = false, mapID = 1429, x = 0.42, y = 0.65,
 	inst = 0, wa = -9000, wb = -100, zone = "Elwynn Forest", subzone = "Goldshire",
-	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false,
+	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false, afk = false,
 	combat = false, indoors = false, secrets = {}, viewMap = 1429, facing = 0, minimapRadius = 200,
 	auras = {},
 	loot = {}, buyback = {}, merchantItems = {}, units = {}, taxiNodes = {},
@@ -195,7 +195,7 @@ PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAIL
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
-ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING]]):gmatch("%S+") do
+ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -686,6 +686,8 @@ function UnitIsDead(unit)
 	return u and u.dead or false
 end
 function UnitIsGhost() return M.ghost end
+-- Only the player can be AFK; tests fire PLAYER_FLAGS_CHANGED themselves.
+function UnitIsAFK(unit) return unit == "player" and M.afk end
 -- Coming back to life. These only answer or do nothing; tests set M.dead and
 -- M.ghost and fire PLAYER_ALIVE or PLAYER_UNGHOST themselves.
 -- M.resurrecter: who's offering a resurrection, M.resSickness: whether it
