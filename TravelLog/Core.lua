@@ -213,22 +213,29 @@ end
 -- The event log
 --------------------------------------------------------------------------------
 
+-- Stamps t with where you are: zone, subzone (when it differs), map and the
+-- map coordinates x and y in percent. A suffix goes on each field name, as in
+-- zoneEnd.
+function ns.StampPlace(t, suffix)
+	suffix = suffix or ""
+	local zone = ns.Clean(GetRealZoneText())
+	zone = zone ~= "" and zone or nil
+	local subzone = ns.Clean(GetSubZoneText())
+	local map, x, y = ns.MapPosition()
+	t["zone" .. suffix] = zone
+	t["subzone" .. suffix] = subzone ~= "" and subzone ~= zone and subzone or nil
+	t["map" .. suffix] = map
+	t["x" .. suffix] = x and ns.Round(x * 100, 2)
+	t["y" .. suffix] = y and ns.Round(y * 100, 2)
+	return t
+end
+
 -- A new log entry stamped with the current time and place, not yet saved.
 function ns.NewEvent(kind, data)
 	local e = data or {}
 	e.type = kind
 	e.time = time()
-	e.zone = ns.Clean(GetRealZoneText())
-	local subzone = ns.Clean(GetSubZoneText())
-	if subzone and subzone ~= "" and subzone ~= e.zone then
-		e.subzone = subzone
-	end
-	local map, x, y = ns.MapPosition()
-	e.map = map
-	if x then
-		e.x, e.y = ns.Round(x * 100, 2), ns.Round(y * 100, 2)
-	end
-	return e
+	return ns.StampPlace(e)
 end
 
 function ns.Save(e)
@@ -344,6 +351,7 @@ local function EndSession()
 	s.stop = time()
 	s.levelEnd = UnitLevel("player")
 	s.moneyEnd = GetMoney()
+	ns.StampPlace(s, "End")
 end
 
 local function Init()
@@ -392,6 +400,7 @@ local function Init()
 		level = profile.level,
 		money = GetMoney(),
 	}
+	ns.StampPlace(session)
 	char.sessions[#char.sessions + 1] = session
 
 	ns.db, ns.settings, ns.charKey = db, db.settings, key
@@ -405,6 +414,12 @@ local function Init()
 		ns.Rotate(false)
 	end)
 	ns.On("PLAYER_LOGOUT", EndSession)
+	-- The zone can still be unknown at login; it is by the first loading screen.
+	ns.On("PLAYER_ENTERING_WORLD", function()
+		if not session.zone then
+			ns.StampPlace(session)
+		end
+	end)
 end
 
 frame:SetScript("OnEvent", function(_, event, ...)

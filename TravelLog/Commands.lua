@@ -85,6 +85,12 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Loot rolls by outcome: "2 won, 5 lost, 9 passed".
+function ns.RollsText(st)
+	local rolls = st.rolls or {}
+	return ("%s won, %s lost, %s passed"):format(Count((st.received or {}).roll), Count(rolls.lost), Count(rolls.passed))
+end
+
 -- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning)".
 function ns.DeathsText(st)
 	local causes = {}
@@ -164,6 +170,7 @@ local function ShowStats(arg)
 	ns.Print("Vendors: %s bought, %s sold, %s repairs; spent %s, earned %s",
 		Count(v.bought), Count(v.sold), Count(v.repairs),
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
+	ns.Print("Rolls: %s", ns.RollsText(st))
 	ns.Print("Items out: %s", ns.GivenText(st))
 	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
@@ -177,9 +184,9 @@ local function ShowStats(arg)
 	ns.Print("Duels won %s, lost %s, no winner %s; honorable kills %s, honor %s",
 		Count(duels.won), Count(duels.lost), Count(duels.interrupted), Count(st.honorKills), Count(st.honor))
 	local instances = st.instances or {}
-	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
+	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, screenshots %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
-		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0))
+		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0), Count(st.screenshots))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
@@ -274,6 +281,12 @@ local DESCRIBE = {
 		local from = e.partner or e.sender
 		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from and " from " .. from or "")
 	end,
+	roll = function(e)
+		local mine = e.roll and ("%s %d"):format(e.choice, e.roll) or e.choice or "?"
+		local won = e.winner and ("won by %s%s"):format(e.winner, e.winnerRoll and " with " .. e.winnerRoll or "")
+			or "everyone passed"
+		return ("%s %s (%s; %s)"):format(e.choice == "pass" and "Passed on" or "Lost the roll for", Item(e.item), mine, won)
+	end,
 	buy = function(e) return ("Bought %s for %s from %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	sell = function(e) return ("Sold %s for %s to %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	buyback = function(e) return ("Bought back %s for %s"):format(Item(e.item, e.count), ns.MoneyText(e.price)) end,
@@ -319,6 +332,7 @@ local DESCRIBE = {
 	end,
 	instanceleave = function(e) return ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0)) end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
+	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"
 		if e.target then text = ("%s fighting %s"):format(text, e.target) end
@@ -425,8 +439,8 @@ end
 local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
-	instance = "Travel", instanceleave = "Travel",
-	loot = "Loot", receive = "Loot", destroy = "Loot",
+	instance = "Travel", instanceleave = "Travel", screenshot = "Travel",
+	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
@@ -437,12 +451,12 @@ local LOG_GROUP = {
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
 }
 local LOG_LABEL = {
-	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
+	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
 	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
-	instanceleave = "Instance left", death = "Death",
+	instanceleave = "Instance left", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor",
