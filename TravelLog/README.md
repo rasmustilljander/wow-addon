@@ -22,6 +22,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Other items** | Quest rewards, crafts, roll wins (with your roll), trades and mail, and other items that arrive without a loot window. |
 | **Rolls** | Group loot rolls you lost or passed on: your choice and roll, and who won with what. |
 | **Items out** | Items you hand over in a trade, mail, put up for auction (with bid and buyout) or destroy. |
+| **Guild bank** | Items you put in and take out, one entry per visit, with the guild's name. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
@@ -106,7 +107,7 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `rest`, `restleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `boss`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`, `achievement`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
+Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `guildbank`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `rest`, `restleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `boss`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`, `achievement`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -114,6 +115,7 @@ Some types have more:
 
 | Type | Fields |
 | --- | --- |
+| `guildbank` | `deposited` and `withdrawn`: lists of `item` (link) and `count`; `guild` |
 | `hearth`, `teleport` | `from`, `to` (place names); `spell` and `via` (its name) when your cast did it |
 | `summon` | `from`, `to`, `by` (the summoner) |
 | `board` | none: it's stamped where the ride started |
@@ -123,6 +125,12 @@ Some types have more:
 | `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` the fight lasted (from the pull, when seen), `instance` |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken) |
+| `quest`, `questabandon` | `id`, `title` |
+| `questdone` | `id`, `title`, `xp` and `money` (copper) it gave |
+| `questfail` | `id`, `title`, `reason` (`time` when its timer ran out) |
+| `kill` | `name`, `xp` |
+| `discover` | `place`, `xp` |
+| `standing` | `faction`, `standing` reached |
 | `level` | `played`: seconds played in all. `took`: seconds played at the level before. |
 | `death` | `target`: the hostile unit you had targeted. `level`. `cause`: `drowning`, `fatigue` or `falling`, when known. |
 | `revive` | `how`: `corpse`, `spirithealer`, `player` or `selfres`, when known. `by`: who resurrected you. `spell`: the self-resurrection used (Soulstone, Reincarnation, ...). `sickness`: `true` with resurrection sickness. `took` and `ghost`: seconds since the death and since the release. `durability`: average percentage points lost on worn items since before the death. |
@@ -179,6 +187,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Items used up (potions, food, reagents) aren't recorded: no event says an item was consumed.
 - Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
 - Destroyed items are recorded only when picked up from your bags or gear first, so a gamepad delete isn't.
+- Guild bank items are read from what your bags gain or lose within 10 s of a guild bank click, so equipping or destroying an item in those seconds counts as a move, and an item held on the cursor longer is missed. Moves between tabs aren't logged.
 - Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.
