@@ -73,6 +73,7 @@ check(Said("1,000 xp: quests 600, other 325, kills 45, discoveries 30  1 quest, 
 SlashCmdList.TRAVELLOG("")
 local w = ns.window
 check(Stat(w, "XP") == "1,900: quests 1,000, other 695, kills 145, discoveries 60", "totals row: " .. tostring(Stat(w, "XP")))
+check(Stat(w, "Discoveries") == "1", "discovery total: " .. tostring(Stat(w, "Discoveries")))
 
 -- Hovering a session in the Sessions view: where its XP came from, and
 -- nothing for one without XP.

@@ -126,12 +126,16 @@ ns.AddStat("Life", "Played", function()
 end, true)
 ns.AddStat("Life", "Quests", function(st)
 	local quests = st.quests or {}
-	return ("%s done, %s failed"):format(Count(quests.completed), Count(quests.failed))
+	return ("%s accepted, %s done, %s abandoned, %s failed"):format(
+		Count(quests.accepted), Count(quests.completed), Count(quests.abandoned), Count(quests.failed))
 end)
+ns.AddStat("Life", "Discoveries", function(st) return Count(st.discoveries) end)
 ns.AddStat("Life", "Learned", function(st)
 	return ("%s spells, %s skills, %s skill points, %s talent points"):format(
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents))
 end)
+ns.AddStat("Life", "Mounts", function(st) return Count(st.mounts) end)
+ns.AddStat("Life", "Pets tamed", function(st) return Count(st.tames) end)
 ns.AddStat("Life", "New gear", function(st) return Count(st.gear) end)
 ns.AddStat("Life", "Legacy Challenges", ns.ChallengesText)
 ns.AddStat("Life", "Reputation", function(st) return ns.ReputationText(st, 3) end)
@@ -145,12 +149,13 @@ ns.AddStat("Life", "Deaths", ns.DeathsText)
 ns.AddStat("Life", "Came back", ns.RevivalsText)
 ns.AddStat("Life", "PvP", function(st)
 	local d = st.duels or {}
-	return ("%s duels won, %s lost, %s honorable kills, %s honor"):format(
-		Count(d.won), Count(d.lost), Count(st.honorKills), Count(st.honor))
+	return ("%s duels won, %s lost, %s no winner, %s honorable kills, %s honor"):format(
+		Count(d.won), Count(d.lost), Count(d.interrupted), Count(st.honorKills), Count(st.honor))
 end)
 ns.AddStat("Life", "Battlegrounds", function(st)
 	local b = st.battlegrounds or {}
-	return ("%s won, %s lost, %s left"):format(Count(b.won), Count(b.lost), Count(b.left))
+	return ("%s won, %s lost, %s drawn, %s left"):format(
+		Count(b.won), Count(b.lost), Count(b.draw), Count(b.left))
 end)
 ns.AddStat("Life", "Guild", ns.GuildText)
 ns.AddStat("Log", "Entries", function()
@@ -443,4 +448,3 @@ function ns.ShowTab(name)
 		end
 	end
 end
-

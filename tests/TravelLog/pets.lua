@@ -130,6 +130,12 @@ SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
 check(line and line:find("pets tamed 3", 1, true), "stats line: " .. tostring(line))
+SlashCmdList.TRAVELLOG("")
+local totals = M.descendants(ns.window)
+for i, r in ipairs(totals) do
+	if r.kind == "FontString" and r:GetText() == "Pets tamed" then line = totals[i + 1]:GetText() end
+end
+check(line == "3", "pet total: " .. tostring(line))
 
 -- Kept across a reload.
 ns = M.Reload()

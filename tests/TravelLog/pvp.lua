@@ -215,7 +215,7 @@ check(#M.out == 2 and M.out[2]:find("Honorable kill: Grok (Sergeant), +45 honor"
 SlashCmdList.TRAVELLOG("")
 local values = {}
 for _, fs in ipairs(M.descendants(TravelLogFrame.pages[1])) do values[#values + 1] = fs.text end
-check(table.concat(values, "\n"):find("PvP\n3 duels won, 2 lost, 4 honorable kills, 157 honor\nBattlegrounds\n1 won, 1 lost, 1 left", 1, true),
+check(table.concat(values, "\n"):find("PvP\n3 duels won, 2 lost, 2 no winner, 4 honorable kills, 157 honor\nBattlegrounds\n1 won, 1 lost, 1 drawn, 1 left", 1, true),
 	"PvP and Battlegrounds rows")
 M.out = {}
 SlashCmdList.TRAVELLOG("log 1 draw")

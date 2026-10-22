@@ -90,7 +90,7 @@ local all = M.descendants(ns.window)
 for i, r in ipairs(all) do
 	if r.kind == "FontString" and r:GetText() == "Quests" then shown = all[i + 1]:GetText() end
 end
-check(shown == "0 done, 4 failed", "Totals: " .. tostring(shown))
+check(shown == "4 accepted, 0 done, 0 abandoned, 4 failed", "Totals: " .. tostring(shown))
 ns.Toggle()
 
 -- A reload doesn't log the failed quests again.
@@ -122,6 +122,14 @@ check(count("questfail") == 5, "a retaken quest isn't failed yet")
 M.failedQuests[70] = true
 M.fire("QUEST_LOG_UPDATE")
 check(count("questfail") == 6 and last("questfail").id == 70 and ns.stats.quests.failed == 6, "a retaken quest fails again")
+
+ns.Toggle()
+all = M.descendants(ns.window)
+for i, r in ipairs(all) do
+	if r.kind == "FontString" and r:GetText() == "Quests" then shown = all[i + 1]:GetText() end
+end
+check(shown == "5 accepted, 0 done, 1 abandoned, 6 failed", "Totals after retaking: " .. tostring(shown))
+ns.Toggle()
 
 -- A secret quest ID in the log is skipped.
 M.questLog = { "Elwynn Forest", 70, 72, "Westfall", 80, 99 }

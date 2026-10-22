@@ -173,6 +173,12 @@ line = nil
 for _, text in ipairs(M.out) do line = line or text:match("Reputation: .*") end
 check(line == "Reputation: Booty Bay +100 -600, Stormwind +325, Ironforge +10, Darnassus +5", "reputation saved: " .. tostring(line))
 check(TravelLogCharDB.mounts[458] and TravelLogCharDB.mounts[472], "mounts saved")
+SlashCmdList.TRAVELLOG("")
+local totals = M.descendants(ns.window)
+for i, r in ipairs(totals) do
+	if r.kind == "FontString" and r:GetText() == "Mounts" then line = totals[i + 1]:GetText() end
+end
+check(line == "2", "mount total: " .. tostring(line))
 
 -- Each milestone has a marker on the map; learned ones share one.
 M.viewMap = M.mapID
