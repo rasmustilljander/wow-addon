@@ -368,8 +368,8 @@ local function Init()
 			db.settings[key] = value
 		end
 	end
-	-- Left over from the minimap button, before the addon compartment.
-	db.settings.minimap, db.settings.minimapAngle = nil, nil
+	-- Left over from removed features.
+	db.settings.minimap, db.settings.minimapAngle, db.archive = nil, nil, nil
 	db.chars = db.chars or {}
 
 	-- Who each character is and their totals live in the account-wide file.
@@ -412,12 +412,8 @@ local function Init()
 	ns.profile, ns.stats, ns.char = profile, profile.stats, char
 	ns.session = session
 
-	-- Registered now, after every module's (and companion addon's) own
-	-- handler: old history is rotated once they've all set up their data,
-	-- and the session is closed after they've saved theirs.
-	ns.On("PLAYER_LOGIN", function()
-		ns.Rotate(false)
-	end)
+	-- Registered now, after every module's (and companion addon's) own logout
+	-- handler, so the session closes after they've saved their data.
 	ns.On("PLAYER_LOGOUT", EndSession)
 	-- The zone can still be unknown at login; it is by the first loading screen.
 	ns.On("PLAYER_ENTERING_WORLD", function()

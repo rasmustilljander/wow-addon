@@ -1,8 +1,8 @@
 -- Alts' trails and trail ranges: the path moving to the account-wide file,
 -- alts drawn in their class color, ranges by hours, days and calendar day,
--- the window's alt rows, the archive and wiping.
+-- the window's alt rows, old stored paths and wiping.
 local HOUR, DAY = 3600, 86400
-M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Archive" }
+M.installed = { "TravelLog", "TravelLog_Path" }
 M.now = os.time({ year = 2025, month = 10, day = 9, hour = 12 })
 local TODAY = os.date("%Y-%m-%d", M.now)
 local YESTERDAY = os.date("%Y-%m-%d", M.now - DAY)
@@ -185,19 +185,21 @@ _, alts = Lines()
 check(not ns.settings.hiddenAlts["Rasmus-Forever"] and #alts > 0, "checking shows it again")
 
 --------------------------------------------------------------------------------
--- "all" reads an alt's archived path; wiping removes only your own
+-- "all" reads an alt's old stored path; wiping removes only your own
 --------------------------------------------------------------------------------
 
-M.saved.TravelLog_Archive = ([[
-TravelLogArchiveDB = { ["chars"] = { ["Rasmus-Forever"] = { ["path"] = { { ["start"] = %d, ["stop"] = %d,
-	["track"] = { "0,1429,50.00,50.00,0,-9200.0,-500.0,0;60,1429,60.00,50.00,0,-9200.0,-600.0,0" } } } } } }
-]]):format(M.now - 30 * DAY, M.now - 30 * DAY + HOUR)
-TravelLogDB.archive = { size = 500 }
+local rasmus = TravelLogPathAccountDB.chars["Rasmus-Forever"]
+table.insert(rasmus.sessions, 1, {
+	start = M.now - 30 * DAY,
+	stop = M.now - 30 * DAY + HOUR,
+	track = { "0,1429,50.00,50.00,0,-9200.0,-500.0,0;60,1429,60.00,50.00,0,-9200.0,-600.0,0" },
+	jumps = {},
+})
 SlashCmdList.TRAVELLOG("trail alts week")
 local week = #select(2, Lines())
 SlashCmdList.TRAVELLOG("trail alts all")
 _, alts = Lines()
-check(C_AddOns.IsAddOnLoaded("TravelLog_Archive") and #alts == week + 1, "alts' archived path drawn with all")
+check(#alts == week + 1, "alts' old stored path drawn with all")
 
 SlashCmdList.TRAVELLOG("wipe confirm")
 M.Logout()

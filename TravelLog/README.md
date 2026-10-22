@@ -6,7 +6,6 @@ Optional companions, each its own folder:
 
 - [TravelLog_Path](../TravelLog_Path/): your path and jumps, drawn on the world map. Needs TravelLog.
 - [TravelLog_Nodes](../TravelLog_Nodes/): looted chests, herbs and ore, pinned on the minimap and world map. Needs TravelLog.
-- `TravelLog_Archive`: storage for older history (see [Where the data is](#where-the-data-is)). Install it with TravelLog.
 - [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
 - [TravelLog_NPCs](../TravelLog_NPCs/): NPCs you've talked to and what they sell, on the maps and item tooltips. Works on its own too.
 - [TravelLog_Group](../TravelLog_Group/): every player you group with, and when. Works on its own too.
@@ -38,7 +37,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, time played, reputation and XP) and Log. Reputation shows the three most changed factions here and all in `/tl stats`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options, Path's interval, and whether gold and XP per hour leave out AFK time (on by default).
-- **History**: what's still in the character file, newest first, in views:
+- **History**: what's in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
   - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths. Hover a session for its XP by source.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
@@ -57,8 +56,7 @@ Companions add their rows to the matching section.
 | `/tl stats [all\|name]` | Totals (and time played) for this character, all of them added up, or another by `Name` or `Name-Realm` |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view, with XP by source |
-| `/tl archive [now]` | Archive size; `now` archives old history right away |
-| `/tl wipe confirm` | Delete everything for this character, including its archive and its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
+| `/tl wipe confirm` | Delete everything for this character, including its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
 `/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
 
@@ -72,9 +70,8 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank, guild, and the instance or rested area you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
-| `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
 
-**Rotation.** The path grows about 100 KB per hour of movement. When a character's log, sessions and path pass about 3 MB, the next login moves everything older than 10 days into the archive (nodes and totals stay). The archive is a separate load-on-demand addon because each addon gets only one account-wide file. It's read only for the `all` trail range, `/tl archive now` and rotation, so its size doesn't slow down logins. Without it installed, history stays in the character files and TravelLog says so when it tries to rotate.
+TravelLog keeps its log and sessions until `/tl wipe confirm`. TravelLog_Path keeps its path separately; see its [data and limits](../TravelLog_Path/README.md#where-the-data-is).
 
 Before 0.3, the path and nodes lived in TravelLog's character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file.
 
@@ -148,8 +145,6 @@ Some types have more:
 | `guildjoin` | `guild`, `rank`, `by` (who invited you), `founder` (`true` when you signed its charter) |
 | `guildleave` | `guild`, `rank` you had, `how` (`left`, `kicked` or `disbanded`, when known), `by` (who kicked you or disbanded it), `seconds` in the guild (when TravelLog saw you join) |
 | `guildrank` | `guild`, `rank`, `from` (the rank before), `change` (`promoted` or `demoted`), `by` |
-
-The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
 ## Limits
 

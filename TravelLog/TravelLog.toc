@@ -9,7 +9,6 @@
 ## AddonCompartmentFunc: TravelLog_OnAddonCompartmentClick
 
 Core.lua
-Archive.lua
 Travel.lua
 Loot.lua
 Vendor.lua

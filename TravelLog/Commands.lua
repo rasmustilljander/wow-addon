@@ -291,27 +291,8 @@ local function ShowStats(arg)
 	ns.Fire("TL_STATS", st, key)
 
 	if key == ns.charKey then
-		ns.Print("In this character's file: %s sessions, %s log entries%s",
-			Count(#ns.char.sessions), Count(#ns.char.log),
-			ns.ArchiveStatus() and " (older history: /tl archive)" or "")
-	end
-end
-
-local function ShowArchive(arg)
-	if arg == "now" then
-		if ns.Rotate(true) == 0 then
-			ns.Print("nothing old enough to archive.")
-		end
-	end
-	local size, installed, keepDays = ns.ArchiveStatus()
-	ns.Print("history older than %d days moves to TravelLog_Archive when this character's file gets big.", keepDays)
-	if size then
-		print(("  Archived so far: about %.1f MB (all characters)"):format(size / 1048576))
-	else
-		print("  Nothing archived yet.")
-	end
-	if not installed then
-		print("  TravelLog_Archive isn't installed, so old history stays in the character file.")
+		ns.Print("In this character's file: %s sessions, %s log entries",
+			Count(#ns.char.sessions), Count(#ns.char.log))
 	end
 end
 
@@ -743,7 +724,6 @@ local function Help()
 		local help = commands[name].help
 		print("  /tl " .. (type(help) == "function" and help() or help))
 	end
-	print("  /tl archive [now] - where older history is kept; \"now\" archives it right away")
 	print("  /tl wipe confirm - delete everything recorded for this character")
 end
 
@@ -760,10 +740,7 @@ SlashCmdList.TRAVELLOG = function(msg)
 		ShowStats(arg)
 	elseif command == "log" then
 		ShowLog(arg)
-	elseif command == "archive" then
-		ShowArchive(arg)
 	elseif command == "wipe" and arg == "confirm" then
-		ns.WipeArchive(ns.charKey)
 		ns.db.chars[ns.charKey] = nil
 		TravelLogCharDB = nil
 		ns.Fire("TL_WIPE") -- companion addons drop their files too

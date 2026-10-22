@@ -164,9 +164,3 @@ function ns.Alts()
 	table.sort(list, function(a, b) return a.key < b.key end)
 	return list
 end
-
--- Old sessions move into TravelLog_Archive along with TravelLog's own.
-tl.Rotates("path", "paths",
-	function() return ns.db.sessions end,
-	function(list) ns.db.sessions = list end,
-	function(s) return s ~= ns.session and (s.stop or s.start) end)

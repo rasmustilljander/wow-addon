@@ -331,9 +331,8 @@ local function DrawSession(s, data, progress, source)
 	progress.jumps = #j + 1
 end
 
--- Adds a character's history in a range to the list, the archive's too
--- when the whole history is asked for. alt is an entry of ns.Alts(), or nil
--- for this character.
+-- Adds a character's stored history in a range to the list. alt is an entry
+-- of ns.Alts(), or nil for this character.
 local function AddSources(list, range, alt)
 	local sessions = alt and alt.sessions or ns.db.sessions
 	local since, before = ns.TrailSpan(range, sessions)
@@ -352,21 +351,6 @@ local function AddSources(list, range, alt)
 		list[#list + 1] = history
 	end
 
-	if range == "all" then
-		for _, archived in ipairs(tl.ArchivedHistory(alt and alt.key)) do
-			-- Sessions archived before TravelLog_Path existed carry their path.
-			local old = {}
-			for _, s in ipairs(archived.sessions or {}) do
-				if s.track then
-					old[#old + 1] = s
-				end
-			end
-			for _, s in ipairs(archived.path or {}) do
-				old[#old + 1] = s
-			end
-			Add({ sessions = old, log = not alt and archived.log or nil })
-		end
-	end
 	Add({ sessions = sessions, log = not alt and tl.char.log or nil })
 end
 

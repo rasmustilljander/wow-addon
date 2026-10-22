@@ -26,7 +26,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `week` | The last 7 days |
 | `6h`, `3d` | The last 6 hours, 3 days, or any number of hours (`h`) or days (`d`) |
 | `yesterday`, `2025-10-19` | That calendar day only. `yesterday` is saved as its date. |
-| `all` | Everything, the archive included |
+| `all` | Everything stored |
 | `off` | Nothing |
 
 `/tl stats` adds jumps, distance and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the interval.
@@ -50,7 +50,7 @@ The colors below are the defaults. To change one, click its swatch in the Travel
 
 ## Where the data is
 
-`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Path.lua`, every character's path, about 100 KB per hour of movement. It's account-wide so alts can see each other's trails. Sessions older than 10 days rotate into `TravelLog_Archive` with TravelLog's history ([details](../TravelLog/README.md#where-the-data-is)).
+`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Path.lua`, every character's path, about 100 KB per hour of movement. It's account-wide so alts can see each other's trails. Paths are not pruned automatically; `/tl wipe confirm` removes that character's path.
 
 Before 0.2 each character's path was in `<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`. It moves to the account-wide file at that character's first login with 0.2, so an alt's trail appears once you've logged in on it. Path data TravelLog kept before this addon existed moves too.
 
@@ -81,5 +81,5 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 ## Limits
 
 - No path in dungeons and raids, since addons get no position there. Jumps are still recorded, without coordinates.
-- Every login loads all characters' paths. An alt's old sessions rotate into the archive only when that alt logs in, so an alt you no longer play keeps its last 10 days or more in the file. `/tl wipe confirm` on that alt removes them.
+- Every login loads all characters' stored paths.
 - Untested in the live game; tested against a fake client ([tests](../tests/README.md)).

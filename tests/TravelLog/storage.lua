@@ -1,6 +1,6 @@
 -- Where TravelLog keeps its data: per-character files, the account-wide
--- file, rotation of old history (TravelLog_Path's too) into the archive
--- addon, and TravelLog with and without its companion addons.
+-- file, old history kept in place, and TravelLog with and without its
+-- companion addons.
 local DAY = 86400
 
 -- This character's TravelLog_Path data, or nil when it isn't loaded.
@@ -65,14 +65,6 @@ ns = M.Login()
 check(#TravelLogCharDB.sessions == 2 and #PathDB().sessions == 2 and ns.stats.jumps == 1, "back on the main, its history is back")
 M.Logout()
 
--- The size estimate used for rotation is in the right ballpark of the file
-ns = M.Login()
-AddOldHistory(0.5, 1, 5)
-local estimate = ns.Size(TravelLogPathAccountDB)
-M.Logout()
-local ratio = M.savedSize("TravelLog_Path") / estimate
-check(ratio > 0.7 and ratio < 1.5, ("size estimate within range of the real file: %.2f"):format(ratio))
-
 --------------------------------------------------------------------------------
 -- Version 1 files (everything in the account-wide file) are migrated
 --------------------------------------------------------------------------------
@@ -103,113 +95,51 @@ check(ns.stats.jumps == 42 and ns.settings.interval == 3, "stats and settings ke
 M.Logout()
 
 --------------------------------------------------------------------------------
--- Rotation into the archive addon
+-- Old history stays in the main files
 --------------------------------------------------------------------------------
 
 M.saved, M.savedChar = {}, {}
-M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes", "TravelLog_Archive" }
+M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }
 
 ns = M.Login()
 AddOldHistory(4, 20, 30) -- 4 MB of history from 50 to 20 days ago
-TravelLogCharDB.log[#TravelLogCharDB.log + 1] = { type = "level", time = M.now - DAY, level = 6 }
+local stored = {
+	sessions = #TravelLogCharDB.sessions,
+	log = #TravelLogCharDB.log,
+	paths = #PathDB().sessions,
+}
+TravelLogDB.archive = { size = 4 * 1048576 } -- metadata left by the removed archive feature
 M.Logout()
-local before = M.savedSize("TravelLog_Path")
-check(before > 3 * 1048576, ("path file is big before rotating: %.1f MB"):format(before / 1048576))
+check(M.savedSize("TravelLog_Path") > 3 * 1048576, "large old path stays in TravelLog_Path")
 
 M.out = {}
 ns = M.Login()
-check(C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "archive loaded for rotation")
-check(said("moved 30 sessions, 30 log entries and 30 paths older than 10 days to TravelLog_Archive"), "rotation reported")
-local recent = true
-for _, s in ipairs(TravelLogCharDB.sessions) do recent = recent and s.start >= M.now - 10 * DAY end
-for _, e in ipairs(TravelLogCharDB.log) do recent = recent and e.time >= M.now - 10 * DAY end
-for _, s in ipairs(PathDB().sessions) do recent = recent and s.start >= M.now - 10 * DAY end
-check(recent and #TravelLogCharDB.sessions == 2 and #PathDB().sessions == 2, "only recent history (last and current session) stays in the character files")
-local archived = TravelLogArchiveDB.chars["Rasmus-Forever"]
-check(#archived.sessions == 30 and #archived.log == 30 and #archived.path == 30, "old sessions, log and paths are in the archive")
-M.Logout()
-check(M.savedSize("TravelLog", true) < 100 * 1024 and M.savedSize("TravelLog_Path") < 100 * 1024,
-	("character and path files are small after rotating: %d and %d bytes"):format(M.savedSize("TravelLog", true), M.savedSize("TravelLog_Path")))
-check(M.savedSize("TravelLog_Archive") > 3 * 1048576, "archive file holds the old history")
+check(TravelLogDB.archive == nil, "old archive metadata removed")
+check(#TravelLogCharDB.sessions == stored.sessions + 1 and #PathDB().sessions == stored.paths + 1,
+	"old sessions and paths kept after login")
+check(#TravelLogCharDB.log >= stored.log and TravelLogCharDB.log[1].source == "Old Kobold"
+	and PathDB().sessions[1].track[1], "old events and path points kept")
+check(not said("moved .* history"), "old history is not rotated")
 
-ns = M.Login()
-check(not C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "archive not loaded at a normal login")
-M.out = {}
-SlashCmdList.TRAVELLOG("archive")
-check(said("Archived so far: about [34]%.%d MB") and not C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "/tl archive reports the size without loading it")
-M.Logout()
-check(M.savedSize("TravelLog_Archive") > 3 * 1048576, "an unloaded archive's file is left alone")
-
--- The map's "all" range reads the archive
-ns = M.Login()
+-- "all" reads old history directly from the stored path and event log.
 SlashCmdList.TRAVELLOG("trail all")
 M.viewMap = 1429
 M.frame()
-check(C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "trail all loads the archive")
 local overlay = M.mapOverlay(2010)
 local purple = 0
 for _, t in ipairs(M.shown(overlay.textures)) do if t.color[1] == 0.75 then purple = purple + 1 end end
-check(purple >= 1, "archived loot markers drawn")
-SlashCmdList.TRAVELLOG("trail today")
-M.Logout()
+check(purple >= 1, "old loot markers drawn from the stored log")
 
--- A second rotation adds to the same archive
-ns = M.Login()
-AddOldHistory(4, 20, 10)
-M.Logout()
-ns = M.Login()
-check(#TravelLogArchiveDB.chars["Rasmus-Forever"].sessions == 40, "second rotation appended to the archive")
-M.Logout()
-
--- Without the archive addon installed, history stays put and you're told
-M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }
-ns = M.Login()
-AddOldHistory(4, 20, 5)
-M.Logout()
-M.out = {}
-ns = M.Login()
-check(said("can't open TravelLog_Archive %(MISSING%)"), "missing archive addon reported")
-check(#TravelLogCharDB.sessions > 5, "history kept in the main file")
 M.out = {}
 SlashCmdList.TRAVELLOG("archive")
-check(said("TravelLog_Archive isn't installed"), "/tl archive says it isn't installed")
-M.Logout()
-M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes", "TravelLog_Archive" }
+check(said("commands:") and not said("/tl archive"), "/tl archive removed")
 
--- Once the archive addon is back, the next login catches up
-M.out = {}
-ns = M.Login()
-check(said("moved 5 sessions") and #TravelLogArchiveDB.chars["Rasmus-Forever"].sessions == 45, "rotation catches up once the archive is installed")
-M.Logout()
-
--- "/tl archive now" moves old history right away, even if the file is small
-ns = M.Login()
-check(not C_AddOns.IsAddOnLoaded("TravelLog_Archive"), "small main file: no rotation at login")
-TravelLogCharDB.log[#TravelLogCharDB.log + 1] = { type = "level", time = M.now - 12 * DAY, level = 7 }
-M.out = {}
-SlashCmdList.TRAVELLOG("archive now")
-check(said("moved %d+ sessions, 1 log entries and %d+ paths"), "forced rotation")
-M.Logout()
-
--- An alt's archived history is kept apart and survives the main being wiped
-M.player = { name = "Altie", realm = "Forever" }
-ns = M.Login()
-AddOldHistory(0.1, 20, 2)
-SlashCmdList.TRAVELLOG("archive now")
-M.Logout()
-M.player = { name = "Rasmus", realm = "Forever" }
-
--- Wiping a character removes it everywhere, the archive included
-ns = M.Login()
+-- Wiping a character removes its retained TravelLog and Path history.
 SlashCmdList.TRAVELLOG("wipe confirm")
 check(M.reloadRequested, "wipe reloads the UI")
 ns = M.Reload()
 check(#TravelLogCharDB.sessions == 1 and #TravelLogCharDB.log <= 1 and #PathDB().sessions == 1, "character history wiped")
 check(ns.stats.jumps == nil, "character stats wiped")
-ns.ArchivedHistory()
-check(TravelLogArchiveDB.chars["Rasmus-Forever"] == nil, "archive no longer holds the character")
-check(#TravelLogArchiveDB.chars["Altie-Forever"].sessions == 2, "the alt's archive is untouched")
-check(TravelLogDB.archive.size < 1048576, "archive size estimate shrinks after the wipe")
 M.Logout()
 
 --------------------------------------------------------------------------------
@@ -262,26 +192,4 @@ M.viewMap = 1436
 M.frame()
 local overlay = M.mapOverlay(2010)
 check(#M.shown(overlay.lines) == 1 and #M.shown(overlay.textures) == 1, "the moved path and its jump are drawn")
-M.Logout()
-
---------------------------------------------------------------------------------
--- Paths archived before TravelLog_Path existed are still drawn
---------------------------------------------------------------------------------
-
-M.saved, M.savedChar = {
-	TravelLog = [[TravelLogDB = { ["archive"] = { ["size"] = 2000 } }]],
-	TravelLog_Archive = [[
-TravelLogArchiveDB = { ["chars"] = { ["Rasmus-Forever"] = {
-	["sessions"] = { { ["start"] = 1750000000, ["stop"] = 1750003600,
-		["track"] = { "1,1436,40.00,40.00,0,-10000.0,-1000.0,0;9,1436,42.00,41.00,0,-10010.0,-1010.0,0" }, ["jumps"] = {} } },
-	["log"] = {},
-} } }
-]] }, {}
-M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Archive" }
-ns = M.Login()
-SlashCmdList.TRAVELLOG("trail all")
-M.viewMap = 1436
-M.frame()
-overlay = M.mapOverlay(2010)
-check(#M.shown(overlay.lines) == 1, "an archived old-style path is drawn")
 M.Logout()
