@@ -110,6 +110,19 @@ function ns.RevivalsText(st)
 	return (st.deadTime or 0) > 0 and ("%s; %s dead"):format(text, ns.Duration(st.deadTime)) or text
 end
 
+-- Guild changes, after the character you're on's guild: "Wanderers
+-- (Officer); joined 2, left 1, kicked out 0, promoted 1, demoted 0".
+function ns.GuildText(st, key)
+	local g = st.guilds or {}
+	local text = ("joined %s, left %s, kicked out %s, promoted %s, demoted %s"):format(
+		Count(g.joined), Count(g.left), Count(g.kicked), Count(g.promoted), Count(g.demoted))
+	local now = key == ns.charKey and ns.char.guild or {}
+	if now.name then
+		return ("%s (%s); %s"):format(now.name, now.rank or "?", text)
+	end
+	return text
+end
+
 -- Money gained or spent ("gained" or "spent") with its reasons, largest
 -- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
 function ns.MoneyByReason(st, way)
@@ -185,6 +198,7 @@ local function ShowStats(arg)
 	ns.Print("Duels won %s, lost %s, no winner %s; battlegrounds won %s, lost %s, drawn %s, left %s; honorable kills %s, honor %s",
 		Count(duels.won), Count(duels.lost), Count(duels.interrupted),
 		Count(bgs.won), Count(bgs.lost), Count(bgs.draw), Count(bgs.left), Count(st.honorKills), Count(st.honor))
+	ns.Print("Guild: %s", ns.GuildText(st, key))
 	local instances = st.instances or {}
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, screenshots %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
@@ -413,6 +427,27 @@ local DESCRIBE = {
 		if e.honor then score[#score + 1] = ("+%d honor"):format(e.honor) end
 		return #score > 0 and ("%s: %s"):format(text, table.concat(score, ", ")) or text
 	end,
+	guildjoin = function(e)
+		local text = ("Joined %s"):format(e.guild or "a guild")
+		if e.rank then text = ("%s as %s"):format(text, e.rank) end
+		if e.founder then return text .. " (founder)" end
+		return e.by and ("%s (invited by %s)"):format(text, e.by) or text
+	end,
+	guildleave = function(e)
+		local guild = e.guild or "the guild"
+		local text = e.how == "left" and ("Left %s"):format(guild)
+			or e.how == "kicked" and ("Kicked out of %s"):format(guild)
+			or e.how == "disbanded" and ("%s was disbanded"):format(guild)
+			or ("No longer in %s"):format(guild)
+		if e.by then text = ("%s by %s"):format(text, e.by) end
+		return e.seconds and ("%s after %s"):format(text, ns.Duration(e.seconds)) or text
+	end,
+	guildrank = function(e)
+		local text = ("%s to %s in %s"):format(e.change == "promoted" and "Promoted" or "Demoted",
+			e.rank or "?", e.guild or "the guild")
+		if e.by then text = ("%s by %s"):format(text, e.by) end
+		return e.from and ("%s (was %s)"):format(text, e.from) or text
+	end,
 	spell = function(e)
 		local text = "Learned " .. (e.name or e.id or "?")
 		if e.rank then text = ("%s (%s)"):format(text, e.rank) end
@@ -471,6 +506,7 @@ local LOG_GROUP = {
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
+	guildjoin = "Life", guildleave = "Life", guildrank = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
@@ -486,6 +522,7 @@ local LOG_LABEL = {
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
 	battleground = "Battleground",
+	guildjoin = "Guild joined", guildleave = "Guild left", guildrank = "Guild rank",
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",

@@ -17,6 +17,7 @@ Outgoing.lua
 Money.lua
 Life.lua
 PvP.lua
+Guild.lua
 Progress.lua
 Commands.lua
 UI.lua

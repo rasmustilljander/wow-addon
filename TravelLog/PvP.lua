@@ -70,10 +70,6 @@ for _, entry in ipairs({ { "DUEL_WINNER_KNOCKOUT", false }, { "DUEL_WINNER_RETRE
 	end
 end
 
-local function IsMe(name)
-	return name:match("^[^%-]+") == UnitName("player")
-end
-
 ns.On("CHAT_MSG_SYSTEM", function(text)
 	text = ns.Clean(text)
 	if type(text) ~= "string" then
@@ -85,9 +81,9 @@ ns.On("CHAT_MSG_SYSTEM", function(text)
 			local names = {}
 			names[r.order[1] or 1], names[r.order[2] or 2] = a, b
 			local winner, loser = names[1], names[2]
-			if IsMe(winner) then
+			if ns.IsMe(winner) then
 				LogDuel("won", loser, r.fled)
-			elseif IsMe(loser) then
+			elseif ns.IsMe(loser) then
 				LogDuel("lost", winner, r.fled)
 			end
 			return
