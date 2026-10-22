@@ -78,6 +78,13 @@ function ns.PlacesVisited(st)
 	return places
 end
 
+-- Items that left the bags, by how: "3 traded, 1 mailed, 0 auctioned, 2 destroyed".
+function ns.GivenText(st)
+	local given = (st or ns.stats).given or {}
+	return ("%s traded, %s mailed, %s auctioned, %s destroyed"):format(
+		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
+end
+
 -- The character a /tl stats argument names: "Name" or "Name-Realm".
 local function FindCharacter(arg)
 	for _, key in ipairs(ns.Characters()) do
@@ -119,6 +126,7 @@ local function ShowStats(arg)
 	ns.Print("Vendors: %s bought, %s sold, %s repairs; spent %s, earned %s",
 		Count(v.bought), Count(v.sold), Count(v.repairs),
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
+	ns.Print("Items out: %s", ns.GivenText(st))
 
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
@@ -213,8 +221,17 @@ local DESCRIBE = {
 	sell = function(e) return ("Sold %s for %s to %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	buyback = function(e) return ("Bought back %s for %s"):format(Item(e.item, e.count), ns.MoneyText(e.price)) end,
 	repair = function(e) return ("Repaired for %s"):format(ns.MoneyText(e.price)) end,
+	give = function(e) return ("Gave %s to %s"):format(Items(e.items), e.partner or "?") end,
+	send = function(e) return ("Mailed %s to %s"):format(Items(e.items), e.recipient or "?") end,
+	post = function(e)
+		local text = ("Posted %s at auction"):format(Item(e.item, e.count))
+		if e.buyout then text = ("%s, buyout %s"):format(text, ns.MoneyText(e.buyout)) end
+		if e.bid then text = ("%s, bid %s"):format(text, ns.MoneyText(e.bid)) end
+		return text
+	end,
+	destroy = function(e) return ("Destroyed %s"):format(Item(e.item, e.count)) end,
 	money = function(e)
-		local who = e.partner or e.sender
+		local who = e.partner or e.sender or e.recipient
 		who = who and (e.amount > 0 and " from " or " to ") .. who or ""
 		return ("%s %s (%s%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), e.reason, who)
 	end,
@@ -285,8 +302,9 @@ local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
 	instance = "Travel", instanceleave = "Travel",
-	loot = "Loot", receive = "Loot",
+	loot = "Loot", receive = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
+	give = "Trade", send = "Trade", post = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", kill = "Life", discover = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", taxipath = "Progress",
@@ -294,7 +312,8 @@ local LOG_GROUP = {
 }
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
-	buyback = "Buyback", repair = "Repair", money = "Money", flight = "Flight",
+	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
+	post = "Auction", destroy = "Destroyed", money = "Money", flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
 	instanceleave = "Instance left", death = "Death",

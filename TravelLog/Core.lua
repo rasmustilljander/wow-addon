@@ -295,9 +295,9 @@ for event, change in pairs(WINDOW_EVENTS) do
 	end)
 end
 
--- Who's on the other side: the trade partner, and the sender of the mail you
--- last took money or an item from.
-local partner, sender
+-- Who's on the other side: the trade partner, the sender of the mail you
+-- last took money or an item from, and who you last sent mail to.
+local partner, sender, recipient
 
 ns.On("TL_OPEN", function(context)
 	if context == "trade" then
@@ -314,11 +314,19 @@ hooksecurefunc("TakeInboxMoney", TookMail)
 hooksecurefunc("TakeInboxItem", TookMail)
 hooksecurefunc("AutoLootMailItem", TookMail)
 
--- Adds the partner or sender to an event's data for money or items that came
--- by trade or mail.
+hooksecurefunc("SendMail", function(to)
+	recipient = ns.Clean(to)
+	ns.Mark("mailsent")
+end)
+
+-- Adds the partner, sender or recipient to an event's data for money or
+-- items that came or went by trade or mail. Money paid right after sending
+-- mail is its postage, or money sent with it.
 function ns.WithCounterpart(data, how)
 	if how == "trade" then
 		data.partner = partner
+	elseif how == "mail" and (data.amount or 0) < 0 and ns.Recent("mailsent", 10) then
+		data.recipient = recipient
 	elseif how == "mail" then
 		data.sender = sender
 	end

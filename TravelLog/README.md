@@ -20,9 +20,10 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | --- | --- |
 | **Loot** | Corpses, pickpockets, chests, herbs, ore, fishing and containers: items taken, coins and source (name, NPC/object ID, and the spell for herbs, ore, chests, skinning and Pick Pocket). |
 | **Other items** | Quest rewards, crafts, roll wins (with your roll), trades and mail, and other items that arrive without a loot window. |
+| **Items out** | Items you hand over in a trade, mail, put up for auction (with bid and buyout) or destroy. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
-| **Trades and mail** | Money and items from a trade are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`). |
+| **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds. |
 | **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups (with how long the level took), quests accepted, completed and abandoned, kills that gave XP, discoveries. |
 | **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
@@ -95,7 +96,7 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `money`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
 
 Travel entries' own fields:
 
@@ -124,5 +125,8 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Time in a dungeon or raid counts only while you're logged in, and a reload inside is the same visit.
 - Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
+- Items used up (potions, food, reagents) aren't recorded: no event says an item was consumed.
+- Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
+- Destroyed items are recorded only when picked up from your bags or gear first, so a gamepad delete isn't.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.
