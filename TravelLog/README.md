@@ -22,7 +22,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Other items** | Quest rewards, crafts, roll wins (with your roll), trades and mail, and other items that arrive without a loot window. |
 | **Items out** | Items you hand over in a trade, mail, put up for auction (with bid and buyout) or destroy. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
-| **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
+| **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds. |
 | **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups (with how long the level took), quests accepted, completed and abandoned, kills that gave XP, discoveries. |
@@ -33,7 +33,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
-- **Totals**: numbers under Travel, Loot, Life (time played too) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
+- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played too) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options and Path's interval.
 - **History**: what's still in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, fight target and location, or `level` for each level-up and how long it took.
@@ -96,7 +96,9 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
+
+A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
 Travel entries' own fields:
 
@@ -128,5 +130,6 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Items used up (potions, food, reagents) aren't recorded: no event says an item was consumed.
 - Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
 - Destroyed items are recorded only when picked up from your bags or gear first, so a gamepad delete isn't.
+- Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.

@@ -112,6 +112,8 @@ ns.AddStat("Loot", "Vendors", function(st)
 	return ("spent %s, earned %s"):format(ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 end)
 ns.AddStat("Loot", "Items out", ns.GivenText)
+ns.AddStat("Loot", "Money in", function(st) return ns.MoneyByReason(st, "gained") end)
+ns.AddStat("Loot", "Money out", function(st) return ns.MoneyByReason(st, "spent") end)
 ns.AddStat("Life", "Played", function()
 	local total, level = ns.Played()
 	return total and ("%s, %s at this level"):format(ns.Duration(total), ns.Duration(level)) or "not known yet"

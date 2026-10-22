@@ -91,8 +91,9 @@ end)
 local posting -- the auction being posted: { item, count, bid, buyout }
 
 -- A post that needs confirming comes again as ConfirmPost*. Either way it's
--- recorded once the auction exists.
+-- recorded once the auction exists. The money it costs is its deposit.
 local function Post(location, _, quantity, bid, buyout)
+	ns.Mark("deposit")
 	local item = C_Item.DoesItemExist(location) and ns.Clean(C_Item.GetItemLink(location))
 	posting = item and { item = item, count = Count(quantity), bid = ns.Clean(bid), buyout = ns.Clean(buyout) } or nil
 end

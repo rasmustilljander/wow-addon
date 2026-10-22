@@ -19,7 +19,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | File | |
 | --- | --- |
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
-| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, trades, mail, posting and owned auctions, loot windows, merchants, flights, the quest log's abandon dialog, summons, instances, the world map and world positions, the minimap's range and facing, the addon compartment, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
+| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs (buying them, account bank gold) and the cursor, equipment, trades, mail, posting and owned auctions, loot windows, merchants, flights, the quest log's abandon dialog, talent resets, stable slots, the guild bank and barber windows, summons, instances, the world map and world positions, the minimap's range and facing, the addon compartment, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests (one abandoned), a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources (pickpockets too), roll wins, and the partner or sender of trades and mail. |
 | `TravelLog/outgoing.lua` | Items given in a trade, mailed (and postage), put up for auction (with a confirmation) and destroyed (whole, split, worn), their totals and History groups, a reload. |
@@ -27,6 +27,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/travel.lua` | Teleports by your casts and others' portals, hearthstone-like spells, summons (a secret summoner too), a boat ride across a loading screen, dungeons and raids with time inside across a reload and a relog, and what isn't travel (casts, walking, doors, knockbacks, deaths); stats, `/tl log` and Totals rows. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History with only Events and Sessions), moving old path and nodes into the companions. |
+| `TravelLog/money.lua` | Money reasons: bank slots (with their entry), the account and guild banks, the barber, talent resets, stable slots, auction deposits and sales, COD; `/tl log`, `/tl stats`, a reload. |
 | `TravelLog/sessions.lua` | Experience gained per session (across a level-up), money and what happened in each, `/tl sessions`, the Sessions view, a reload. |
 | `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the History tab's searchable event log and Kills view, companion tabs, moving, a reload, and an alt's view of other characters' and everyone's totals (`/tl stats all`/`name` too). |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
@@ -75,8 +76,8 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.cvars[name] = { value, default, help, category, ... }` | CVars the client knows (also `secure`, `readOnly`, `account`, `character`, `max`, and `unlisted` to leave one out of `ConsoleGetAllCommands`). |
 | `M.script(frame, name, ...)`, `button:Click([mouseButton])` | Run a frame's script and its hooks (`OnEnterPressed`, `OnDragStop`, ...); click a button (default `"LeftButton"`) unless it's disabled. A scroll box gets a row in `.rows` for every element. |
 | `M.bags["bag:slot"]`, `M.bagSlots[bag]`, `M.items[itemID]` | Bag contents (an item link, or `{ link, count, locked }`), bag sizes (default: a 16-slot backpack) and what the client knows of an item (`quality`, `price`, `icon`, `noValue`, `uncached`). |
-| `M.equipped[slot]`, `M.accountBank` | Worn item links by inventory slot; whether the account bank can be seen. Bank tabs are bags 6 and up (account bank 15 and up) in `M.bags`. |
-| `M.inbox`, `M.sendItems`, `M.sentMail` | Inbox mails `{ cod, items = { { link, count, currency } } }`, attachments of the mail being written, and what `SendMail` sent. |
+| `M.equipped[slot]`, `M.accountBank`, `M.bankTabs[bankType]` | Worn item links by inventory slot; whether the account bank can be seen; how many tabs (bank slots) each bank has bought. Bank tabs are bags 6 and up (account bank 15 and up) in `M.bags`. |
+| `M.inbox`, `M.sendItems`, `M.sentMail` | Inbox mails `{ sender, money, cod, invoice = { type, item, player }, items = { { link, count, currency } } }`, attachments of the mail being written, and what `SendMail` sent. |
 | `M.tradeItems[i]` | `{ link, count }` in your trade slot i (7 is "will not be traded"). |
 | `M.ownedAuctions`, `M.ownedQueries` | What `C_AuctionHouse.GetOwnedAuctions` returns, and how often owned auctions were queried. |
 | `M.posts`, `M.postWarning` | What `C_AuctionHouse.PostItem`, `PostCommodity` and their `Confirm*` posted (`ItemLocation:CreateFromBagAndSlot` for the item); whether a post needs confirming. |

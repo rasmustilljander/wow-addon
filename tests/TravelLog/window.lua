@@ -61,13 +61,14 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
-check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Teleports, Boat rides, Instances, Jumps, Distance, Looted, Vendors, Items out, Nodes, "
+check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Teleports, Boat rides, Instances, Jumps, Distance, Looted, Vendors, Items out, Money in, Money out, Nodes, "
 	.. "Played, Quests done, Learned, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Items out") == "0 traded, 0 mailed, 0 auctioned, 0 destroyed", "items out: " .. Stat(w, "Items out"))
+check(Stat(w, "Money in") == "0c" and Stat(w, "Money out") == "0c", "no money in or out yet")
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
 check(Stat(w, "Played") == "not known yet", "played before /played answers")
@@ -178,12 +179,20 @@ check(Button(w, "week").highlightLocked and not ExactCheck(w, "Looted nodes on t
 -- An alt sees its own totals first; the picker steps through the others and
 -- all of them added up, then wraps. Rows only a character's own files know
 -- (its log, Kills) show for the one you're on only.
+M.fire("BARBER_SHOP_OPEN")
+M.money = M.money - 500
+M.fire("PLAYER_MONEY")
+M.fire("BARBER_SHOP_CLOSE")
 M.Logout()
 M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
 ns = M.Login()
 M.dead = true
 M.fire("PLAYER_DEAD")
 M.dead = false
+M.fire("BARBER_SHOP_OPEN")
+M.money = M.money - 1000
+M.fire("PLAYER_MONEY")
+M.fire("BARBER_SHOP_CLOSE")
 SlashCmdList.TRAVELLOG("")
 w = ns.window
 totals = w.pages[1]
@@ -191,6 +200,7 @@ local function Picker() return Texts(totals, 152) end
 local function Step(text) Button(totals, text):Click() end
 check(w.who:GetText():find("^Altie%-Forever") and Picker():find("^Altie%-Forever, level 5")
 	and Stat(w, "Deaths") == "1" and Stat(w, "Jumps") == "0 (0 this session)", "the alt's own totals: " .. Picker())
+check(Stat(w, "Money out") == "10s 0c: barber 10s 0c", "the alt's money out: " .. Stat(w, "Money out"))
 Step(">")
 check(Picker():find("^Rasmus%-Forever, level 5") and Stat(w, "Deaths") == "1" and Stat(w, "XP kills") == "1"
 	and Stat(w, "Jumps") == "1", "the main's totals, no session: " .. Stat(w, "Jumps"))
@@ -199,6 +209,7 @@ check(Stat(w, "Entries"):find("only for the character you're on") and Stat(w, "A
 Step(">")
 check(Picker():find("^All 2 characters") and Stat(w, "Deaths") == "2" and Stat(w, "Jumps") == "1"
 	and Stat(w, "Places visited") == "1", "all added up, a shared place once: " .. Stat(w, "Places visited"))
+check(Stat(w, "Money out") == "15s 0c: barber 15s 0c", "money added up: " .. Stat(w, "Money out"))
 Step(">")
 check(Picker():find("^Altie") and Stat(w, "Entries"):find("^%d+ in 1 sessions"), "wraps to the alt")
 Step("<")

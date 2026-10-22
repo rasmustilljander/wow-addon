@@ -259,7 +259,7 @@ end
 
 local INTERACTIONS = {
 	Merchant = "merchant", TaxiNode = "taxi", Trainer = "trainer", MailInfo = "mail",
-	TradePartner = "trade", Auctioneer = "auction", Banker = "bank",
+	TradePartner = "trade", Auctioneer = "auction", Banker = "bank", GuildBanker = "guildbank",
 }
 local contextByType = {}
 if Enum and Enum.PlayerInteractionType then
@@ -288,6 +288,8 @@ local WINDOW_EVENTS = {
 	TRADE_SHOW = { "trade", true }, TRADE_CLOSED = { "trade", false },
 	AUCTION_HOUSE_SHOW = { "auction", true }, AUCTION_HOUSE_CLOSED = { "auction", false },
 	BANKFRAME_OPENED = { "bank", true }, BANKFRAME_CLOSED = { "bank", false },
+	GUILDBANKFRAME_OPENED = { "guildbank", true }, GUILDBANKFRAME_CLOSED = { "guildbank", false },
+	BARBER_SHOP_OPEN = { "barber", true }, BARBER_SHOP_CLOSE = { "barber", false },
 }
 for event, change in pairs(WINDOW_EVENTS) do
 	ns.On(event, function()
@@ -321,13 +323,13 @@ end)
 
 -- Adds the partner, sender or recipient to an event's data for money or
 -- items that came or went by trade or mail. Money paid right after sending
--- mail is its postage, or money sent with it.
+-- mail is its postage, or money sent with it; COD is paid to the sender.
 function ns.WithCounterpart(data, how)
 	if how == "trade" then
 		data.partner = partner
 	elseif how == "mail" and (data.amount or 0) < 0 and ns.Recent("mailsent", 10) then
 		data.recipient = recipient
-	elseif how == "mail" then
+	elseif how == "mail" or how == "cod" then
 		data.sender = sender
 	end
 	return data
