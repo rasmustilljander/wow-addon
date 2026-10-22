@@ -29,7 +29,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money and the experience gained. |
-| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, beasts tamed (name, level and family), and the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards). |
+| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills (a dropped profession learned again counts), every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, beasts tamed (name, level and family), and the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards). |
 
 ## Window
 
@@ -94,7 +94,7 @@ TravelLogCharDB = {
       zoneEnd = "Stormwind City", subzoneEnd = "Old Town", mapEnd = 1453, xEnd = 75.2, yEnd = 61.8 },  -- and out
   },
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ..., failed = ... } },  -- last time of each
-  skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones
+  skills = { [129] = 75 },           -- skill ID -> rank of skills you have, to tell new skills and milestones
   talents = { [7001] = { [101] = 3 } },  -- loadout ID -> talent node ID -> rank, to tell points spent
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
   instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ..., kills = 2, wipes = 1 },  -- while you're in one
