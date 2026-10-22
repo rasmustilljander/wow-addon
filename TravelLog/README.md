@@ -25,7 +25,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
-| **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds, screenshots (with the file's name, to match pictures to the log). |
+| **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log). |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, discoveries, and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money and the experience gained. |
@@ -68,7 +68,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank, guild and the instance you're in |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank, guild, and the instance or rested area you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
@@ -98,13 +98,14 @@ TravelLogCharDB = {
   talents = { [7001] = { [101] = 3 } },  -- loadout ID -> talent node ID -> rank, to tell points spent
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
   instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ... },  -- while you're in one
+  rest = { inside = 600, since = ... },  -- while you're resting
   gear = { [25] = 0, [2361] = 1760000000 },  -- item ID -> first put on (0: worn when gear recording began)
   pvpRank = { rank = 3, season = 1 },  -- last rank seen, to tell changes
   guild = { name = "Wanderers", rank = "Officer", rankIndex = 2, since = 1760000000 },  -- {} for none; since: when you joined
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
+Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `rest`, `restleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -118,6 +119,7 @@ Some types have more:
 | `disembark` | `from`, `to`, `seconds` on board |
 | `instance` | `name`, `kind` (`dungeon`, `raid`, `battleground`, `arena` or `scenario`), `difficulty`, `size`, `id` |
 | `instanceleave` | `name`, `kind`, `seconds` inside |
+| `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken) |
 | `level` | `played`: seconds played in all. `took`: seconds played at the level before. |
 | `death` | `target`: the hostile unit you had targeted. `level`. `cause`: `drowning`, `fatigue` or `falling`, when known. |
@@ -151,6 +153,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - A screenshot's `file` is worked out from your computer's clock, not read from the game, so it can be a second off from the real name.
 - Summons are logged once you accept and arrive. The summoner's name is missing if the client hides it.
 - Time in a dungeon or raid counts only while you're logged in, and a reload inside is the same visit.
+- Resting comes from the game's rested state, so it can't tell an inn from a city. A change is logged where it happened once it has held for 5 s, so stepping through an inn's door isn't a stay. Logging in rested starts a stay without a `rest` entry (the session says where you were), a reload or a night logged out inside is the same stay, and its time counts only while you're logged in.
 - Talent points count when applied, not when placed in the talent frame. Points spent before TravelLog was installed, or on the other spec before you first switch to it with TravelLog, are remembered without being logged. Re-spent points count again in the total. A reset is logged without its cost.
 - A failed quest is noticed when the quest log next updates, and logged once each time you take it: not again after a reload, and abandoning it afterwards is a `questabandon`. One that failed while you were offline or before TravelLog was installed is logged when it's first seen. The client doesn't say why a quest failed, so only a timer running out is told apart, and a failed quest the server drops from the log at once isn't seen.
 - Mounts and pets count from when TravelLog was installed, so "First mount" and "First pet" are only your real firsts if you hadn't ridden or tamed before.
