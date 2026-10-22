@@ -1,7 +1,7 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, talent points spent, flight paths found,
--- reputation standings reached, the first ride on each mount, beasts tamed
--- and the first time you put on each piece of gear.
+-- reputation standings reached, the first ride on each mount, beasts tamed,
+-- the first time you put on each piece of gear and Legacy Challenges earned.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -470,6 +470,37 @@ end
 
 ns.On("PLAYER_LOGIN", ReadWorn)
 ns.On("PLAYER_EQUIPMENT_CHANGED", CheckGear)
+
+--------------------------------------------------------------------------------
+-- Legacy Challenges: Forever's achievements
+--------------------------------------------------------------------------------
+
+-- alreadyEarned: another character on the account earned it first.
+ns.On("ACHIEVEMENT_EARNED", function(id, alreadyEarned)
+	id = ns.Clean(id)
+	if not id then
+		return
+	end
+	local name, points, reward, guild
+	if GetAchievementInfo then
+		local _
+		_, name, points, _, _, _, _, _, _, _, reward, guild = GetAchievementInfo(id)
+		name, points, reward = ns.Clean(name), ns.Clean(points), ns.Clean(reward)
+	end
+	local category = GetAchievementCategory and ns.Clean(GetAchievementCategory(id))
+	category = category and GetCategoryInfo and ns.Clean((GetCategoryInfo(category))) or nil
+	ns.Log("achievement", {
+		id = id,
+		name = name,
+		points = points ~= 0 and points or nil,
+		category = category,
+		reward = reward ~= "" and reward or nil,
+		already = ns.Clean(alreadyEarned) or nil,
+		guild = ns.Clean(guild) or nil,
+	})
+	ns.Add(1, "achievements")
+	ns.Add(points or 0, "achievementPoints")
+end)
 
 --------------------------------------------------------------------------------
 -- Chat

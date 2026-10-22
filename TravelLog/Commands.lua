@@ -123,6 +123,11 @@ function ns.GuildText(st, key)
 	return text
 end
 
+-- Legacy Challenges earned and their points: "12 earned, 120 points".
+function ns.ChallengesText(st)
+	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
+end
+
 -- Money gained or spent ("gained" or "spent") with its reasons, largest
 -- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
 function ns.MoneyByReason(st, way)
@@ -206,6 +211,7 @@ local function ShowStats(arg)
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
+	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
@@ -476,6 +482,16 @@ local DESCRIBE = {
 		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, " ")) end
 		return e.pet and ("%s, named %s"):format(text, e.pet) or text
 	end,
+	achievement = function(e)
+		local text = "Legacy Challenge: " .. (e.name or e.id or "?")
+		local about = {}
+		if e.points then about[#about + 1] = e.points .. " points" end
+		if e.category then about[#about + 1] = e.category end
+		if e.guild then about[#about + 1] = "guild" end
+		if e.already then about[#about + 1] = "already earned on another character" end
+		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
+		return e.reward and ("%s; %s"):format(text, e.reward) or text
+	end,
 	equip = function(e)
 		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
 		local text = ("Equipped %s (%s%s)"):format(e.item or "?", slot, e.ilvl and ", item level " .. e.ilvl or "")
@@ -510,6 +526,7 @@ local LOG_GROUP = {
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
+	achievement = "Progress",
 }
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
@@ -526,7 +543,7 @@ local LOG_LABEL = {
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
-	mount = "Mount", tame = "Pet tamed", equip = "Gear",
+	mount = "Mount", tame = "Pet tamed", equip = "Gear", achievement = "Legacy Challenge",
 }
 
 function ns.LogGroup(e)
