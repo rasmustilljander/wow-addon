@@ -112,6 +112,21 @@ check(count("standing") == 1 and last("standing").faction == "Stormwind" and las
 	"standing logged once")
 check(ns.Describe(last("standing")) == "Now Friendly with Stormwind", "standing described")
 
+-- Reputation gains and losses add up per faction, without log entries.
+local entries = #TravelLogCharDB.log
+M.fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Reputation with Stormwind increased by 250.")
+M.fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Reputation with Stormwind increased by 75. (+7.5 bonus)")
+M.fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Reputation with Booty Bay increased by 100.")
+M.fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Reputation with Booty Bay decreased by 600.")
+M.fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Reputation with Ironforge increased by 10.")
+M.fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Reputation with Darnassus increased by 5.")
+M.fire("CHAT_MSG_SYSTEM", "Reputation with Darnassus increased by 5.")
+check(#TravelLogCharDB.log == entries, "reputation gains not logged")
+local rep = ns.stats.reputation
+check(rep.Stormwind.gained == 325 and rep["Booty Bay"].gained == 100 and rep["Booty Bay"].lost == 600
+	and rep.Darnassus.gained == 5, "reputation per faction")
+check(ns.ReputationText(ns.stats, 3) == "Booty Bay +100 -600, Stormwind +325, Ironforge +10, 1 more", "reputation text")
+
 -- Mounts: the first ride on each, not later ones, not flights.
 M.spellNames[458], M.spellNames[472] = "Brown Horse", "Pinto"
 M.cast(458)
@@ -154,6 +169,9 @@ SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
 check(line == "Spells learned 3, new skills 2, skill points 57, talent points 0, flight paths found 1, mounts 2, pets tamed 0, new gear 0", "stats line: " .. tostring(line))
+line = nil
+for _, text in ipairs(M.out) do line = line or text:match("Reputation: .*") end
+check(line == "Reputation: Booty Bay +100 -600, Stormwind +325, Ironforge +10, Darnassus +5", "reputation saved: " .. tostring(line))
 check(TravelLogCharDB.mounts[458] and TravelLogCharDB.mounts[472], "mounts saved")
 
 -- Each milestone has a marker on the map; learned ones share one.
