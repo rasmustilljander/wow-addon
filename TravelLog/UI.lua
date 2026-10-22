@@ -137,6 +137,10 @@ ns.AddStat("Life", "PvP", function(st)
 	return ("%s duels won, %s lost, %s honorable kills, %s honor"):format(
 		Count(d.won), Count(d.lost), Count(st.honorKills), Count(st.honor))
 end)
+ns.AddStat("Life", "Battlegrounds", function(st)
+	local b = st.battlegrounds or {}
+	return ("%s won, %s lost, %s left"):format(Count(b.won), Count(b.lost), Count(b.left))
+end)
 ns.AddStat("Log", "Entries", function()
 	return ("%s in %s sessions"):format(Count(#ns.char.log), Count(#ns.char.sessions))
 end, true)

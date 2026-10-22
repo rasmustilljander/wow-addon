@@ -180,7 +180,7 @@ TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALEN
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
-UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED]]):gmatch("%S+") do
+UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -1195,6 +1195,16 @@ function GetCurrentArenaSeason() return M.pvpSeason end
 -- Global strings by name; the female forms are left out.
 function GetText(token) return _G[token] end
 function UnitSex() return 2 end
+
+-- Battlegrounds: your team (0 Horde, 1 Alliance) and your scoreboard line
+-- (M.pvpScore = { killingBlows, honorableKills, deaths, honorGained }); fire
+-- PVP_MATCH_COMPLETE(winner, duration) when the match ends.
+M.pvpFaction = 1
+function GetBattlefieldArenaFaction() return M.pvpFaction end
+C_PvP = {}
+function C_PvP.GetScoreInfoByPlayerGuid(guid)
+	return M.pvpScore and guid == UnitGUID("player") and M.pvpScore or nil
+end
 function JumpOrAscendStart() end
 
 -- World map: Blizzard's frames survive reloads, addon frames don't.

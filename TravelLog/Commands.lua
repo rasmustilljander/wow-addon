@@ -181,8 +181,10 @@ local function ShowStats(arg)
 		Count(ns.PlacesVisited(st)))
 	ns.Print("Came back: %s", ns.RevivalsText(st))
 	local duels = st.duels or {}
-	ns.Print("Duels won %s, lost %s, no winner %s; honorable kills %s, honor %s",
-		Count(duels.won), Count(duels.lost), Count(duels.interrupted), Count(st.honorKills), Count(st.honor))
+	local bgs = st.battlegrounds or {}
+	ns.Print("Duels won %s, lost %s, no winner %s; battlegrounds won %s, lost %s, drawn %s, left %s; honorable kills %s, honor %s",
+		Count(duels.won), Count(duels.lost), Count(duels.interrupted),
+		Count(bgs.won), Count(bgs.lost), Count(bgs.draw), Count(bgs.left), Count(st.honorKills), Count(st.honor))
 	local instances = st.instances or {}
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, screenshots %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
@@ -394,6 +396,23 @@ local DESCRIBE = {
 		text = ("%s (%s from %d"):format(text, e.rank > e.old and "up" or "down", e.old)
 		return (e.newSeason and "%s, new season)" or "%s)"):format(text)
 	end,
+	battleground = function(e)
+		local name = e.name or "a battleground"
+		local text = e.result == "won" and "Won " .. name
+			or e.result == "lost" and "Lost " .. name
+			or e.result == "draw" and "Draw in " .. name
+			or ("Left %s before the end"):format(name)
+		if e.seconds then text = ("%s after %s"):format(text, ns.Duration(e.seconds)) end
+		local score = {}
+		local function Add(n, one, many)
+			if n then score[#score + 1] = ("%d %s"):format(n, n == 1 and one or many) end
+		end
+		Add(e.killingBlows, "killing blow", "killing blows")
+		Add(e.honorableKills, "honorable kill", "honorable kills")
+		Add(e.deaths, "death", "deaths")
+		if e.honor then score[#score + 1] = ("+%d honor"):format(e.honor) end
+		return #score > 0 and ("%s: %s"):format(text, table.concat(score, ", ")) or text
+	end,
 	spell = function(e)
 		local text = "Learned " .. (e.name or e.id or "?")
 		if e.rank then text = ("%s (%s)"):format(text, e.rank) end
@@ -451,7 +470,7 @@ local LOG_GROUP = {
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
-	duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life",
+	duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
@@ -466,6 +485,7 @@ local LOG_LABEL = {
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
+	battleground = "Battleground",
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
