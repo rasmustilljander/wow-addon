@@ -1,7 +1,8 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, talent points spent, flight paths found,
--- reputation standings reached, the first ride on each mount, beasts tamed,
--- the first time you put on each piece of gear and Legacy Challenges earned.
+-- reputation standings reached and gained per faction, the first ride on each
+-- mount, beasts tamed, the first time you put on each piece of gear and
+-- Legacy Challenges earned.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -293,6 +294,31 @@ local function CheckStanding(text)
 	end
 	return true
 end
+
+-- Each gain or loss ("Reputation with Stormwind increased by 25.") only adds
+-- to the faction's totals: one entry per kill or quest would flood the log.
+-- Open-ended, so the bonus variants ("... (+2.5 bonus)") match too.
+local repPatterns = {}
+for _, entry in ipairs({ { "FACTION_STANDING_INCREASED", "gained" }, { "FACTION_STANDING_DECREASED", "lost" } }) do
+	if type(_G[entry[1]]) == "string" then
+		repPatterns[#repPatterns + 1] = { pattern = ns.ToPattern(_G[entry[1]], true), way = entry[2] }
+	end
+end
+
+ns.On("CHAT_MSG_COMBAT_FACTION_CHANGE", function(text)
+	text = ns.Clean(text)
+	if type(text) ~= "string" then
+		return
+	end
+	for _, rep in ipairs(repPatterns) do
+		local faction, amount = text:match(rep.pattern)
+		amount = tonumber(amount)
+		if amount then
+			ns.Add(amount, "reputation", faction, rep.way)
+			return
+		end
+	end
+end)
 
 --------------------------------------------------------------------------------
 -- Mounts: the first ride on each one

@@ -134,6 +134,38 @@ function ns.ChallengesText(st)
 	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
 end
 
+-- Reputation gained and lost per faction, most changed first: "Stormwind
+-- +800, Booty Bay +200 -600". With most, only that many factions and how
+-- many more.
+function ns.ReputationText(st, most)
+	local list = {}
+	for faction, t in pairs(st.reputation or {}) do
+		list[#list + 1] = { faction = faction, gained = t.gained or 0, lost = t.lost or 0 }
+	end
+	if #list == 0 then
+		return "none"
+	end
+	table.sort(list, function(a, b)
+		local x, y = a.gained + a.lost, b.gained + b.lost
+		if x ~= y then
+			return x > y
+		end
+		return a.faction < b.faction
+	end)
+	local parts = {}
+	for i, r in ipairs(list) do
+		if most and i > most then
+			parts[#parts + 1] = ("%d more"):format(#list - most)
+			break
+		end
+		local text = r.faction
+		if r.gained > 0 then text = text .. " +" .. Count(r.gained) end
+		if r.lost > 0 then text = text .. " -" .. Count(r.lost) end
+		parts[i] = text
+	end
+	return table.concat(parts, ", ")
+end
+
 -- Money gained or spent ("gained" or "spent") with its reasons, largest
 -- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
 function ns.MoneyByReason(st, way)
@@ -221,6 +253,7 @@ local function ShowStats(arg)
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
+	ns.Print("Reputation: %s", ns.ReputationText(st))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
