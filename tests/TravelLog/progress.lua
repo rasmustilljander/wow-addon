@@ -74,10 +74,29 @@ check(ns.stats.skills == 1 and ns.stats.skillups == 4, "skills and points counte
 
 -- A collapsed header hides its skills; showing them again isn't news.
 local swords = table.remove(M.skills, 2)
+M.skills[1].isCollapsed = true
 M.fire("SKILL_LINES_CHANGED")
+check(TravelLogCharDB.skills[43] == 26, "hidden skill kept")
+M.skills[1].isCollapsed = false
 table.insert(M.skills, 2, swords)
 M.fire("SKILL_LINES_CHANGED")
 check(count("skill") == 1, "skill shown again not logged")
+
+-- A dropped skill is forgotten, so learning it again is news, and so are its
+-- milestones below the old rank.
+M.skills[4].rank = 30
+M.fire("SKILL_LINES_CHANGED")
+check(count("skillup") == 2, "First Aid at 25")
+local firstAid = table.remove(M.skills, 4)
+M.fire("SKILL_LINES_CHANGED")
+check(TravelLogCharDB.skills[129] == nil and count("skill") == 1, "dropped skill forgotten, not logged")
+firstAid.rank = 1
+table.insert(M.skills, firstAid)
+M.fire("SKILL_LINES_CHANGED")
+check(count("skill") == 2 and last("skill").name == "First Aid", "relearned skill logged")
+firstAid.rank = 25
+M.fire("SKILL_LINES_CHANGED")
+check(count("skillup") == 3 and last("skillup").rank == 25, "milestone logged again")
 
 -- A flight path, shown on screen and in chat.
 M.units.npc = { name = "Thor", guid = "Creature-0-1-0-1-523-0000" }
@@ -128,13 +147,13 @@ check(count("standing") == 1, "secret chat skipped")
 
 -- After a reload the skills are still known, so nothing is logged again.
 ns = M.Reload()
-check(TravelLogCharDB.skills[129] == 1 and TravelLogCharDB.skills[43] == 26, "skills saved")
-check(count("skill") == 1 and count("skillup") == 1, "nothing new after reload")
+check(TravelLogCharDB.skills[129] == 25 and TravelLogCharDB.skills[43] == 26, "skills saved")
+check(count("skill") == 2 and count("skillup") == 3, "nothing new after reload")
 M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
-check(line == "Spells learned 3, new skills 1, skill points 4, talent points 0, flight paths found 1, mounts 2, pets tamed 0, new gear 0", "stats line: " .. tostring(line))
+check(line == "Spells learned 3, new skills 2, skill points 57, talent points 0, flight paths found 1, mounts 2, pets tamed 0, new gear 0", "stats line: " .. tostring(line))
 check(TravelLogCharDB.mounts[458] and TravelLogCharDB.mounts[472], "mounts saved")
 
 -- Each milestone has a marker on the map; learned ones share one.

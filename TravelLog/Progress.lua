@@ -105,21 +105,26 @@ end
 local SKILL_STEP = 25
 
 -- Ranks are kept in the character file, so a skill hidden under a collapsed
--- header and shown again isn't taken for a new one. The first scan only
--- remembers what you already have.
+-- header and shown again isn't taken for a new one. A skill missing from a
+-- scan with every header open was dropped, and is forgotten so learning it
+-- again counts. The first scan only remembers what you already have.
 local function CheckSkills()
 	if not (C_SkillInfo and C_SkillInfo.GetNumSkillLines) then
 		return
 	end
 	local known = ns.char.skills
 	local skills = known or {}
-	local any
+	local any, collapsed, seen = false, false, {}
 	for i = 1, C_SkillInfo.GetNumSkillLines() do
 		local info = C_SkillInfo.GetSkillLineInfo(i)
+		if info and info.isHeader and ns.Clean(info.isCollapsed) then
+			collapsed = true
+		end
 		local id = info and not info.isHeader and ns.Clean(info.skillID)
 		local rank = id and ns.Clean(info.rank)
 		if rank then
 			any = true
+			seen[id] = true
 			local old = skills[id]
 			if not old then
 				if known then
@@ -133,6 +138,13 @@ local function CheckSkills()
 				end
 			end
 			skills[id] = rank
+		end
+	end
+	if any and not collapsed then
+		for id in pairs(skills) do
+			if not seen[id] then
+				skills[id] = nil
+			end
 		end
 	end
 	if any then

@@ -818,13 +818,14 @@ M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
 M.spellRanks = {}
 function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end
--- Skill lines as the skills frame lists them: { skillID, name, rank, isHeader }.
+-- Skill lines as the skills frame lists them: { skillID, name, rank, isHeader,
+-- isCollapsed }. A collapsed header's skills are left out of the list.
 M.skills = {}
 C_SkillInfo = {}
 function C_SkillInfo.GetNumSkillLines() return #M.skills end
 function C_SkillInfo.GetSkillLineInfo(i)
 	local s = M.skills[i]
-	return s and { skillID = s.skillID or 0, name = s.name, rank = s.rank or 0, isHeader = s.isHeader or false, maxRank = s.maxRank or 0 }
+	return s and { skillID = s.skillID or 0, name = s.name, rank = s.rank or 0, isHeader = s.isHeader or false, isCollapsed = s.isCollapsed or false, maxRank = s.maxRank or 0 }
 end
 -- Talents, as Forever's trait system: M.talentConfig is the active loadout's
 -- ID (nil before the client has one) and M.loadouts[configID][nodeID] =
