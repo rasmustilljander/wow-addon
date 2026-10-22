@@ -442,15 +442,17 @@ end
 --------------------------------------------------------------------------------
 
 -- Left open-ended so rested and group bonus variants match too.
-local killPattern = type(COMBATLOG_XPGAIN_FIRSTPERSON) == "string"
-	and ns.ToPattern(COMBATLOG_XPGAIN_FIRSTPERSON:gsub("%.$", ""), true)
+local killPattern, killOrder
+if type(COMBATLOG_XPGAIN_FIRSTPERSON) == "string" then
+	killPattern, killOrder = ns.ToPattern(COMBATLOG_XPGAIN_FIRSTPERSON:gsub("%.$", ""), true)
+end
 
 ns.On("CHAT_MSG_COMBAT_XP_GAIN", function(text)
 	text = ns.Clean(text)
 	if not killPattern or not text then
 		return
 	end
-	local name, xp = text:match(killPattern)
+	local name, xp = ns.MatchPattern(text, killPattern, killOrder)
 	if not name then
 		return
 	end
@@ -466,7 +468,8 @@ end)
 local discoveryPatterns = {}
 for _, name in ipairs({ "ERR_ZONE_EXPLORED_XP", "ERR_ZONE_EXPLORED" }) do
 	if type(_G[name]) == "string" then
-		discoveryPatterns[#discoveryPatterns + 1] = ns.ToPattern(_G[name], true)
+		local pattern, order = ns.ToPattern(_G[name], true)
+		discoveryPatterns[#discoveryPatterns + 1] = { pattern = pattern, order = order }
 	end
 end
 
@@ -477,8 +480,8 @@ local function CheckDiscovery(text)
 	if type(text) ~= "string" then
 		return
 	end
-	for _, pattern in ipairs(discoveryPatterns) do
-		local place, xp = text:match(pattern)
+	for _, p in ipairs(discoveryPatterns) do
+		local place, xp = ns.MatchPattern(text, p.pattern, p.order)
 		if place then
 			-- The same message can arrive both as a UI message and in chat.
 			if place ~= lastDiscovery or not ns.Recent("discovery", 5) then

@@ -18,7 +18,6 @@ local function Me(name)
 end
 
 -- System lines about you. Others' arrivals and departures aren't news.
--- The %s are taken in order, as they are in English.
 local LINES = {
 	{ "ERR_GUILD_ACCEPT", function() return { how = "joined" } end },
 	{ "ERR_GUILD_FOUNDER_S", function() return { how = "joined", founder = true } end },
@@ -36,7 +35,8 @@ local lines = {}
 for _, entry in ipairs(LINES) do
 	local format = _G[entry[1]]
 	if type(format) == "string" then
-		lines[#lines + 1] = { pattern = ns.ToPattern(format), fn = entry[2] }
+		local pattern, order = ns.ToPattern(format)
+		lines[#lines + 1] = { pattern = pattern, order = order, fn = entry[2] }
 	end
 end
 
@@ -138,9 +138,9 @@ ns.On("CHAT_MSG_SYSTEM", function(text)
 	end
 	for _, line in ipairs(lines) do
 		-- A line without %s gives back the whole match, which is ignored.
-		local a, b = text:match(line.pattern)
+		local a, b, c = ns.MatchPattern(text, line.pattern, line.order)
 		if a then
-			local r = line.fn(a, b)
+			local r = line.fn(a, b, c)
 			if r then
 				reason = r
 				ns.Mark("guild")

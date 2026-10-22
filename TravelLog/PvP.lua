@@ -62,11 +62,8 @@ local results = {}
 for _, entry in ipairs({ { "DUEL_WINNER_KNOCKOUT", false }, { "DUEL_WINNER_RETREAT", true } }) do
 	local format = _G[entry[1]]
 	if type(format) == "string" then
-		local order = {}
-		for n in format:gmatch("%%(%d)%$") do
-			order[#order + 1] = tonumber(n)
-		end
-		results[#results + 1] = { pattern = ns.ToPattern(format), order = order, fled = entry[2] }
+		local pattern, order = ns.ToPattern(format)
+		results[#results + 1] = { pattern = pattern, order = order, fled = entry[2] }
 	end
 end
 
@@ -76,11 +73,8 @@ ns.On("CHAT_MSG_SYSTEM", function(text)
 		return
 	end
 	for _, r in ipairs(results) do
-		local a, b = text:match(r.pattern)
-		if a then
-			local names = {}
-			names[r.order[1] or 1], names[r.order[2] or 2] = a, b
-			local winner, loser = names[1], names[2]
+		local winner, loser = ns.MatchPattern(text, r.pattern, r.order)
+		if winner then
 			if ns.IsMe(winner) then
 				LogDuel("won", loser, r.fled)
 			elseif ns.IsMe(loser) then
@@ -114,11 +108,13 @@ end)
 -- Open-ended so the bonus variants match too.
 local function Open(name)
 	local format = _G[name]
-	return type(format) == "string" and ns.ToPattern(format:gsub("%.$", ""), true)
+	if type(format) == "string" then
+		return ns.ToPattern(format:gsub("%.$", ""), true)
+	end
 end
-local killPattern = Open("COMBATLOG_HONORGAIN")
-local noRankPattern = Open("COMBATLOG_HONORGAIN_NO_RANK")
-local awardPattern = Open("COMBATLOG_HONORAWARD")
+local killPattern, killOrder = Open("COMBATLOG_HONORGAIN")
+local noRankPattern, noRankOrder = Open("COMBATLOG_HONORGAIN_NO_RANK")
+local awardPattern, awardOrder = Open("COMBATLOG_HONORAWARD")
 
 -- Kills the server counted minus kills read from chat, for kills whose chat
 -- line was hidden (in battlegrounds, say). Settled a moment after the count
@@ -141,17 +137,17 @@ ns.On("CHAT_MSG_COMBAT_HONOR_GAIN", function(text)
 	end
 	local name, rank, honor
 	if killPattern then
-		name, rank, honor = text:match(killPattern)
+		name, rank, honor = ns.MatchPattern(text, killPattern, killOrder)
 	end
 	if not name and noRankPattern then
-		name, honor = text:match(noRankPattern)
+		name, honor = ns.MatchPattern(text, noRankPattern, noRankOrder)
 	end
 	if name then
 		unexplained = unexplained - 1
 		HonorKill({ name = name, rank = rank, honor = tonumber(honor) })
 		return
 	end
-	local award = awardPattern and tonumber(text:match(awardPattern))
+	local award = awardPattern and tonumber((ns.MatchPattern(text, awardPattern, awardOrder)))
 	if award then
 		ns.Log("honor", { honor = award })
 		ns.Add(award, "honor")

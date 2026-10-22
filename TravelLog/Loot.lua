@@ -170,13 +170,34 @@ end
 --------------------------------------------------------------------------------
 
 -- Turns a localized format like "You receive loot: %sx%d." into a Lua pattern.
+-- Numbered placeholders can appear in a different display order in some
+-- locales, so keep their argument numbers alongside the pattern.
 local function ToPattern(format, open)
+	local order = {}
+	for position in format:gmatch("%%(%d+)%$[sd]") do
+		order[#order + 1] = tonumber(position)
+	end
 	local pattern = format:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
-	pattern = pattern:gsub("%%%%%d%%%$s", "(.+)"):gsub("%%%%%d%%%$d", "(%%d+)")
+	pattern = pattern:gsub("%%%%%d+%%%$s", "(.+)"):gsub("%%%%%d+%%%$d", "(%%d+)")
 	pattern = pattern:gsub("%%%%s", "(.+)"):gsub("%%%%d", "(%%d+)")
-	return "^" .. pattern .. (open and "" or "$")
+	return "^" .. pattern .. (open and "" or "$"), order[1] and order or nil
 end
 ns.ToPattern = ToPattern
+
+-- Returns captures in format-argument order, rather than the order in which
+-- numbered placeholders happen to be displayed.
+function ns.MatchPattern(text, pattern, order)
+	local captures = { text:match(pattern) }
+	if not captures[1] or not order then
+		return unpack(captures)
+	end
+	local reordered, count = {}, 0
+	for i, position in ipairs(order) do
+		reordered[position] = captures[i]
+		count = math.max(count, position)
+	end
+	return unpack(reordered, 1, count)
+end
 
 -- Multiple-item variants first: the single variant would also match them.
 local RECEIVE = {
@@ -191,7 +212,8 @@ local patterns = {}
 for _, entry in ipairs(RECEIVE) do
 	local format = _G[entry[1]]
 	if type(format) == "string" then
-		patterns[#patterns + 1] = { pattern = ToPattern(format), how = entry[2] }
+		local pattern, order = ToPattern(format)
+		patterns[#patterns + 1] = { pattern = pattern, order = order, how = entry[2] }
 	end
 end
 
@@ -236,7 +258,7 @@ ns.On("CHAT_MSG_LOOT", function(text)
 		return
 	end
 	for _, p in ipairs(patterns) do
-		local item, count = text:match(p.pattern)
+		local item, count = ns.MatchPattern(text, p.pattern, p.order)
 		if item then
 			-- Loot-window items are already recorded with their source, and
 			-- vendor purchases are recorded by the vendor module.

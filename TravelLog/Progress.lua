@@ -278,11 +278,14 @@ end)
 -- Reputation ("You are now Friendly with Stormwind.")
 --------------------------------------------------------------------------------
 
-local standingPattern = type(FACTION_STANDING_CHANGED) == "string" and ns.ToPattern(FACTION_STANDING_CHANGED)
+local standingPattern, standingOrder
+if type(FACTION_STANDING_CHANGED) == "string" then
+	standingPattern, standingOrder = ns.ToPattern(FACTION_STANDING_CHANGED)
+end
 local lastStanding
 
 local function CheckStanding(text)
-	local standing, faction = text:match(standingPattern)
+	local standing, faction = ns.MatchPattern(text, standingPattern, standingOrder)
 	if not standing then
 		return
 	end
@@ -301,7 +304,8 @@ end
 local repPatterns = {}
 for _, entry in ipairs({ { "FACTION_STANDING_INCREASED", "gained" }, { "FACTION_STANDING_DECREASED", "lost" } }) do
 	if type(_G[entry[1]]) == "string" then
-		repPatterns[#repPatterns + 1] = { pattern = ns.ToPattern(_G[entry[1]], true), way = entry[2] }
+		local pattern, order = ns.ToPattern(_G[entry[1]], true)
+		repPatterns[#repPatterns + 1] = { pattern = pattern, order = order, way = entry[2] }
 	end
 end
 
@@ -311,7 +315,7 @@ ns.On("CHAT_MSG_COMBAT_FACTION_CHANGE", function(text)
 		return
 	end
 	for _, rep in ipairs(repPatterns) do
-		local faction, amount = text:match(rep.pattern)
+		local faction, amount = ns.MatchPattern(text, rep.pattern, rep.order)
 		amount = tonumber(amount)
 		if amount then
 			ns.Add(amount, "reputation", faction, rep.way)
