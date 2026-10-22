@@ -125,6 +125,7 @@ ERR_LEARN_RECIPE_S = "You have learned how to create a new item: %s."
 ERR_NEWTAXIPATH = "New flight path discovered!"
 FACTION_STANDING_CHANGED = "You are now %s with %s."
 ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
+ERR_TRADE_COMPLETE = "Trade complete."
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17,
@@ -161,7 +162,7 @@ PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUN
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
-GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG]]):gmatch("%S+") do
+GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -755,26 +756,51 @@ function C_Container.GetContainerItemInfo(bag, slot)
 	}
 end
 -- The cursor holds a bag slot's item (M.cursorItem = "bag:slot", which stays
--- locked) until it's put down, cleared or deleted.
+-- locked; M.cursorSplit items of it after a split) or a worn item
+-- ("equip:slot") until it's put down, cleared or deleted.
 function C_Container.PickupContainerItem(bag, slot)
 	local key = bag .. ":" .. slot
 	if M.cursorItem then
 		M.bags[M.cursorItem], M.bags[key] = M.bags[key], M.bags[M.cursorItem]
-		M.cursorItem = nil
+		M.cursorItem, M.cursorSplit = nil, nil
 	elseif M.bags[key] then
 		M.cursorItem = key
 	end
 end
+function C_Container.SplitContainerItem(bag, slot, amount)
+	local e = BagItem(bag .. ":" .. slot)
+	if not M.cursorItem and e and amount < (e.count or 1) then
+		M.cursorItem, M.cursorSplit = bag .. ":" .. slot, amount
+	end
+end
+function PickupInventoryItem(slot)
+	if not M.cursorItem and M.equipped[slot] then M.cursorItem = "equip:" .. slot end
+end
+local function CursorLink()
+	local slot = M.cursorItem:match("^equip:(%d+)")
+	return slot and M.equipped[tonumber(slot)] or BagItem(M.cursorItem).link
+end
 function GetCursorInfo()
 	if M.cursorItem then
-		local link = BagItem(M.cursorItem).link
+		local link = CursorLink()
 		return "item", LinkID(link), link
 	end
 end
 function CursorHasItem() return M.cursorItem ~= nil end
-function ClearCursor() M.cursorItem = nil end
+function ClearCursor() M.cursorItem, M.cursorSplit = nil, nil end
 function DeleteCursorItem()
-	if M.cursorItem then M.bags[M.cursorItem], M.cursorItem = nil, nil end
+	local key = M.cursorItem
+	if not key then return end
+	local slot = key:match("^equip:(%d+)")
+	if slot then
+		M.equipped[tonumber(slot)] = nil
+	elseif M.cursorSplit then
+		local e = BagItem(key)
+		M.bags[key] = { link = e.link, count = e.count - M.cursorSplit }
+	else
+		M.bags[key] = nil
+	end
+	M.cursorItem, M.cursorSplit = nil, nil
 end
 -- Equipped items: M.equipped[inventorySlot] = item link.
 INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED = 1, 19
@@ -794,6 +820,17 @@ function C_Item.GetItemInfo(item)
 	return link:match("%[(.-)%]"), link, it.quality or 1, 1, 1, "Junk", "Junk", 20, "", it.icon or 134400,
 		it.price or 0, 15, 0, 0, 0, nil, false, ""
 end
+-- Item locations: only bag slots.
+ItemLocation = {}
+local ItemLocationMixin = {}
+ItemLocationMixin.__index = ItemLocationMixin
+function ItemLocationMixin:GetBagAndSlot() return self.bagID, self.slotIndex end
+function ItemLocation:CreateFromBagAndSlot(bag, slot)
+	return setmetatable({ bagID = bag, slotIndex = slot }, ItemLocationMixin)
+end
+function C_Item.DoesItemExist(loc) return BagItem(loc.bagID .. ":" .. loc.slotIndex) ~= nil end
+function C_Item.GetItemLink(loc) local e = BagItem(loc.bagID .. ":" .. loc.slotIndex); return e and e.link end
+function C_Item.GetStackCount(loc) return BagItem(loc.bagID .. ":" .. loc.slotIndex).count or 1 end
 function C_Item.GetItemInfoInstant(item)
 	local id = tonumber(item) or LinkID(item)
 	return id, "Junk", "Junk", "", (M.items[id] or {}).icon or 134400, 15, 0
@@ -852,6 +889,17 @@ function GetSendMailItem(i)
 end
 function SendMail(to) M.sentMail[#M.sentMail + 1] = { to = to, items = M.sendItems } end
 
+-- Trade. M.tradeItems[i] = { link, count } is what you've put in trade slot
+-- i (7 is "will not be traded"). Completing it is a UI_INFO_MESSAGE.
+M.tradeItems = {}
+function GetTradePlayerItemInfo(i)
+	local it = M.tradeItems[i]
+	if not it then return nil end
+	local id = LinkID(it.link)
+	return it.link:match("%[(.-)%]"), 134400, it.count or 1, (M.items[id] or {}).quality or 1, nil, false, false, id
+end
+function GetTradePlayerItemLink(i) return M.tradeItems[i] and M.tradeItems[i].link end
+
 -- Auction house. M.ownedAuctions = { OwnedAuctionInfo, ... } is what
 -- GetOwnedAuctions returns after QueryOwnedAuctions, which counts its calls
 -- in M.ownedQueries.
@@ -860,6 +908,21 @@ C_AuctionHouse = {}
 function C_AuctionHouse.QueryOwnedAuctions(sorts) assert(type(sorts) == "table"); M.ownedQueries = M.ownedQueries + 1 end
 function C_AuctionHouse.HasFullOwnedAuctionResults() return true end
 function C_AuctionHouse.GetOwnedAuctions() return M.ownedAuctions end
+-- Posting: what was posted goes in M.posts ({ fn, item, duration, quantity,
+-- ... }); M.postWarning makes a post need confirming. The auction exists
+-- once the test fires AUCTION_HOUSE_AUCTION_CREATED.
+M.posts = {}
+local function Poster(fn, confirm)
+	return function(item, duration, quantity, ...)
+		assert(getmetatable(item) == ItemLocationMixin and type(duration) == "number" and type(quantity) == "number")
+		M.posts[#M.posts + 1] = { fn = fn, item = item, duration = duration, quantity = quantity, ... }
+		return not confirm and M.postWarning == true
+	end
+end
+C_AuctionHouse.PostItem = Poster("PostItem")
+C_AuctionHouse.PostCommodity = Poster("PostCommodity")
+C_AuctionHouse.ConfirmPostItem = Poster("ConfirmPostItem", true)
+C_AuctionHouse.ConfirmPostCommodity = Poster("ConfirmPostCommodity", true)
 
 -- Merchant: M.merchantItems[i] is C_MerchantFrame.GetItemInfo's table plus
 -- the item's link and cost: { { count, link = ..., currency = ... } }, what
@@ -1151,7 +1214,7 @@ function M.Logout()
 	M.canvas.children, Minimap.children = nil, nil
 	UIParent.children = { Minimap }
 	for _, name in ipairs(namedFrames) do _G[name] = nil end
-	namedFrames, UISpecialFrames, M.focus, M.cursorItem = {}, {}, nil, nil
+	namedFrames, UISpecialFrames, M.focus, M.cursorItem, M.cursorSplit = {}, {}, nil, nil, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
 	M.chatFilters, M.prefixes = {}, {}

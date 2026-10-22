@@ -13,6 +13,7 @@ Archive.lua
 Travel.lua
 Loot.lua
 Vendor.lua
+Outgoing.lua
 Money.lua
 Life.lua
 Progress.lua
