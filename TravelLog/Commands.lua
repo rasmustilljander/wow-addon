@@ -169,8 +169,9 @@ local function ShowStats(arg)
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
 
 	local quests = st.quests or {}
-	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
-		ns.DeathsText(st), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited(st)))
+	ns.Print("Deaths %s, kills %s, quests done %s, failed %s, flights %s, places visited %s",
+		ns.DeathsText(st), Count(st.kills), Count(quests.completed), Count(quests.failed), Count(st.flights),
+		Count(ns.PlacesVisited(st)))
 	ns.Print("Came back: %s", ns.RevivalsText(st))
 	local instances = st.instances or {}
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
@@ -340,6 +341,10 @@ local DESCRIBE = {
 	quest = function(e) return ("Accepted quest: %s"):format(e.title or e.id) end,
 	questdone = function(e) return ("Completed quest: %s"):format(e.title or e.id) end,
 	questabandon = function(e) return ("Abandoned quest: %s"):format(e.title or e.id) end,
+	questfail = function(e)
+		local text = ("Failed quest: %s"):format(e.title or e.id)
+		return e.reason == "time" and text .. " (ran out of time)" or text
+	end,
 	kill = function(e) return ("Killed %s (+%s xp)"):format(e.name, e.xp or "?") end,
 	discover = function(e) return ("Discovered %s"):format(e.place) end,
 	spell = function(e)
@@ -376,7 +381,7 @@ local LOG_GROUP = {
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
-	questdone = "Life", questabandon = "Life", kill = "Life", discover = "Life",
+	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress",
 }
@@ -388,7 +393,8 @@ local LOG_LABEL = {
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
 	instanceleave = "Instance left", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
-	questdone = "Quest completed", questabandon = "Quest abandoned", kill = "XP kill", discover = "Discovery", spell = "Spell",
+	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
+	discover = "Discovery", spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount",
 }

@@ -62,7 +62,7 @@ function ns.SessionSummaries()
 			levelEnd = current and UnitLevel("player") or s.levelEnd,
 			money = moneyEnd and s.money and moneyEnd - s.money,
 			xp = s.xp,
-			quests = 0, kills = 0, deaths = 0,
+			quests = 0, failed = 0, kills = 0, deaths = 0,
 		}
 	end
 
@@ -76,6 +76,8 @@ function ns.SessionSummaries()
 		if sum and (not sum.stop or e.time <= sum.stop) then
 			if e.type == "questdone" then
 				sum.quests = sum.quests + 1
+			elseif e.type == "questfail" then
+				sum.failed = sum.failed + 1
 			elseif e.type == "kill" then
 				sum.kills = sum.kills + 1
 			elseif e.type == "death" then
@@ -135,10 +137,11 @@ local function Gains(sum)
 	return table.concat(parts, ", ")
 end
 
--- "5 quests, 40 XP kills, 1 death"
+-- "5 quests, 1 failed quest, 40 XP kills, 1 death"
 local function Happenings(sum)
 	local parts = {}
 	if sum.quests > 0 then parts[#parts + 1] = Plural(sum.quests, "quest") end
+	if sum.failed > 0 then parts[#parts + 1] = Plural(sum.failed, "failed quest") end
 	if sum.kills > 0 then parts[#parts + 1] = Plural(sum.kills, "XP kill") end
 	if sum.deaths > 0 then parts[#parts + 1] = Plural(sum.deaths, "death") end
 	return table.concat(parts, ", ")

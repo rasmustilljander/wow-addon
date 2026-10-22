@@ -22,7 +22,7 @@ M = {
 	combat = false, indoors = false, secrets = {}, viewMap = 1429, facing = 0, minimapRadius = 200,
 	auras = {},
 	loot = {}, buyback = {}, merchantItems = {}, units = {}, taxiNodes = {},
-	quests = {}, bind = "Goldshire", bags = {}, repairCost = 0, canRepair = false,
+	quests = {}, questLog = {}, failedQuests = {}, questTimers = {}, bind = "Goldshire", bags = {}, repairCost = 0, canRepair = false,
 	installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }, -- addon folders the fake client knows about
 	disabled = {},                 -- addon name -> true
 }
@@ -157,7 +157,7 @@ TRADE_SHOW TRADE_CLOSED AUCTION_HOUSE_SHOW AUCTION_HOUSE_CLOSED BANKFRAME_OPENED
 UNIT_SPELLCAST_SENT UNIT_SPELLCAST_SUCCEEDED HEARTHSTONE_BOUND LOOT_READY LOOT_OPENED LOOT_SLOT_CLEARED LOOT_CLOSED
 LOOT_ITEM_ROLL_WON CHAT_MSG_LOOT CHAT_MSG_COMBAT_XP_GAIN CHAT_MSG_SYSTEM UI_INFO_MESSAGE BAG_UPDATE_DELAYED
 UPDATE_INVENTORY_DURABILITY PLAYER_MONEY PLAYER_DEAD PLAYER_ALIVE PLAYER_UNGHOST PLAYER_LEVEL_UP QUEST_ACCEPTED
-QUEST_TURNED_IN QUEST_REMOVED PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
+QUEST_TURNED_IN QUEST_REMOVED QUEST_LOG_UPDATE PARTY_KILL UNIT_DIED NAME_PLATE_UNIT_ADDED PLAYER_TARGET_CHANGED UPDATE_MOUSEOVER_UNIT CVAR_UPDATE
 PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
@@ -756,6 +756,27 @@ function C_QuestLog.GetSelectedQuest() return M.selectedQuest or 0 end
 function C_QuestLog.SetAbandonQuest() M.abandonQuest = M.selectedQuest end
 function C_QuestLog.GetAbandonQuest() return M.abandonQuest or 0 end
 function C_QuestLog.AbandonQuest() M.abandonQuest = nil end
+-- The quest log as shown: M.questLog lists quest IDs and header names (a
+-- collapsed header's quests left out). M.failedQuests[id] marks a failed
+-- quest, M.questTimers[id] = { total = seconds, started = GetTime() } a timed one.
+function C_QuestLog.GetNumQuestLogEntries()
+	local quests = 0
+	for _, entry in ipairs(M.questLog) do
+		if type(entry) == "number" then quests = quests + 1 end
+	end
+	return #M.questLog, quests
+end
+function C_QuestLog.GetQuestIDForLogIndex(i)
+	local entry = M.questLog[i]
+	return type(entry) == "number" and entry or nil
+end
+function C_QuestLog.IsFailed(id) return M.failedQuests[id] == true end
+function C_QuestLog.GetTimeAllowed(id)
+	local timer = M.questTimers[id]
+	if timer then
+		return timer.total, math.min(M.gametime - timer.started, timer.total)
+	end
+end
 C_Spell = {}
 M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball", [921] = "Pick Pocket" }
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
