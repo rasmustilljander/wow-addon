@@ -195,11 +195,12 @@ end
 
 -- Mobs we've looked at recently, by name, so a kill message ("Kobold
 -- Vermin dies, you gain 40 experience.") can be matched to a level.
+local REMEMBER_FOR = 60
 local mobs = {}
 function ns.Remember(name, mobLevel, elite)
 	name = ns.Clean(name)
 	if name then
-		mobs[name] = { level = mobLevel, elite = elite }
+		mobs[name] = { level = mobLevel, elite = elite, seen = GetTime() }
 	end
 end
 
@@ -266,7 +267,8 @@ local function OnKill(text)
 		ns.RememberUnit("target")
 	end
 	local mob = mobs[name]
-	if not mob then
+	if not mob or GetTime() - mob.seen > REMEMBER_FOR then
+		mobs[name] = nil
 		return
 	end
 	-- Save an unbuffed value so food or sleeping-bag buffs can come and go

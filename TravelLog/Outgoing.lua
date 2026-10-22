@@ -157,11 +157,16 @@ hooksecurefunc("ClearCursor", function()
 end)
 
 hooksecurefunc("DeleteCursorItem", function()
-	if held and ns.char then
+	-- Protected items leave the cursor in place while Blizzard asks for
+	-- confirmation. The accepted second call clears it; a cancellation goes
+	-- through ClearCursor above.
+	if held and not GetCursorInfo() and ns.char then
 		ns.Log("destroy", held)
 		ns.Add(held.count, "given", "destroy")
 	end
-	held = nil
+	if not GetCursorInfo() then
+		held = nil
+	end
 end)
 
 --------------------------------------------------------------------------------

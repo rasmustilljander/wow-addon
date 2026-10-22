@@ -102,8 +102,15 @@ M.script(mb, "OnEnter")
 check(Plain(GameTooltip.lines[1]) == "JunkToss" and Plain(GameTooltip.lines[2]) == "Next: [Linen Cloth]x3 (39c)", "tooltip names the next: " .. Plain(GameTooltip.lines[2]))
 check(GameTooltip.lines[3]:find("Right%-click to throw"), "tooltip help")
 M.out = {}
+M.deleteWarning = true
 mb:Click("RightButton")
-check(M.bags["0:3"] == nil and Plain(M.out[1]) == "JunkToss Threw away [Linen Cloth]x3 (39c).", "right-click throws")
+check(M.bags["0:3"] and M.cursorItem == "0:3" and #M.out == 0, "confirmation does not report success")
+ClearCursor()
+check(M.bags["0:3"] and #M.out == 0, "cancelled confirmation keeps the item")
+mb:Click("RightButton")
+DeleteCursorItem()
+check(M.bags["0:3"] == nil and Plain(M.out[1]) == "JunkToss Threw away [Linen Cloth]x3 (39c).", "accepted confirmation reports success")
+M.deleteWarning = nil
 check(Plain(GameTooltip.lines[2]) == "Next: [Cracked Claw] (1s 50c)", "tooltip updated: " .. Plain(GameTooltip.lines[2]))
 M.script(mb, "OnLeave")
 check(not GameTooltip.shown, "tooltip hidden")

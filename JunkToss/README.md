@@ -13,7 +13,7 @@ Throws away the least valuable grey in your bags, one stack per right-click on i
 JunkToss Threw away [Rat Tail]x5 (10c).
 ```
 
-There's no confirmation, also for allowlisted items. It doesn't throw anything while your cursor holds something, and skips items the client hasn't loaded a price for yet.
+Poor items have no confirmation. For an allowlisted item of higher quality, accept the game's confirmation before JunkToss reports it as thrown away. It doesn't throw anything while your cursor holds something, and skips items the client hasn't loaded a price for yet.
 
 ## Commands
 

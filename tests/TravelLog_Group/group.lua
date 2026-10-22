@@ -58,6 +58,10 @@ M.secrets["Bob"] = true
 Roster(BOB)
 check(TravelLogGroupDB.open["Bob-StormRage"], "a secret name keeps groups")
 M.secrets["Bob"] = nil
+M.group, M.units.party1 = { "party1" }, nil
+M.fire("GROUP_ROSTER_UPDATE")
+check(TravelLogGroupDB.open["Bob-StormRage"], "a missing roster unit keeps groups")
+Roster(BOB)
 
 -- Later, a raid with both again.
 M.advance(1200)

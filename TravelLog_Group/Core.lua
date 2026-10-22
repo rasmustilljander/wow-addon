@@ -223,9 +223,11 @@ local function Roster()
 	end
 	local raid = IsInRaid()
 	local prefix = raid and "raid" or "party"
+	local seen = 0
 	for i = 1, raid and n or n - 1 do
 		local unit = prefix .. i
 		if UnitExists(unit) and not UnitIsUnit(unit, "player") then
+			seen = seen + 1
 			local name, realm = UnitName(unit)
 			name, realm = ns.Clean(name), ns.Clean(realm)
 			if not name or name == "" or name == UNKNOWNOBJECT then
@@ -241,6 +243,11 @@ local function Roster()
 				}
 			end
 		end
+	end
+	-- GetNumGroupMembers includes the player. Unit tokens can lag behind a
+	-- roster update; until every other member has a token, nobody is gone.
+	if seen < n - 1 then
+		complete = false
 	end
 	return members, complete
 end

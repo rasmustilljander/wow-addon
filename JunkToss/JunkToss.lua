@@ -117,6 +117,22 @@ function ns.Describe(item)
 	return item.link .. (item.count > 1 and "x" .. item.count or "") .. " (" .. ns.Money(item.value) .. ")"
 end
 
+local deleting
+
+-- Blizzard calls DeleteCursorItem again after the player accepts its dialog
+-- for a protected item. Report success only after that call clears the cursor.
+hooksecurefunc("DeleteCursorItem", function()
+	if deleting and not GetCursorInfo() then
+		local item = deleting
+		deleting = nil
+		ns.Print("Threw away %s.", ns.Describe(item))
+		ns.Update()
+	end
+end)
+hooksecurefunc("ClearCursor", function()
+	deleting = nil
+end)
+
 -- Throws away the cheapest stack and returns it, or nil if nothing was thrown.
 function ns.Throw()
 	if GetCursorInfo() then
@@ -135,10 +151,9 @@ function ns.Throw()
 		ns.Print("Couldn't pick up %s.", item.link)
 		return nil
 	end
+	deleting = item
 	DeleteCursorItem()
-	ns.Print("Threw away %s.", ns.Describe(item))
-	ns.Update()
-	return item
+	return not GetCursorInfo() and item or nil
 end
 
 --------------------------------------------------------------------------------

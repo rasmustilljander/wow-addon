@@ -173,10 +173,15 @@ ns.pending = {}       -- log entries arriving after you asked for them
 ns.logRefused = {}    -- players who said no to your last log request
 ns.nodesRefused = {}  -- followed players who said no to sharing nodes, told once
 local pending = ns.pending
+local nodeBatches = {} -- key -> highest timestamp in the requested batch
 
 function ns.RequestNodes(key)
 	local peer = ns.db.peers[key]
-	ns.Send(ns.db.follow[key], "NODES " .. (peer and peer.nodesSince or 0))
+	local since = peer and peer.nodesSince or 0
+	-- Timestamps have one-second resolution, so include the watermark second;
+	-- records overwrite by map/index and are safe to receive again.
+	nodeBatches[key] = since
+	ns.Send(ns.db.follow[key], "NODES " .. math.max(since - 1, 0))
 end
 
 function ns.RequestLog(name, key, n)
@@ -196,6 +201,7 @@ end
 -- Stops, and drops their nodes.
 function ns.Unfollow(key)
 	ns.db.follow[key] = nil
+	nodeBatches[key] = nil
 	if ns.db.peers[key] then
 		ns.db.peers[key].nodes, ns.db.peers[key].nodesSince = {}, nil
 	end
@@ -217,10 +223,13 @@ handlers.NO = function(sender, key, what)
 		pending[key], ns.logRefused[key] = nil, true
 		ns.Changed()
 		tl.Print("%s hasn't allowed you to see their log.", sender)
-	elseif what == "nodes" and ns.db.follow[key] and not ns.nodesRefused[key] then
-		ns.nodesRefused[key] = true
-		ns.Changed()
-		tl.Print("%s doesn't share their nodes with you.", sender)
+	elseif what == "nodes" and ns.db.follow[key] then
+		nodeBatches[key] = nil
+		if not ns.nodesRefused[key] then
+			ns.nodesRefused[key] = true
+			ns.Changed()
+			tl.Print("%s doesn't share their nodes with you.", sender)
+		end
 	end
 end
 
@@ -237,7 +246,11 @@ handlers.N = function(sender, key, arg)
 			peer.nodes[map] = peer.nodes[map] or {}
 			peer.nodes[map][index] = { kind = kind, name = name ~= "" and name or nil, id = tonumber(id),
 				x = x, y = y, last = last, count = count }
-			peer.nodesSince = math.max(peer.nodesSince or 0, last)
+			if nodeBatches[key] then
+				nodeBatches[key] = math.max(nodeBatches[key], last)
+			else
+				peer.nodesSince = math.max(peer.nodesSince or 0, last)
+			end
 		end
 	end
 	ns.nodesRefused[key] = nil
@@ -249,8 +262,16 @@ end
 
 handlers.NEND = function(sender, key, arg)
 	local n = tonumber(arg)
-	if ns.db.follow[key] and n and n > 0 then
-		tl.Print("got %d new or updated nodes from %s.", n, sender)
+	if ns.db.follow[key] and n then
+		local newest = nodeBatches[key]
+		if newest then
+			ns.Peer(key, sender).nodesSince = newest
+			nodeBatches[key] = nil
+			ns.Changed()
+		end
+		if n > 0 then
+			tl.Print("got %d new or updated nodes from %s.", n, sender)
+		end
 	end
 end
 

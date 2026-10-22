@@ -68,6 +68,6 @@ Each group is one string, `start, seconds, place, kills, level, r` (`r` for a ra
 
 ## Limits
 
-- Inside instances the client can hide players' names. While anyone in the roster can't be read, nobody's group ends.
+- Inside instances the client can hide players' names. While anyone in the roster is unavailable or can't be read, nobody's group ends.
 - Kills together are the killing blows [TravelLog_Kills](../TravelLog_Kills/README.md#how-kills-are-detected) sees too (`PARTY_KILL`), so kills by players outside your party don't count.
 - Untested in the live game; written against the Forever 1.60.1 API documentation and tested against a fake client ([tests](../tests/README.md)).

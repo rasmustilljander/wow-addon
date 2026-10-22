@@ -12,6 +12,7 @@ local ALT_ALPHA = 0.7
 local MIN_SEGMENT = 4    -- screen pixels between drawn trail points
 local MAX_STEP = 300     -- yards between consecutive points; more is a teleport
 local REFRESH = 3        -- seconds between adding new points while the map is open
+local RANGE_REFRESH = 60 -- seconds before a rolling trail cutoff is recomputed
 
 -- Trail colors by how you were moving, and marker colors. Changes from the
 -- Colors tab (tl.settings.trailColors, markerColors) take their place.
@@ -41,7 +42,23 @@ local MARKER_OF = { spell = "learned", skill = "learned", skillup = "learned" }
 
 local overlay
 local lines, dots, deathPins = {}, {}, {}
-local drawnMap, drawnScale, drawnVersion, drawnAt = nil, nil, nil, 0
+local drawnMap, drawnScale, drawnVersion, drawnRange, drawnAt = nil, nil, nil, nil, 0
+
+-- A stable key until a rolling range needs its cutoff recomputed. Calendar
+-- days change at local midnight; hour/day durations and week age once a
+-- minute so an open map does not keep old points indefinitely.
+local function RangeKey(range)
+	if range == "today" then
+		return range .. date("%Y-%m-%d", time())
+	elseif range == "week" or range:match("^%d+[hd]$") then
+		return range .. math.floor(time() / RANGE_REFRESH)
+	end
+	return range
+end
+
+local function CurrentRangeKey()
+	return RangeKey(tl.settings.trail) .. ":" .. RangeKey(tl.settings.altTrail)
+end
 
 local function ModeOf(flags)
 	local F = tl.FLAGS
@@ -417,6 +434,7 @@ end
 local function Redraw()
 	drawnMap = WorldMapFrame:GetMapID()
 	drawnScale = WorldMapFrame:GetCanvasScale() or 1
+	drawnRange = CurrentRangeKey()
 
 	view.map, view.scale = drawnMap, drawnScale
 	view.w, view.h = overlay:GetSize()
@@ -448,7 +466,7 @@ end
 local function OnUpdate()
 	local map, scale = WorldMapFrame:GetMapID(), WorldMapFrame:GetCanvasScale()
 	local sinceDraw = GetTime() - drawnAt
-	if map ~= drawnMap or (scale ~= drawnScale and sinceDraw > 0.2) then
+	if map ~= drawnMap or CurrentRangeKey() ~= drawnRange or (scale ~= drawnScale and sinceDraw > 0.2) then
 		Redraw()
 	elseif drawnVersion ~= tl.version and sinceDraw > REFRESH then
 		DrawNew()

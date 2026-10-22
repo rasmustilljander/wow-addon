@@ -955,10 +955,14 @@ function GetCursorInfo()
 	end
 end
 function CursorHasItem() return M.cursorItem ~= nil end
-function ClearCursor() M.cursorItem, M.cursorSplit = nil, nil end
+function ClearCursor() M.cursorItem, M.cursorSplit, M.deletePending = nil, nil, nil end
 function DeleteCursorItem()
 	local key = M.cursorItem
 	if not key then return end
+	if M.deleteWarning and not M.deletePending then
+		M.deletePending = true
+		return
+	end
 	local slot = key:match("^equip:(%d+)")
 	if slot then
 		M.equipped[tonumber(slot)] = nil
@@ -968,7 +972,7 @@ function DeleteCursorItem()
 	else
 		M.bags[key] = nil
 	end
-	M.cursorItem, M.cursorSplit = nil, nil
+	M.cursorItem, M.cursorSplit, M.deletePending = nil, nil, nil
 end
 -- Equipped items: M.equipped[inventorySlot] = item link.
 INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED = 1, 19
@@ -1572,7 +1576,7 @@ function M.Logout()
 	M.canvas.children, Minimap.children = nil, nil
 	UIParent.children = { Minimap }
 	for _, name in ipairs(namedFrames) do _G[name] = nil end
-	namedFrames, UISpecialFrames, M.focus, M.cursorItem, M.cursorSplit = {}, {}, nil, nil, nil
+	namedFrames, UISpecialFrames, M.focus, M.cursorItem, M.cursorSplit, M.deletePending = {}, {}, nil, nil, nil, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
 	M.settings = {}

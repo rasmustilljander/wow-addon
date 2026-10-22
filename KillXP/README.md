@@ -23,7 +23,7 @@ Gray mobs show `none (too low)`, mobs tagged by others `none (tapped by others)`
 - **Party bonus:** 1.166× for 3 players, 1.3× for 4, 1.4× for 5, split by level. Nobody gets XP if the mob is gray to the highest-level member.
 - **XP buffs:** Well Fed adds 5%; the sleeping-bag Well-Rested buff adds 1% per stack, up to 3%. These are separate from the rested-XP pool that doubles kill XP.
 
-Each **solo** kill replaces the estimate with the XP you actually got minus rested and active percentage bonuses, remembered per your level, mob level, elite and dungeon, and shown without `~` after that. The current buffs are added when the tooltip is shown. Learned values are shared by all your characters. Group kills aren't learned, so group numbers stay estimates that assume everyone is alive and nearby.
+Each **solo** kill of a mob KillXP saw in the last minute replaces the estimate with the XP you actually got minus rested and active percentage bonuses, remembered per your level, mob level, elite and dungeon, and shown without `~` after that. The current buffs are added when the tooltip is shown. Learned values are shared by all your characters. Group kills aren't learned, so group numbers stay estimates that assume everyone is alive and nearby.
 
 `WTF/Account/<ACCOUNT>/SavedVariables/KillXP.lua` stores `KillXPDB = { version = 2, seen = { ... } }`. Version 1 learned values are cleared once because their active XP buffs were not recorded.
 

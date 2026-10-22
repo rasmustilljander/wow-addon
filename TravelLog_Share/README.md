@@ -17,7 +17,7 @@ With nobody picked, the tab shows the last request you got. The Totals tab shows
 
 | | You share | You receive |
 | --- | --- | --- |
-| **Nodes** | Sent whenever an allowed player asks, which their addon does on its own: at their login, at yours, and when they follow you. Nodes you loot afterwards go to them right away. | Only nodes looted since the last batch are sent again. |
+| **Nodes** | Sent whenever an allowed player asks, which their addon does on its own: at their login, at yours, and when they follow you. Nodes you loot afterwards go to them right away. | New or updated nodes since the last batch are sent. The newest second may be sent again so simultaneous nodes aren't missed. |
 | **Log** | Sent only when they ask. Chat tells you who asked. | Chat tells you when it arrives. |
 
 The allow list is account-wide, so all your characters answer. Each sends the nodes all your characters looted, with the total loot count, and its own log. Both players need TravelLog Share.

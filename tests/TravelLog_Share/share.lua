@@ -281,13 +281,23 @@ check(Printed("Rasmus%-Forever hasn't allowed you to see their log"), "told when
 Tab()
 check(d.status:GetText() == "They haven't allowed you to see their log." and #M.shown(d.log.rows) == 3, "refused, the old log stays")
 
--- Saved; asks for newer nodes at login and when Rasmus says hello
+-- An interrupted batch stores its nodes but does not advance the durable
+-- watermark, so the next login asks for them again.
+local committed = peer.nodesSince
+M.addonMessage("Rasmus-Forever", PREFIX, "HELLO")
+check(Take("Rasmus-Forever")[1] == "NODES " .. math.max(committed - 1, 0), "request overlaps the newest second")
+M.addonMessage("Rasmus-Forever", PREFIX,
+	"N 1429,2,c,30.0,40.0," .. (committed + 30) .. ",2,2843,Battered Chest")
+check(peer.nodes[1429][2].last == committed + 30 and peer.nodesSince == committed, "partial batch does not advance the watermark")
+
+-- Saved; asks from the committed watermark at login and when Rasmus says hello.
 ns = M.Reload()
 peer = TravelLogShareDB.peers["rasmus-forever"]
-check(peer.nodes[1429][2].name == "Battered Chest" and #peer.log.entries == 3, "shared nodes and log saved")
-check(Take("Rasmus-Forever")[1] == "NODES " .. peer.nodesSince, "asks for nodes since the newest at login")
+check(peer.nodes[1429][2].name == "Battered Chest" and peer.nodes[1429][2].last == committed + 30
+	and peer.nodesSince == committed and #peer.log.entries == 3, "shared nodes, committed watermark and log saved")
+check(Take("Rasmus-Forever")[1] == "NODES " .. math.max(peer.nodesSince - 1, 0), "asks from the committed watermark at login")
 M.addonMessage("Rasmus-Forever", PREFIX, "HELLO")
-check(Take("Rasmus-Forever")[1] == "NODES " .. peer.nodesSince, "and on hello")
+check(Take("Rasmus-Forever")[1] == "NODES " .. math.max(peer.nodesSince - 1, 0), "and on hello")
 M.addonMessage("Ann-Forever", PREFIX, "HELLO")
 check(#Take("Ann-Forever") == 0, "hello from someone not followed does nothing")
 

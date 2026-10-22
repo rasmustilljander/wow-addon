@@ -154,6 +154,21 @@ M.postWarning = nil
 -- Destroyed items
 --------------------------------------------------------------------------------
 
+-- A protected item is not recorded when its confirmation is cancelled, and
+-- is recorded only after the accepted second DeleteCursorItem call.
+M.bags["0:9"] = SWORD
+M.deleteWarning = true
+C_Container.PickupContainerItem(0, 9)
+DeleteCursorItem()
+check(count("destroy") == 0 and M.bags["0:9"] == SWORD and M.cursorItem == "0:9", "confirmation is not a deletion")
+ClearCursor()
+check(count("destroy") == 0 and M.bags["0:9"] == SWORD, "cancelled deletion not recorded")
+C_Container.PickupContainerItem(0, 9)
+DeleteCursorItem()
+DeleteCursorItem()
+check(count("destroy") == 1 and last("destroy").item == SWORD and not M.bags["0:9"], "confirmed deletion recorded once")
+M.deleteWarning = nil
+
 -- A whole stack, part of one and a worn item.
 M.bags["0:5"] = { link = JUNK, count = 3 }
 C_Container.PickupContainerItem(0, 5)
@@ -177,8 +192,8 @@ DeleteCursorItem()
 C_Container.PickupContainerItem(0, 8)
 ClearCursor()
 DeleteCursorItem()
-check(count("destroy") == 3 and M.bags["0:8"] == JUNK, "nothing destroyed when put down or cancelled")
-check(ns.stats.given.destroy == 8, "destroyed items counted")
+check(count("destroy") == 4 and M.bags["0:8"] == JUNK, "nothing destroyed when put down or cancelled")
+check(ns.stats.given.destroy == 9, "destroyed items counted")
 
 --------------------------------------------------------------------------------
 -- Guild bank
@@ -262,7 +277,7 @@ check(ns.stats.guildBank.withdrawn == 16, "counted on logout")
 M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local stats = table.concat(M.out, "\n")
-check(stats:find("Items out: 5 traded, 21 mailed, 21 auctioned, 8 destroyed", 1, true), "/tl stats line")
+check(stats:find("Items out: 5 traded, 21 mailed, 21 auctioned, 9 destroyed", 1, true), "/tl stats line")
 check(stats:find("Guild bank items: 4 deposited, 16 withdrawn", 1, true), "/tl stats guild bank line")
 check(ns.LogMatches(last("give"), "", "Trade") and ns.LogMatches(last("send"), "", "Trade")
 	and ns.LogMatches(last("post"), "", "Trade") and ns.LogMatches(last("destroy"), "", "Loot")

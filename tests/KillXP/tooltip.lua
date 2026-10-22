@@ -135,6 +135,12 @@ check(Line(Mob(9), "Kill XP") == "70", "learned from a targeted mob")
 -- A kill of a mob we never saw teaches nothing.
 M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Stranger dies, you gain 999 experience.")
 check(Line(Mob(10), "Kill XP") == "~95", "unknown mob not learned")
+-- A same-named mob seen long before the kill is no longer a safe match.
+ns.Remember("Old Wolf", 6, false)
+M.advance(61)
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Old Wolf dies, you gain 999 experience.")
+local _, guessed = ns.SoloXP(10, 6, false, false)
+check(guessed, "stale mob observation not learned")
 -- The same name at another level: the targeted corpse decides which level
 -- the kill was.
 Mob(8)

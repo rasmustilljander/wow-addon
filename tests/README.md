@@ -97,7 +97,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.tradeItems[i]` | `{ link, count }` in your trade slot i (7 is "will not be traded"). |
 | `M.ownedAuctions`, `M.ownedQueries` | What `C_AuctionHouse.GetOwnedAuctions` returns, and how often owned auctions were queried. |
 | `M.posts`, `M.postWarning` | What `C_AuctionHouse.PostItem`, `PostCommodity` and their `Confirm*` posted (`ItemLocation:CreateFromBagAndSlot` for the item); whether a post needs confirming. |
-| `M.cursorItem`, `M.cursorSplit` | The `"bag:slot"` (or `"equip:slot"`) whose item is on the cursor, and how many after `C_Container.SplitContainerItem` (`C_Container.PickupContainerItem`, `PickupInventoryItem`, `DeleteCursorItem`). |
+| `M.cursorItem`, `M.cursorSplit`, `M.deleteWarning` | The `"bag:slot"` (or `"equip:slot"`) whose item is on the cursor, how many after `C_Container.SplitContainerItem`, and whether the first `DeleteCursorItem` waits for confirmation. |
 | `M.combat`, `M.afk` | In combat (`InCombatLockdown`); AFK (`UnitIsAFK`; fire `PLAYER_FLAGS_CHANGED` after changing it). |
 | `M.dead`, `M.ghost`, `M.falling`, `M.durability[slot]`, `M.mirrorTimers` | Dead, a ghost or falling; worn items' `{ current, max }` durability; milliseconds left on the `BREATH` and `EXHAUSTION` bars. Tests fire the death, resurrection and bar events themselves. |
 | `M.resurrecter`, `M.resSickness`, `M.selfRes` | Who offers a resurrection, whether it brings resurrection sickness, and the death dialog's self-resurrect options (`{ name, optionType, id, canUse, ... }`). |
