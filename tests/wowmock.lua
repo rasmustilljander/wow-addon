@@ -132,6 +132,9 @@ COMBATLOG_HONORGAIN = "%s dies (Honorable Kill: %s). You gain %d Honor."
 COMBATLOG_HONORGAIN_EXHAUSTION1 = "%s dies (Honorable Kill: %s). You gain %d Honor (%s %s bonus)."
 COMBATLOG_HONORGAIN_NO_RANK = "%s dies (Honorable Kill). You gain %d Honor."
 COMBATLOG_HONORAWARD = "You have been awarded %d Honor."
+PVP_RANK_0_NAME = "No Rank"
+PVP_RANK_5_1, PVP_RANK_6_1, PVP_RANK_7_1 = "Private", "Corporal", "Sergeant"
+PVP_RANK_5_0, PVP_RANK_6_0, PVP_RANK_7_0 = "Scout", "Grunt", "Sergeant"
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
@@ -148,6 +151,7 @@ Enum = {
 	SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
 		NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10,
 		AddOnMessageLockdown = 11, TargetOffline = 12 },
+	PvPRanks = { RankNone = 0, Rank_1 = 5, Rank_14 = 18 },
 }
 
 --------------------------------------------------------------------------------
@@ -175,7 +179,8 @@ GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
 TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
-UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET]]):gmatch("%S+") do
+UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
+UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -1176,6 +1181,20 @@ function CancelDuel() end
 -- after changing M.honorKills.
 M.honorKills = 0
 function GetPVPSessionStats() return M.honorKills, 0 end
+-- Your PvP rank: renown with faction 2800 in the season M.pvpSeason (nil:
+-- not loaded yet). Fire UPDATE_FACTION or MAJOR_FACTION_RENOWN_LEVEL_CHANGED
+-- after changing M.pvpRank.
+M.pvpRank, M.pvpSeason = 0, 1
+C_MajorFactions = {}
+function C_MajorFactions.GetMajorFactionProgressionInfo(factionID)
+	if factionID ~= 2800 or not M.pvpRank then return nil end
+	return { renownLevel = M.pvpRank, previousWeekProgressiveMaxLevel = 0, currentWeekProgressiveMaxLevel = 0,
+		maxLevel = 14, renownReputationEarned = 0, renownLevelThreshold = 1000, weekNumber = 1 }
+end
+function GetCurrentArenaSeason() return M.pvpSeason end
+-- Global strings by name; the female forms are left out.
+function GetText(token) return _G[token] end
+function UnitSex() return 2 end
 function JumpOrAscendStart() end
 
 -- World map: Blizzard's frames survive reloads, addon frames don't.

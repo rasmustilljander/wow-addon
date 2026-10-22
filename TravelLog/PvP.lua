@@ -1,4 +1,4 @@
--- PvP: duels and honorable kills.
+-- PvP: duels, honorable kills and your rank.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -189,4 +189,62 @@ ns.On("PLAYER_PVP_KILLS_CHANGED", function(unit)
 		end
 		unexplained = 0
 	end)
+end)
+
+--------------------------------------------------------------------------------
+-- Your rank: in Forever, your renown with the PvP rank faction. It starts over
+-- each season.
+--------------------------------------------------------------------------------
+
+local RANK_FACTION = 2800 -- PVP_RANK_POINTS_FACTION_ID in Blizzard's PVPRankFrame
+
+-- As the character frame names it: "Sergeant", "Knight", ...
+local function RankTitle(rank)
+	if rank <= 0 then
+		return ns.Clean(PVP_RANK_0_NAME)
+	end
+	local ranks = Enum.PvPRanks
+	if not GetText or not ranks or rank > ranks.Rank_14 - ranks.Rank_1 + 1 then
+		return
+	end
+	local faction = UnitFactionGroup("player") == "Alliance" and 1 or 0
+	local ok, title = pcall(GetText, ("PVP_RANK_%d_%d"):format(ranks.Rank_1 + rank - 1, faction), UnitSex("player"))
+	return ok and ns.Clean(title) or nil
+end
+
+-- The first reading is only remembered. A change while you were offline (a
+-- new week or season) is logged at the next login.
+local function CheckRank()
+	local info = C_MajorFactions and C_MajorFactions.GetMajorFactionProgressionInfo(RANK_FACTION)
+	local rank = info and ns.Clean(info.renownLevel)
+	if type(rank) ~= "number" then
+		return
+	end
+	local season = GetCurrentArenaSeason and ns.Clean(GetCurrentArenaSeason())
+	local saved = ns.char.pvpRank
+	ns.char.pvpRank = { rank = rank, season = season }
+	if not saved or saved.rank == rank then
+		return
+	end
+	ns.Log("pvprank", {
+		rank = rank,
+		old = saved.rank,
+		title = RankTitle(rank),
+		season = season,
+		newSeason = season and saved.season and season ~= saved.season or nil,
+	})
+end
+
+ns.On("PLAYER_ENTERING_WORLD", CheckRank)
+-- Faction data can arrive after login.
+ns.On("UPDATE_FACTION", CheckRank)
+ns.On("MAJOR_FACTION_RENOWN_LEVEL_CHANGED", function(factionID)
+	if factionID == RANK_FACTION then
+		CheckRank()
+	end
+end)
+ns.On("PLAYER_PVP_RANK_CHANGED", function(unit)
+	if unit == "player" then
+		CheckRank()
+	end
 end)

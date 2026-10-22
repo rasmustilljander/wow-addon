@@ -27,7 +27,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds, screenshots (with the file's name, to match pictures to the log). |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, discoveries. |
-| **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), honorable kills (victim, rank, honor) and honor awards. |
+| **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money and the experience gained. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, beasts tamed (name, level and family), and the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards). |
 
@@ -68,7 +68,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear and the instance you're in |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank and the instance you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
@@ -99,10 +99,11 @@ TravelLogCharDB = {
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
   instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ... },  -- while you're in one
   gear = { [25] = 0, [2361] = 1760000000 },  -- item ID -> first put on (0: worn when gear recording began)
+  pvpRank = { rank = 3, season = 1 },  -- last rank seen, to tell changes
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `duel`, `honorkill`, `honor`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
+Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `duel`, `honorkill`, `honor`, `pvprank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -128,6 +129,7 @@ Some types have more:
 | `duel` | `opponent`, `result` (`won`, `lost` or `interrupted`: no winner), `fled` (the loser ran), `challenger` (`you` or `opponent`) |
 | `honorkill` | `name`, `rank`, `honor`; all empty for a kill known only from the count |
 | `honor` | `honor` awarded |
+| `pvprank` | `rank` (0 unranked), `old` (the rank before), `title` (Sergeant, Knight, ...), `season`, `newSeason` (`true` when the season changed) |
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
@@ -151,6 +153,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Gear counts from the first login that records it: what you wear then is remembered, not logged, and gear in your bags is logged the first time you put it on. Gear is kept by item ID, so a second copy of an item, or the same item with another random enchantment, isn't logged again.
 - Duel results come from the "Ann has defeated Bob in a duel" line. The client doesn't say when the other player accepts your challenge, so a duel you challenged that ends without a winner is logged only if one of you crossed the duel area's edge.
 - Honorable kills and honor come from their chat lines. Where chat is hidden (battlegrounds), kills come from the day's honorable kill count instead, without name, rank or honor, and honor awards are missed. Deaths don't say whether a player killed you: no event names the killer.
+- Your PvP rank is your renown with the PvP rank faction, as on the character frame's PvP tab. The rank at the first login is remembered, not logged; a change while you were offline (a new season) is logged at the next login.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Without the combat log, a death's `cause` comes only from the breath and fatigue bars (run out in the last minute) and from falls over 1.5 s that end within a second of dying. Lava, fire and slime aren't told apart, and a mob kill right after a long fall counts as the fall.
 - How you came back is known when you chose it in the game's dialogs (resurrection, spirit healer, soulstone and the like, corpse) in the 30 s before. Battleground spirit healers aren't. A resurrection names the player but not the spell.
