@@ -128,7 +128,7 @@ ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 ERR_TRADE_COMPLETE = "Trade complete."
 
 Enum = {
-	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, MailInfo = 17,
+	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
 		Binder = 20, Auctioneer = 21, StableMaster = 22 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
 	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
@@ -162,7 +162,8 @@ PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUN
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
-GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON]]):gmatch("%S+") do
+GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON
+GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -826,9 +827,20 @@ M.equipped = {}
 function GetInventoryItemID(_, slot) local link = M.equipped[slot]; return link and LinkID(link) end
 -- The bank: its tabs are bags (Enum.BagIndex.CharacterBankTab_1 and up, the
 -- account bank's from AccountBankTab_1), in M.bags and M.bagSlots like the
--- others. M.accountBank: the account bank can be seen.
+-- others. M.accountBank: the account bank can be seen. M.bankTabs[bankType]
+-- is how many tabs (bank bag slots) are bought; buying one or moving gold
+-- does nothing, since the result arrives later as events.
 C_Bank = {}
+M.bankTabs = {}
 function C_Bank.CanViewBank(bankType) return bankType ~= Enum.BankType.Account or M.accountBank == true end
+function C_Bank.FetchNumPurchasedBankTabs(bankType) assert(type(bankType) == "number"); return M.bankTabs[bankType] or 0 end
+function C_Bank.PurchaseBankTab(bankType) assert(type(bankType) == "number") end
+function C_Bank.DepositMoney(bankType, amount) assert(type(bankType) == "number" and type(amount) == "number") end
+function C_Bank.WithdrawMoney(bankType, amount) assert(type(bankType) == "number" and type(amount) == "number") end
+-- Paid at a class trainer and a stable master; the charge arrives later.
+function ConfirmTalentWipe() end
+C_StableInfo = {}
+function C_StableInfo.BuyStableSlot() end
 C_Item = {}
 function C_Item.GetItemInfo(item)
 	local id = tonumber(item) or LinkID(item)
@@ -880,7 +892,8 @@ function M.lootAll(take)
 	M.fire("LOOT_CLOSED")
 end
 
--- Mail. M.inbox = { { sender, money, cod, items = { { link, count, currency }, ... } }, ... };
+-- Mail. M.inbox = { { sender, money, cod, invoice, items = { { link, count, currency }, ... } }, ... },
+-- invoice being an auction house mail's { type, item, player } ("seller" for a sale);
 -- M.sendItems[i] = { link, count } are the attachments of the mail being
 -- written, and SendMail puts { to, items } in M.sentMail. Taking money or
 -- items does nothing: as in the game, the result arrives later as events.
@@ -889,6 +902,10 @@ function GetInboxNumItems() return #M.inbox, #M.inbox end
 function GetInboxHeaderInfo(i)
 	local m = M.inbox[i]
 	return nil, nil, m.sender or "Someone", m.subject or "", m.money or 0, m.cod or 0, 30, #(m.items or {}), false
+end
+function GetInboxInvoiceInfo(i)
+	local inv = M.inbox[i].invoice
+	if inv then return inv.type, inv.item, inv.player, inv.bid or 0, inv.buyout or 0, inv.deposit or 0, inv.consignment or 0 end
 end
 function TakeInboxMoney(i) assert(M.inbox[i]) end
 function TakeInboxItem(i, a) assert(M.inbox[i] and a) end

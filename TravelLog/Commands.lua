@@ -85,6 +85,25 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Money gained or spent ("gained" or "spent") with its reasons, largest
+-- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
+function ns.MoneyByReason(st, way)
+	local list, total = {}, 0
+	for reason, t in pairs((st or ns.stats).money or {}) do
+		local amount = t[way] or 0
+		if amount > 0 then
+			list[#list + 1] = { reason = reason, amount = amount }
+			total = total + amount
+		end
+	end
+	table.sort(list, function(a, b) return a.amount > b.amount end)
+	local parts = {}
+	for i, r in ipairs(list) do
+		parts[i] = ("%s %s"):format(ns.MONEY_REASONS[r.reason] or r.reason, ns.MoneyText(r.amount))
+	end
+	return #parts > 0 and ("%s: %s"):format(ns.MoneyText(total), table.concat(parts, ", ")) or ns.MoneyText(0)
+end
+
 -- The character a /tl stats argument names: "Name" or "Name-Realm".
 local function FindCharacter(arg)
 	for _, key in ipairs(ns.Characters()) do
@@ -127,6 +146,8 @@ local function ShowStats(arg)
 		Count(v.bought), Count(v.sold), Count(v.repairs),
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 	ns.Print("Items out: %s", ns.GivenText(st))
+	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
+	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
 
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
@@ -233,7 +254,12 @@ local DESCRIBE = {
 	money = function(e)
 		local who = e.partner or e.sender or e.recipient
 		who = who and (e.amount > 0 and " from " or " to ") .. who or ""
-		return ("%s %s (%s%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), e.reason, who)
+		local reason = ns.MONEY_REASONS[e.reason] or e.reason
+		reason = e.item and ("%s: %s"):format(reason, e.item) or reason
+		return ("%s %s (%s%s)"):format(e.amount > 0 and "Got" or "Paid", ns.MoneyText(math.abs(e.amount)), reason, who)
+	end,
+	bankslot = function(e)
+		return ("Bought %sbank slot %d for %s"):format(e.bank == "account" and "account " or "", e.slot or 0, ns.MoneyText(e.price))
 	end,
 	flight = function(e) return ("Flew from %s to %s for %s"):format(e.from or "?", e.to or "?", ns.MoneyText(e.price)) end,
 	landed = function(e) return e.seconds and ("Landed after %s"):format(MinSec(e.seconds)) or "Landed" end,
@@ -304,7 +330,7 @@ local LOG_GROUP = {
 	instance = "Travel", instanceleave = "Travel",
 	loot = "Loot", receive = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
-	give = "Trade", send = "Trade", post = "Trade",
+	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", kill = "Life", discover = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", taxipath = "Progress",
@@ -313,7 +339,7 @@ local LOG_GROUP = {
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
-	post = "Auction", destroy = "Destroyed", money = "Money", flight = "Flight",
+	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
 	instanceleave = "Instance left", death = "Death",
@@ -385,7 +411,7 @@ local function ShowLog(arg)
 		number, query = arg:match("^(%d+)%s+(.+)$")
 	end
 	local limit = tonumber(number) or 15
-	query = query or arg
+	query = query or (number and "" or arg)
 	local found = {}
 	if limit > 0 then
 		for i = #ns.char.log, 1, -1 do
