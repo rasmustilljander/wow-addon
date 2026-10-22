@@ -141,6 +141,7 @@ ns.AddStat("Life", "Battlegrounds", function(st)
 	local b = st.battlegrounds or {}
 	return ("%s won, %s lost, %s left"):format(Count(b.won), Count(b.lost), Count(b.left))
 end)
+ns.AddStat("Life", "Guild", ns.GuildText)
 ns.AddStat("Log", "Entries", function()
 	return ("%s in %s sessions"):format(Count(#ns.char.log), Count(#ns.char.sessions))
 end, true)

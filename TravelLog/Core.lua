@@ -87,6 +87,11 @@ function ns.ParseGUID(guid)
 	return kind, tonumber(id)
 end
 
+-- Whether a name from a chat line ("Name" or "Name-Realm") is yours.
+function ns.IsMe(name)
+	return name:match("^[^%-]+") == UnitName("player")
+end
+
 -- Adds n to a (possibly nested) counter in this character's stats, e.g.
 -- ns.Add(1, "jumps") or ns.Add(12.5, "distance", "mount").
 function ns.Add(n, ...)

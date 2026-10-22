@@ -135,6 +135,19 @@ COMBATLOG_HONORAWARD = "You have been awarded %d Honor."
 PVP_RANK_0_NAME = "No Rank"
 PVP_RANK_5_1, PVP_RANK_6_1, PVP_RANK_7_1 = "Private", "Corporal", "Sergeant"
 PVP_RANK_5_0, PVP_RANK_6_0, PVP_RANK_7_0 = "Scout", "Grunt", "Sergeant"
+ERR_GUILD_ACCEPT = "You have joined the guild."
+ERR_GUILD_FOUNDER_S = "Congratulations, you are a founding member of %s!"
+ERR_GUILD_JOIN_S = "%s has joined the guild."
+ERR_GUILD_LEAVE_RESULT = "You have left the guild."
+ERR_GUILD_LEAVE_S = "%s has left the guild."
+ERR_GUILD_REMOVE_SELF = "You have been kicked out of the guild."
+ERR_GUILD_REMOVE_SS = "%s has been kicked out of the guild by %s."
+ERR_GUILD_DISBANDED = "Guild has been disbanded."
+ERR_GUILD_DISBAND_SELF = "You have disbanded the guild."
+ERR_GUILD_DISBAND_S = "%s has disbanded the guild."
+ERR_GUILD_PROMOTE_SSS = "%s has promoted %s to %s."
+ERR_GUILD_DEMOTE_SSS = "%s has demoted %s to %s."
+ERR_GUILD_LEADER_CHANGED_SS = "%s has made %s the new Guild Master."
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
@@ -180,7 +193,8 @@ TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALEN
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
-UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE]]):gmatch("%S+") do
+UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
+PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -1205,6 +1219,18 @@ C_PvP = {}
 function C_PvP.GetScoreInfoByPlayerGuid(guid)
 	return M.pvpScore and guid == UnitGUID("player") and M.pvpScore or nil
 end
+
+-- Your guild: M.guild = { name, rank, rankIndex } or nil for none, and
+-- M.guild.loading while the client knows you're in one but not which.
+-- Tests fire PLAYER_GUILD_UPDATE and the system lines themselves.
+function IsInGuild() return M.guild ~= nil end
+function GetGuildInfo(unit)
+	local g = M.guild
+	if unit == "player" and g and not g.loading then return g.name, g.rank, g.rankIndex, nil end
+end
+C_GuildInfo = {}
+M.rosterRequests = 0
+function C_GuildInfo.GuildRoster() M.rosterRequests = M.rosterRequests + 1 end
 function JumpOrAscendStart() end
 
 -- World map: Blizzard's frames survive reloads, addon frames don't.
