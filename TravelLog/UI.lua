@@ -118,7 +118,10 @@ ns.AddStat("Life", "Played", function()
 	local total, level = ns.Played()
 	return total and ("%s, %s at this level"):format(ns.Duration(total), ns.Duration(level)) or "not known yet"
 end, true)
-ns.AddStat("Life", "Quests done", function(st) return Count((st.quests or {}).completed) end)
+ns.AddStat("Life", "Quests", function(st)
+	local quests = st.quests or {}
+	return ("%s done, %s failed"):format(Count(quests.completed), Count(quests.failed))
+end)
 ns.AddStat("Life", "Learned", function(st)
 	return ("%s spells, %s skills, %s skill points"):format(Count(st.spells), Count(st.skills), Count(st.skillups))
 end)

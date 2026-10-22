@@ -367,6 +367,75 @@ ns.On("QUEST_REMOVED", function(questID)
 	ns.Add(1, "quests", "abandoned")
 end)
 
+-- A quest fails when its timer runs out, an escort dies or a condition
+-- breaks. No event says so: the quest stays in the log marked failed, so the
+-- log is checked whenever it changes. A collapsed header hides its quests
+-- from the log's list, so quests TravelLog saw you accept are checked by ID
+-- too.
+local open = {}      -- quest IDs that may be in the log
+local deadlines = {} -- quest ID -> GetTime() its timer runs out
+
+local function Ended(quest)
+	local accepted = quest.accepted or 0
+	return (quest.done or 0) >= accepted or (quest.abandoned or 0) >= accepted or (quest.failed or 0) >= accepted
+end
+
+local function CheckFailed(questID)
+	local total, elapsed = C_QuestLog.GetTimeAllowed(questID)
+	total, elapsed = ns.Clean(total), ns.Clean(elapsed)
+	if total and elapsed and total > 0 then
+		deadlines[questID] = GetTime() - elapsed + total
+	end
+	if not ns.Clean(C_QuestLog.IsFailed(questID)) then
+		return
+	end
+	-- Logged once per time you take the quest, not again on a reload or
+	-- when you abandon it afterwards.
+	local quest = ns.char.quests[questID]
+	if quest and quest.failed and quest.failed >= (quest.accepted or 0) then
+		return
+	end
+	-- The client doesn't say why; a timer we saw run out is the one reason
+	-- we can tell.
+	local deadline = deadlines[questID]
+	local reason = deadline and GetTime() >= deadline - 2 and "time" or nil
+	local title = Note(questID, "failed")
+	ns.Log("questfail", { id = questID, title = title, reason = reason })
+	ns.Add(1, "quests", "failed")
+end
+
+if C_QuestLog.IsFailed and C_QuestLog.GetTimeAllowed and C_QuestLog.GetQuestIDForLogIndex then
+	ns.On("PLAYER_LOGIN", function()
+		for questID, quest in pairs(ns.char.quests) do
+			if quest.accepted and not Ended(quest) then
+				open[questID] = true
+			end
+		end
+	end)
+
+	ns.On("QUEST_ACCEPTED", function(a, b)
+		open[b or a] = true
+	end)
+
+	ns.On("QUEST_REMOVED", function(questID)
+		if questID then
+			open[questID], deadlines[questID] = nil, nil
+		end
+	end)
+
+	ns.On("QUEST_LOG_UPDATE", function()
+		for i = 1, C_QuestLog.GetNumQuestLogEntries() do
+			local questID = ns.Clean(C_QuestLog.GetQuestIDForLogIndex(i))
+			if questID then
+				open[questID] = true
+			end
+		end
+		for questID in pairs(open) do
+			CheckFailed(questID)
+		end
+	end)
+end
+
 --------------------------------------------------------------------------------
 -- Kills (from "X dies, you gain N experience")
 --------------------------------------------------------------------------------

@@ -25,7 +25,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds. |
-| **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed and abandoned, kills that gave XP, discoveries. |
+| **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, discoveries. |
 | **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
 
@@ -37,7 +37,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 - **Settings**: the companions' map options and Path's interval.
 - **History**: what's still in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
-  - **Sessions**: each session's length, levels, money and experience gained (per hour once it's 10 minutes long), and its quests, XP kills and deaths.
+  - **Sessions**: each session's length, levels, money and experience gained (per hour once it's 10 minutes long), and its quests done and failed, XP kills and deaths.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
@@ -89,14 +89,14 @@ TravelLogCharDB = {
   sessions = {   -- one per login or reload
     { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500, xp = 5600 },
   },
-  quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ... } },  -- last time of each
+  quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ..., failed = ... } },  -- last time of each
   skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
   instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ... },  -- while you're in one
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -128,6 +128,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - The client doesn't report boats and zeppelins. A ride is when you're carried at least 4 yards a second faster than your own speed for 5 seconds, so it can't tell a boat from a zeppelin, and it ends after 10 seconds on your own feet.
 - Summons are logged once you accept and arrive. The summoner's name is missing if the client hides it.
 - Time in a dungeon or raid counts only while you're logged in, and a reload inside is the same visit.
+- A failed quest is noticed when the quest log next updates, and logged once each time you take it: not again after a reload, and abandoning it afterwards is a `questabandon`. One that failed while you were offline or before TravelLog was installed is logged when it's first seen. The client doesn't say why a quest failed, so only a timer running out is told apart, and a failed quest the server drops from the log at once isn't seen.
 - Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Without the combat log, a death's `cause` comes only from the breath and fatigue bars (run out in the last minute) and from falls over 1.5 s that end within a second of dying. Lava, fire and slime aren't told apart, and a mob kill right after a long fall counts as the fall.
