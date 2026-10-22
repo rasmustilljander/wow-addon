@@ -177,8 +177,8 @@ local function ShowStats(arg)
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, flight paths found %s, mounts %s, new gear %s",
-		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.flightPaths), Count(st.mounts), Count(st.gear))
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, new gear %s",
+		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts), Count(st.gear))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
@@ -361,6 +361,15 @@ local DESCRIBE = {
 	end,
 	skill = function(e) return ("Learned skill: %s"):format(e.name or e.id) end,
 	skillup = function(e) return ("%s reached %d"):format(e.name or e.id, e.rank) end,
+	talent = function(e)
+		local text = ("Talent: %s %d/%d"):format(e.name or e.id or "?", e.rank, e.max or e.rank)
+		if e.tree then text = ("%s (%s)"):format(text, e.tree) end
+		return ("%s at level %d"):format(text, e.level or 0)
+	end,
+	talentreset = function(e)
+		local text = e.spent == 0 and "Reset talents" or "Unlearned talents"
+		return ("%s: %d points back at level %d"):format(text, e.points or 0, e.level or 0)
+	end,
 	taxipath = function(e) return e.npc and ("Found the flight path at %s"):format(e.npc) or "Found a flight path" end,
 	standing = function(e) return ("Now %s with %s"):format(e.standing, e.faction) end,
 	mount = function(e) return (e.first and "First mount: %s" or "First ride on %s"):format(e.name or e.id) end,
@@ -393,7 +402,8 @@ local LOG_GROUP = {
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
-	spell = "Progress", skill = "Progress", skillup = "Progress", taxipath = "Progress",
+	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
+	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", equip = "Progress",
 }
 local LOG_LABEL = {
@@ -406,7 +416,8 @@ local LOG_LABEL = {
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", spell = "Spell",
-	skill = "Skill", skillup = "Skill-up", taxipath = "Flight path", standing = "Reputation",
+	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
+	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", equip = "Gear",
 }
 

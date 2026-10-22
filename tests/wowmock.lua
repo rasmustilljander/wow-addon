@@ -164,7 +164,8 @@ AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
 GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON
 RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
-GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE]]):gmatch("%S+") do
+GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
+TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -789,6 +790,61 @@ function C_SkillInfo.GetNumSkillLines() return #M.skills end
 function C_SkillInfo.GetSkillLineInfo(i)
 	local s = M.skills[i]
 	return s and { skillID = s.skillID or 0, name = s.name, rank = s.rank or 0, isHeader = s.isHeader or false, maxRank = s.maxRank or 0 }
+end
+-- Talents, as Forever's trait system: M.talentConfig is the active loadout's
+-- ID (nil before the client has one) and M.loadouts[configID][nodeID] =
+-- { spellID, tree, rank, max } its nodes, rank the points applied. All
+-- loadouts share one tree whose display groups are M.talentTrees[groupID] =
+-- name; a node is in group tree + 100 too (a currency group, unnamed).
+-- M.talentsStaged: points placed in the talent frame, not applied yet.
+M.talentConfig, M.loadouts, M.talentTrees = nil, {}, {}
+local TALENT_TREE = 790
+C_ClassTalents = {}
+function C_ClassTalents.GetActiveConfigID() return M.talentConfig end
+C_Traits = {}
+function C_Traits.ConfigHasStagedChanges() return M.talentsStaged or false end
+function C_Traits.GetConfigInfo(configID)
+	if M.loadouts[configID] then
+		return { ID = configID, type = 1, name = "", treeIDs = { TALENT_TREE }, usesSharedActionBars = false }
+	end
+end
+function C_Traits.GetTreeNodes(treeID)
+	local ids, seen = {}, {}
+	if treeID == TALENT_TREE then
+		for _, nodes in pairs(M.loadouts) do
+			for id in pairs(nodes) do
+				if not seen[id] then seen[id] = true; ids[#ids + 1] = id end
+			end
+		end
+	end
+	table.sort(ids)
+	return ids
+end
+function C_Traits.GetNodeInfo(configID, nodeID)
+	local n = (M.loadouts[configID] or {})[nodeID]
+	if not n then return end
+	local entryID = nodeID * 10
+	return {
+		ID = nodeID, entryIDs = { entryID }, ranksPurchased = n.rank or 0, activeRank = n.rank or 0, currentRank = n.rank or 0,
+		activeEntry = (n.rank or 0) > 0 and { entryID = entryID, rank = n.rank } or nil, maxRanks = n.max or 1,
+		groupIDs = { n.tree + 100, n.tree },
+	}
+end
+function C_Traits.GetEntryInfo(configID, entryID)
+	local n = (M.loadouts[configID] or {})[entryID / 10]
+	return n and { definitionID = entryID / 10, type = 1, maxRanks = n.max or 1, isAvailable = true, conditionIDs = {} }
+end
+function C_Traits.GetDefinitionInfo(definitionID)
+	for _, nodes in pairs(M.loadouts) do
+		if nodes[definitionID] then return { spellID = nodes[definitionID].spellID } end
+	end
+end
+function C_Traits.GetGroupDisplayInfoByTreeID(treeID)
+	local list = {}
+	for groupID, name in pairs(M.talentTrees) do
+		list[#list + 1] = { groupID = groupID, treeID = treeID, skillLineID = 0, orderIndex = groupID, displayName = name, icon = 0 }
+	end
+	return list
 end
 -- Bags: M.bags["bag:slot"] is an item link, or { link, count, locked }.
 -- M.bagSlots[bag] is each bag's size and M.items[itemID] = { quality, price,

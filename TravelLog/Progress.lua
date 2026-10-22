@@ -1,7 +1,7 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
--- skills and skill milestones, flight paths found, reputation standings
--- reached, the first ride on each mount and the first time you put on each
--- piece of gear.
+-- skills and skill milestones, talent points spent, flight paths found,
+-- reputation standings reached, the first ride on each mount and the first
+-- time you put on each piece of gear.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -142,6 +142,103 @@ end
 
 ns.On("PLAYER_LOGIN", CheckSkills)
 ns.On("SKILL_LINES_CHANGED", CheckSkills)
+
+--------------------------------------------------------------------------------
+-- Talents: each point spent, and points taken back
+--------------------------------------------------------------------------------
+
+-- Forever's talents are the retail trait system (C_Traits) laid out as the
+-- classic trees: one trait tree per class, whose display groups are the trees
+-- you see. Ranks are kept per loadout (each spec has its own) in the
+-- character file, so a reload, login or spec switch isn't taken for points
+-- spent. The first scan of a loadout only remembers what it has.
+
+-- Group ID -> the tree's name ("Fire").
+local function TreeNames(treeID)
+	local names = {}
+	for _, info in ipairs(C_Traits.GetGroupDisplayInfoByTreeID(treeID) or {}) do
+		names[info.groupID] = ns.Clean(info.displayName)
+	end
+	return names
+end
+
+-- The talent's name and spell ID.
+local function Talent(configID, node)
+	local entryID = node.activeEntry and node.activeEntry.entryID or (node.entryIDs or {})[1]
+	local entry = entryID and C_Traits.GetEntryInfo(configID, entryID)
+	local def = entry and entry.definitionID and C_Traits.GetDefinitionInfo(entry.definitionID)
+	if not def then
+		return
+	end
+	local id = ns.Clean(def.spellID)
+	local name = ns.Clean(def.overrideName)
+	if (not name or name == "") and id and C_Spell then
+		name = ns.Clean(C_Spell.GetSpellName(id))
+	end
+	return name ~= "" and name or nil, id
+end
+
+local function CheckTalents()
+	if not (C_ClassTalents and C_Traits) then
+		return
+	end
+	local configID = ns.Clean(C_ClassTalents.GetActiveConfigID())
+	-- Points placed in the talent frame count once they're applied.
+	if not configID or C_Traits.ConfigHasStagedChanges(configID) then
+		return
+	end
+	local config = C_Traits.GetConfigInfo(configID)
+	local treeID = config and config.treeIDs[1]
+	local nodes = treeID and C_Traits.GetTreeNodes(treeID)
+	if not nodes or #nodes == 0 then
+		return
+	end
+	local all = ns.char.talents or {}
+	ns.char.talents = all
+	local known = all[configID]
+	local ranks, gained, refunded, spent, trees = {}, {}, 0, 0, nil
+	for _, nodeID in ipairs(nodes) do
+		local node = C_Traits.GetNodeInfo(configID, nodeID)
+		local old = known and known[nodeID] or 0
+		local rank = node and ns.Clean(node.ranksPurchased)
+		if not rank then
+			rank = old -- unreadable: keep what we had
+		elseif known and rank > old then
+			trees = trees or TreeNames(treeID)
+			local tree
+			for _, groupID in ipairs(node.groupIDs or {}) do
+				tree = tree or trees[groupID]
+			end
+			local name, id = Talent(configID, node)
+			gained[#gained + 1] = { id = id, name = name, tree = tree, rank = rank,
+				max = ns.Clean(node.maxRanks), points = rank - old > 1 and rank - old or nil }
+		elseif rank < old then
+			refunded = refunded + old - rank
+		end
+		ranks[nodeID] = rank > 0 and rank or nil
+		spent = spent + rank
+	end
+	all[configID] = ranks
+	if not known then
+		return
+	end
+	local level = UnitLevel("player")
+	-- A respec applied in one go: the reset first, then the new points.
+	if refunded > 0 then
+		ns.Log("talentreset", { points = refunded, spent = spent, level = level })
+	end
+	for _, t in ipairs(gained) do
+		t.level = level
+		ns.Log("talent", t)
+		ns.Add(t.points or 1, "talents")
+	end
+end
+
+ns.On("PLAYER_ENTERING_WORLD", CheckTalents)
+ns.On("TRAIT_CONFIG_UPDATED", CheckTalents)
+ns.On("TRAIT_CONFIG_LIST_UPDATED", CheckTalents)
+ns.On("PLAYER_TALENT_UPDATE", CheckTalents)
+ns.On("ACTIVE_TALENT_GROUP_CHANGED", CheckTalents)
 
 --------------------------------------------------------------------------------
 -- Flight paths
