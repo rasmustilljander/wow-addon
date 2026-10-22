@@ -321,6 +321,7 @@ local function CheckInstance()
 		return
 	end
 	if was then
+		ns.Fire("TL_INSTANCE_LEFT", was)
 		local seconds = was.inside + (was.since and time() - was.since or 0)
 		ns.Log("instanceleave", { name = was.name, kind = was.kind, seconds = seconds })
 		ns.Add(seconds, "instanceTime")

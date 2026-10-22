@@ -1,8 +1,8 @@
 -- PvP: duels you challenge and are challenged to (won, lost, fled, without a
 -- winner, declined), others' duels nearby, honorable kills from chat and
 -- from the kill count when chat is hidden, honor awards, your rank going up
--- and down (online, offline, a new season); stats, the window, /tl log and a
--- reload.
+-- and down (online, offline, a new season), battlegrounds won, lost, drawn and
+-- left; stats, the window, /tl log and a reload.
 local ns = M.Login()
 
 local function last(kind)
@@ -130,23 +130,80 @@ M.tick(3)
 check(count("honorkill") == 4, "daily reset isn't a kill")
 
 --------------------------------------------------------------------------------
+-- Battlegrounds
+--------------------------------------------------------------------------------
+
+local function enter(name, id)
+	M.instance, M.instanceInfo = name and "pvp" or nil, name and { name = name, maxPlayers = 10, instanceID = id }
+	M.zone, M.subzone = name or "Elwynn Forest", ""
+	M.fire("PLAYER_ENTERING_WORLD", false, false)
+end
+
+-- A win, with your scoreboard line; a reload before leaving doesn't log it
+-- twice, and leaving after the end is no desertion.
+enter("Warsong Gulch", 489)
+M.pvpScore = { killingBlows = 3, honorableKills = 12, deaths = 2, honorGained = 340 }
+M.fire("PVP_MATCH_COMPLETE", 1, 1380)
+local bg = last("battleground")
+check(count("battleground") == 1 and bg.name == "Warsong Gulch" and bg.result == "won" and bg.seconds == 1380
+	and bg.killingBlows == 3 and bg.honorableKills == 12 and bg.deaths == 2 and bg.honor == 340, "battleground won")
+check(ns.Describe(bg) == "Won Warsong Gulch after 23m: 3 killing blows, 12 honorable kills, 2 deaths, +340 honor",
+	"win described: " .. ns.Describe(bg))
+ns = M.Reload()
+M.fire("PVP_MATCH_COMPLETE", 1, 1380)
+enter(nil)
+check(count("battleground") == 1 and last("instanceleave").name == "Warsong Gulch", "logged once, left after the end")
+
+-- A loss to the Horde without a scoreboard, a draw with a secret line, and
+-- one left before the end.
+M.pvpScore = nil
+enter("Arathi Basin", 529)
+M.fire("PVP_MATCH_COMPLETE", 0, 1800)
+check(count("battleground") == 2 and last("battleground").result == "lost", "battleground lost")
+check(ns.Describe(last("battleground")) == "Lost Arathi Basin after 30m", "loss described: " .. ns.Describe(last("battleground")))
+enter(nil)
+M.pvpScore = { killingBlows = 0, honorableKills = 4, deaths = 1, honorGained = 77 }
+M.secrets[77] = true
+enter("Warsong Gulch", 489)
+M.fire("PVP_MATCH_COMPLETE", 255, 1500)
+M.secrets[77] = nil
+bg = last("battleground")
+check(count("battleground") == 3 and bg.result == "draw" and not bg.honor and bg.deaths == 1, "draw, secret honor left out")
+check(ns.Describe(bg) == "Draw in Warsong Gulch after 25m: 0 killing blows, 4 honorable kills, 1 death", "draw described: " .. ns.Describe(bg))
+enter(nil)
+enter("Alterac Valley", 30)
+enter(nil)
+bg = last("battleground")
+check(count("battleground") == 4 and bg.name == "Alterac Valley" and bg.result == "left" and not bg.seconds, "left before the end")
+check(ns.Describe(bg) == "Left Alterac Valley before the end", "desertion described")
+
+-- Dungeons aren't battlegrounds.
+M.instance, M.instanceInfo = "party", { name = "The Deadmines", maxPlayers = 5, instanceID = 36 }
+M.fire("PLAYER_ENTERING_WORLD", false, false)
+enter(nil)
+check(count("battleground") == 4, "leaving a dungeon isn't a battleground")
+
+--------------------------------------------------------------------------------
 -- Totals, /tl log, the window and a reload
 --------------------------------------------------------------------------------
 
 local st = ns.stats
 check(st.duels.won == 3 and st.duels.lost == 2 and st.duels.interrupted == 2, "duels counted")
 check(st.honorKills == 4 and st.honor == 157, "honor counted: " .. tostring(st.honor))
-for _, kind in ipairs({ "duel", "honorkill", "honor" }) do
+check(st.battlegrounds.won == 1 and st.battlegrounds.lost == 1 and st.battlegrounds.draw == 1 and st.battlegrounds.left == 1,
+	"battlegrounds counted")
+for _, kind in ipairs({ "duel", "honorkill", "honor", "battleground" }) do
 	check(ns.LogGroup(last(kind)) == "Life", kind .. " under Life")
 end
 check(ns.LogTypeLabel(last("duel")) == "Duel" and ns.LogTypeLabel(last("honorkill")) == "Honorable kill"
-	and ns.LogTypeLabel(last("honor")) == "Honor", "labels")
+	and ns.LogTypeLabel(last("honor")) == "Honor" and ns.LogTypeLabel(last("battleground")) == "Battleground", "labels")
 
 M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Duels .*") end
-check(line == "Duels won 3, lost 2, no winner 2; honorable kills 4, honor 157", "stats line: " .. tostring(line))
+check(line == "Duels won 3, lost 2, no winner 2; battlegrounds won 1, lost 1, drawn 1, left 1; honorable kills 4, honor 157",
+	"stats line: " .. tostring(line))
 M.out = {}
 SlashCmdList.TRAVELLOG("log 2 duel")
 check(#M.out == 3 and M.out[2]:find("Lost a duel to Zed-Otherrealm", 1, true)
@@ -158,10 +215,15 @@ check(#M.out == 2 and M.out[2]:find("Honorable kill: Grok (Sergeant), +45 honor"
 SlashCmdList.TRAVELLOG("")
 local values = {}
 for _, fs in ipairs(M.descendants(TravelLogFrame.pages[1])) do values[#values + 1] = fs.text end
-check(table.concat(values, "\n"):find("PvP\n3 duels won, 2 lost, 4 honorable kills, 157 honor", 1, true), "PvP row")
+check(table.concat(values, "\n"):find("PvP\n3 duels won, 2 lost, 4 honorable kills, 157 honor\nBattlegrounds\n1 won, 1 lost, 1 left", 1, true),
+	"PvP and Battlegrounds rows")
+M.out = {}
+SlashCmdList.TRAVELLOG("log 1 draw")
+check(#M.out == 2 and M.out[2]:find("Draw in Warsong Gulch after 25m", 1, true), "/tl log finds the result")
 
 ns = M.Reload()
-check(count("duel") == 7 and count("honorkill") == 4 and ns.stats.duels.won == 3 and ns.stats.honor == 157, "kept after a reload")
+check(count("duel") == 7 and count("honorkill") == 4 and count("battleground") == 4 and ns.stats.duels.won == 3
+	and ns.stats.honor == 157 and ns.stats.battlegrounds.won == 1, "kept after a reload")
 -- The day's count is read again at login, so it isn't counted twice.
 M.honorKills = 1
 M.fire("PLAYER_PVP_KILLS_CHANGED", "player")

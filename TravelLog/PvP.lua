@@ -1,4 +1,4 @@
--- PvP: duels, honorable kills and your rank.
+-- PvP: duels, honorable kills, your rank and battleground results.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -246,5 +246,61 @@ end)
 ns.On("PLAYER_PVP_RANK_CHANGED", function(unit)
 	if unit == "player" then
 		CheckRank()
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- Battlegrounds
+--------------------------------------------------------------------------------
+
+-- Your line on the scoreboard, as Blizzard's results window reads it when the
+-- match ends. Any of it can be secret.
+local function Score()
+	local guid = ns.Clean(UnitGUID("player"))
+	local info = guid and C_PvP and C_PvP.GetScoreInfoByPlayerGuid and C_PvP.GetScoreInfoByPlayerGuid(guid)
+	if type(info) ~= "table" then
+		return {}
+	end
+	return {
+		killingBlows = ns.Clean(info.killingBlows), honorableKills = ns.Clean(info.honorableKills),
+		deaths = ns.Clean(info.deaths), honor = ns.Clean(info.honorGained),
+	}
+end
+
+local function LogMatch(data)
+	ns.Log("battleground", data)
+	ns.Add(1, "battlegrounds", data.result)
+end
+
+-- winner is a faction index, as GetBattlefieldArenaFaction gives yours:
+-- 0 Horde, 1 Alliance; anything else is a draw.
+local watching = ns.On("PVP_MATCH_COMPLETE", function(winner, duration)
+	local inst = ns.char.instance
+	if inst and inst.result then
+		return
+	end
+	winner = ns.Clean(winner)
+	if winner == nil then
+		return
+	end
+	local mine = GetBattlefieldArenaFaction and ns.Clean(GetBattlefieldArenaFaction())
+	if mine == nil then
+		mine = UnitFactionGroup("player") == "Alliance" and 1 or 0
+	end
+	local data = Score()
+	data.name = ns.Clean((GetInstanceInfo()))
+	data.result = winner == mine and "won" or winner == 1 - mine and "lost" or "draw"
+	data.seconds = ns.Clean(duration)
+	LogMatch(data)
+	if inst then
+		inst.result = data.result
+	end
+end)
+
+-- Leaving a battleground before its end: deserting, or a disconnect that
+-- outlasted the match.
+ns.On("TL_INSTANCE_LEFT", function(inst)
+	if watching and (inst.kind == "battleground" or inst.kind == "arena") and not inst.result then
+		LogMatch({ name = inst.name, result = "left" })
 	end
 end)
