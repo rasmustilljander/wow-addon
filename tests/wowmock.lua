@@ -162,7 +162,7 @@ PLAYER_REGEN_DISABLED PLAYER_REGEN_ENABLED PLAYERBANKSLOTS_CHANGED PLAYER_ACCOUN
 PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_AUCTIONS_UPDATED
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
-GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE]]):gmatch("%S+") do
+GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -602,6 +602,24 @@ function GetXPExhaustion() return M.rested end
 function GetMaxPlayerLevel() return M.maxLevel end
 function IsXPUserDisabled() return M.xpDisabled end
 function IsInInstance() return M.instance ~= nil, M.instance or "none" end
+-- Inside (M.instance set), M.instanceInfo = { name, difficultyName,
+-- maxPlayers, instanceID } names the instance; outside, it's the zone.
+function GetInstanceInfo()
+	if not M.instance then return M.zone, "none", 0, "", 0, 0, false, M.inst, 0, nil, false end
+	local i = M.instanceInfo or {}
+	return i.name or M.zone, M.instance, 1, i.difficultyName or "Normal", i.maxPlayers or 5, 0, false,
+		i.instanceID or 36, i.maxPlayers or 5, nil, false
+end
+-- Your own speed in yards a second: running (7) unless M.speed says
+-- otherwise, such as 0 standing on a boat.
+function GetUnitSpeed() return M.speed or 7, 7, 7, 4.72 end
+-- A summon on offer: M.summon = { by, area }, announced with CONFIRM_SUMMON.
+C_SummonInfo = {}
+function C_SummonInfo.GetSummonConfirmSummoner() return M.summon and M.summon.by end
+function C_SummonInfo.GetSummonConfirmAreaName() return M.summon and M.summon.area or "" end
+function C_SummonInfo.GetSummonConfirmTimeLeft() return M.summon and 120 or 0 end
+function C_SummonInfo.ConfirmSummon() M.summon = nil end
+function C_SummonInfo.CancelSummon() M.summon = nil end
 C_UnitAuras = {}
 function C_UnitAuras.GetPlayerAuraBySpellID(spellID) return M.auras[spellID] end
 -- M.group lists the other members' units ("party1", ...), set in M.units.

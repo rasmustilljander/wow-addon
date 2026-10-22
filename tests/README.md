@@ -19,11 +19,12 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | File | |
 | --- | --- |
 | `run.py` | Finds and runs `tests/<Addon>/*.lua`. |
-| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, trades, mail, posting and owned auctions, loot windows, merchants, flights, the quest log's abandon dialog, the world map and world positions, the minimap's range and facing, the addon compartment, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
+| `wowmock.lua` | The fake client: frames and the Blizzard templates addons use, events, player position and state, bags, bank tabs and the cursor, equipment, trades, mail, posting and owned auctions, loot windows, merchants, flights, the quest log's abandon dialog, summons, instances, the world map and world positions, the minimap's range and facing, the addon compartment, CVars, addon messages and chat filters, SavedVariables, load-on-demand addons. |
 | `TravelLog/adventure.lua` | A short adventure with TravelLog, Path and Nodes: path, jumps, loot, vendors, money, quests (one abandoned), a flight, a death, the map trail, companion commands, a reload. |
 | `TravelLog/loot.lua` | Loot sources (pickpockets too), roll wins, and the partner or sender of trades and mail. |
 | `TravelLog/outgoing.lua` | Items given in a trade, mailed (and postage), put up for auction (with a confirmation) and destroyed (whole, split, worn), their totals and History groups, a reload. |
 | `TravelLog/played.lua` | Time played: asked quietly at login, counted forward, how long a level took, `/tl stats` and `/tl log`, a reload, no answer. |
+| `TravelLog/travel.lua` | Teleports by your casts and others' portals, hearthstone-like spells, summons (a secret summoner too), a boat ride across a loading screen, dungeons and raids with time inside across a reload and a relog, and what isn't travel (casts, walking, doors, knockbacks, deaths); stats, `/tl log` and Totals rows. |
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History with only Events and Sessions), moving old path and nodes into the companions. |
 | `TravelLog/sessions.lua` | Experience gained per session (across a level-up), money and what happened in each, `/tl sessions`, the Sessions view, a reload. |
@@ -67,6 +68,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.hover(unit)`, `M.hoverItem(itemID)` | Show a unit's or item's tooltip, running addons' post-calls; returns its lines without color codes. |
 | `M.played`, `M.playedLevel`, `M.playedAsks`, `M.chatLines` | Seconds played in all and at this level (both grow with the clock), how often `RequestTimePlayed` was called (it answers with `TIME_PLAYED_MSG` a second later), and what `ChatFrame1` printed of the answers. |
 | `M.xp`, `M.xpMax`, `M.rested`, `M.auras`, `M.group`, `M.raid`, `M.instance` | Experience, rested pool, player auras by spell ID, other group members' units (`party1`, ... or `raid1`, ...), raid or party, instance type. |
+| `M.instanceInfo`, `M.speed`, `M.summon` | The instance you're in (`{ name, difficultyName, maxPlayers, instanceID }`, for `GetInstanceInfo`), your own speed (`GetUnitSpeed`: 7 unless set, 0 standing on a boat), a summon on offer (`{ by, area }`, then fire `CONFIRM_SUMMON`). |
 | `M.skills`, `M.spellNames[id]`, `M.spellRanks[id]` | Skill lines (`{ skillID, name, rank, isHeader }`), spell names and rank text. |
 | `M.trainerServices[i] = { name, rank, cost }` | The open trainer's list (`GetTrainerServiceInfo`, `GetTrainerServiceCost`). |
 | `M.guidNames[guid] = name` | Units the client still knows by GUID (`UnitNameFromGUID`) after they're gone. |

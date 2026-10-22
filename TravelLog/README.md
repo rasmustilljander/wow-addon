@@ -24,7 +24,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, trade, auction or other. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
-| **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstone uses and binds. |
+| **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds. |
 | **Life** | Deaths (and what you fought), spirit releases, revivals, level-ups (with how long the level took), quests accepted, completed and abandoned, kills that gave XP, discoveries. |
 | **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
@@ -66,7 +66,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills and mounts |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, mounts and the instance you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
@@ -92,10 +92,22 @@ TravelLogCharDB = {
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ... } },  -- last time of each
   skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
+  instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ... },  -- while you're in one
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `flight`, `landed`, `hearth`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `level` entry also has `played`, the seconds played in all, and `took`, the seconds played at the level before.
+
+Travel entries' own fields:
+
+| Type | Fields |
+| --- | --- |
+| `hearth`, `teleport` | `from`, `to` (place names); `spell` and `via` (its name) when your cast did it |
+| `summon` | `from`, `to`, `by` (the summoner) |
+| `board` | none: it's stamped where the ride started |
+| `disembark` | `from`, `to`, `seconds` on board |
+| `instance` | `name`, `kind` (`dungeon`, `raid`, `battleground`, `arena` or `scenario`), `difficulty`, `size`, `id` |
+| `instanceleave` | `name`, `kind`, `seconds` inside |
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
@@ -106,6 +118,11 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Objects are named from the cast that opened them. One that opens without a cast (some quest crates) gets its object ID but no name.
 - Addons get no coordinates in dungeons and raids. The Midnight-era client also hides some chat there, so crafted items, quest rewards, kills, discoveries and reputation standings may be missing. Loot windows and roll wins still work.
 - Time played comes from `/played`, which TravelLog asks for at each login and keeps out of chat. A `/played` you type before that answer arrives (usually within a second of login) doesn't show, and a level-up before the answer arrives gets no times.
+- Teleports are found by a jump in your position: more than 100 yards beyond what you could have walked or ridden since the last look a second before. A cast in the 5 seconds before is named as the cause, and one that lands you where your hearthstone is set counts as a hearth. A jump without a cast of yours (another mage's portal, an NPC that sends you somewhere) is a teleport with no spell, since the client doesn't say whose portal it was.
+- The Hearthstone always counts, even next to the inn. Other teleports shorter than 100 yards, teleports inside dungeons (no positions there), and teleports out of a dungeon that don't land at your hearthstone are missed: leaving a dungeon is logged either way.
+- The client doesn't report boats and zeppelins. A ride is when you're carried at least 4 yards a second faster than your own speed for 5 seconds, so it can't tell a boat from a zeppelin, and it ends after 10 seconds on your own feet.
+- Summons are logged once you accept and arrive. The summoner's name is missing if the client hides it.
+- Time in a dungeon or raid counts only while you're logged in, and a reload inside is the same visit.
 - Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Items used up (potions, food, reagents) aren't recorded: no event says an item was consumed.

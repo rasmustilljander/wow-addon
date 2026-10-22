@@ -95,6 +95,14 @@ local Count = ns.Count
 ns.AddStat("Travel", "Places visited", function(st) return Count(ns.PlacesVisited(st)) end)
 ns.AddStat("Travel", "Flights", function(st) return Count(st.flights) end)
 ns.AddStat("Travel", "Flight paths", function(st) return Count(st.flightPaths) end)
+ns.AddStat("Travel", "Teleports", function(st)
+	return ("%s hearths, %s teleports, %s summons"):format(Count(st.hearths), Count(st.teleports), Count(st.summons))
+end)
+ns.AddStat("Travel", "Boat rides", function(st) return Count(st.boats) end)
+ns.AddStat("Travel", "Instances", function(st)
+	local i = st.instances or {}
+	return ("%s dungeons, %s raids, %s inside"):format(Count(i.dungeon), Count(i.raid), ns.Duration(st.instanceTime or 0))
+end)
 ns.AddStat("Loot", "Looted", function(st)
 	local loot = st.loot or {}
 	return ("%s items from %s sources, %s in coins"):format(Count(loot.items), Count(loot.opened), ns.MoneyText(loot.money))

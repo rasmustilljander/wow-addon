@@ -228,10 +228,11 @@ check(last("level").level == 6 and TravelLogDB.chars[KEY].level == 6, "level up"
 
 -- Hearthstone back to Goldshire
 M.fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-9", 8690)
-check(last("hearth") and last("hearth").to == "Goldshire", "hearth logged")
 M.mapID, M.zone, M.subzone, M.x, M.y, M.wa, M.wb = 1429, "Elwynn Forest", "Goldshire", 0.42, 0.65, -9000, -100
 M.fire("ZONE_CHANGED_NEW_AREA")
 M.tick(1)
+check(count("hearth") == 1 and last("hearth").from == "Sentinel Hill" and last("hearth").to == "Goldshire", "hearth logged")
+check(count("teleport") == 0, "a hearth isn't another teleport")
 
 -- Dungeon: no coordinates, but jumps still count
 M.x, M.wa = nil, nil
