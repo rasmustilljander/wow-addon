@@ -81,6 +81,6 @@ Each kill is one string, `time, uiMapID, x, y, place, xp, killed by`, with trail
 ## Limits
 
 - Kills by anyone outside your party (another player, a guard) aren't counted.
-- In dungeons and raids the client can hide mob identities and coordinates. A kill there is recorded without coordinates if its XP line names it, and not at all if nothing names it.
+- In dungeons and raids the client can hide mob identities and coordinates. A kill there is recorded without coordinates if its XP line names it, and not at all if nothing names it. TravelLog logs boss kills and wipes there as `boss` entries.
 - When several unnamed mobs die at once, their XP lines are matched to them in order.
 - Untested in the live game; written against the Forever 1.60.1 API documentation and tested against a fake client ([tests](../tests/README.md)).
