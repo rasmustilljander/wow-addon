@@ -16,6 +16,7 @@ Vendor.lua
 Outgoing.lua
 Money.lua
 Life.lua
+PvP.lua
 Progress.lua
 Commands.lua
 UI.lua

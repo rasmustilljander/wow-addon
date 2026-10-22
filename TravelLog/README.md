@@ -26,6 +26,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds. |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, discoveries. |
+| **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), honorable kills (victim, rank, honor) and honor awards. |
 | **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, and the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards). |
 
@@ -36,7 +37,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played too) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options and Path's interval.
 - **History**: what's still in the character file, newest first, in views:
-  - **Events**: every event. Filter by Travel, Loot, Trade, Life or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
+  - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
   - **Sessions**: each session's length, levels, money and experience gained (per hour once it's 10 minutes long), and its quests done and failed, XP kills and deaths.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
@@ -98,7 +99,7 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `duel`, `honorkill`, `honor`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -118,6 +119,9 @@ Some types have more:
 | `equip` | `slot` (inventory slot, 1 head to 18 ranged), `item` (link), `ilvl`, `quality` (0 poor, 1 common, 2 uncommon, ...), `replaced` (the link it replaced). `ilvl` and `quality` are missing if the item wasn't loaded yet. |
 | `talent` | `name`, `id` (its spell), `tree`, `rank`, `max`, `level`; `points` when several ranks were applied at once. |
 | `talentreset` | `points` taken back, `spent` (points still spent), `level`. |
+| `duel` | `opponent`, `result` (`won`, `lost` or `interrupted`: no winner), `fled` (the loser ran), `challenger` (`you` or `opponent`) |
+| `honorkill` | `name`, `rank`, `honor`; all empty for a kill known only from the count |
+| `honor` | `honor` awarded |
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
@@ -137,6 +141,8 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - A failed quest is noticed when the quest log next updates, and logged once each time you take it: not again after a reload, and abandoning it afterwards is a `questabandon`. One that failed while you were offline or before TravelLog was installed is logged when it's first seen. The client doesn't say why a quest failed, so only a timer running out is told apart, and a failed quest the server drops from the log at once isn't seen.
 - Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
 - Gear counts from the first login that records it: what you wear then is remembered, not logged, and gear in your bags is logged the first time you put it on. Gear is kept by item ID, so a second copy of an item, or the same item with another random enchantment, isn't logged again.
+- Duel results come from the "Ann has defeated Bob in a duel" line. The client doesn't say when the other player accepts your challenge, so a duel you challenged that ends without a winner is logged only if one of you crossed the duel area's edge.
+- Honorable kills and honor come from their chat lines. Where chat is hidden (battlegrounds), kills come from the day's honorable kill count instead, without name, rank or honor, and honor awards are missed. Deaths don't say whether a player killed you: no event names the killer.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Without the combat log, a death's `cause` comes only from the breath and fatigue bars (run out in the last minute) and from falls over 1.5 s that end within a second of dying. Lava, fire and slime aren't told apart, and a mob kill right after a long fall counts as the fall.
 - How you came back is known when you chose it in the game's dialogs (resurrection, spirit healer, soulstone and the like, corpse) in the 30 s before. Battleground spirit healers aren't. A resurrection names the player but not the spell.

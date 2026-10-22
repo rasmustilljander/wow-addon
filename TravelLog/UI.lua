@@ -130,6 +130,11 @@ ns.AddStat("Life", "New gear", function(st) return Count(st.gear) end)
 ns.AddStat("Life", "XP kills", function(st) return Count(st.kills) end)
 ns.AddStat("Life", "Deaths", ns.DeathsText)
 ns.AddStat("Life", "Came back", ns.RevivalsText)
+ns.AddStat("Life", "PvP", function(st)
+	local d = st.duels or {}
+	return ("%s duels won, %s lost, %s honorable kills, %s honor"):format(
+		Count(d.won), Count(d.lost), Count(st.honorKills), Count(st.honor))
+end)
 ns.AddStat("Log", "Entries", function()
 	return ("%s in %s sessions"):format(Count(#ns.char.log), Count(#ns.char.sessions))
 end, true)
