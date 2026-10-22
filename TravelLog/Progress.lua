@@ -1,7 +1,7 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, talent points spent, flight paths found,
--- reputation standings reached, the first ride on each mount and the first
--- time you put on each piece of gear.
+-- reputation standings reached, the first ride on each mount, beasts tamed
+-- and the first time you put on each piece of gear.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -330,6 +330,84 @@ ns.On("PLAYER_LOGIN", function()
 			end
 		end)
 	end
+end)
+
+--------------------------------------------------------------------------------
+-- Pets: each beast you tame
+--------------------------------------------------------------------------------
+
+-- Tame Beast is a channel at your target. It worked if a pet appears once
+-- the channel has run its full length; nothing else says so.
+local TAME_BEAST = 1515
+local TAME_LONGEST = 30 -- seconds a channel can last, when its end isn't known
+local TAME_WAIT = 5     -- seconds after the channel for the pet to appear
+local taming            -- { name, id, level, family, started, ends, stopped }
+
+local function IsTame(spellID)
+	spellID = ns.Clean(spellID)
+	if spellID == TAME_BEAST then
+		return true
+	end
+	local name = spellID and C_Spell and ns.Clean(C_Spell.GetSpellName(spellID))
+	return name ~= nil and name == ns.Clean(C_Spell.GetSpellName(TAME_BEAST))
+end
+
+ns.On("UNIT_SPELLCAST_CHANNEL_START", function(unit, _, spellID)
+	if unit ~= "player" or not IsTame(spellID) then
+		return
+	end
+	local _, id = ns.ParseGUID(UnitGUID("target"))
+	local level = ns.Clean(UnitLevel("target"))
+	local ends = UnitChannelInfo and ns.Clean(select(5, UnitChannelInfo("player")))
+	taming = {
+		name = ns.Clean((UnitName("target"))),
+		id = id,
+		level = level and level > 0 and level or nil,
+		family = UnitCreatureFamily and ns.Clean((UnitCreatureFamily("target"))),
+		started = GetTime(),
+		ends = ends and ends / 1000,
+	}
+end)
+
+-- Moving or being hit too hard stops the channel early, and the beast stays
+-- wild.
+ns.On("UNIT_SPELLCAST_CHANNEL_STOP", function(unit, _, spellID)
+	if unit == "player" and taming and IsTame(spellID) then
+		if taming.ends and GetTime() < taming.ends - 1 then
+			taming = nil
+		else
+			taming.stopped = GetTime()
+		end
+	end
+end)
+ns.On("UNIT_SPELLCAST_INTERRUPTED", function(unit, _, spellID)
+	if unit == "player" and IsTame(spellID) then
+		taming = nil
+	end
+end)
+
+ns.On("UNIT_PET", function(unit)
+	if unit ~= "player" or not taming or not UnitExists("pet") then
+		return
+	end
+	local beast = taming
+	taming = nil
+	if GetTime() > (beast.stopped or beast.ends or beast.started + TAME_LONGEST) + TAME_WAIT then
+		return
+	end
+	local pet = ns.Clean((UnitName("pet")))
+	local name = beast.name or pet
+	local family = beast.family or UnitCreatureFamily and ns.Clean((UnitCreatureFamily("pet")))
+	ns.Log("tame", {
+		name = name,
+		id = beast.id,
+		level = beast.level,
+		family = family,
+		-- Only a name of its own, not the beast's or its family's.
+		pet = pet ~= name and pet ~= family and pet or nil,
+		first = not ns.stats.tames or nil,
+	})
+	ns.Add(1, "tames")
 end)
 
 --------------------------------------------------------------------------------

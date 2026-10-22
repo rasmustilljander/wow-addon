@@ -134,7 +134,7 @@ M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
-check(line == "Spells learned 3, new skills 1, skill points 4, talent points 0, flight paths found 1, mounts 2, new gear 0", "stats line: " .. tostring(line))
+check(line == "Spells learned 3, new skills 1, skill points 4, talent points 0, flight paths found 1, mounts 2, pets tamed 0, new gear 0", "stats line: " .. tostring(line))
 check(TravelLogCharDB.mounts[458] and TravelLogCharDB.mounts[472], "mounts saved")
 
 -- Each milestone has a marker on the map; learned ones share one.

@@ -180,8 +180,9 @@ local function ShowStats(arg)
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, new gear %s",
-		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts), Count(st.gear))
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
+		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
+		Count(st.tames), Count(st.gear))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
@@ -393,6 +394,14 @@ local DESCRIBE = {
 	taxipath = function(e) return e.npc and ("Found the flight path at %s"):format(e.npc) or "Found a flight path" end,
 	standing = function(e) return ("Now %s with %s"):format(e.standing, e.faction) end,
 	mount = function(e) return (e.first and "First mount: %s" or "First ride on %s"):format(e.name or e.id) end,
+	tame = function(e)
+		local text = (e.first and "First pet: %s" or "Tamed %s"):format(e.name or e.id or "a beast")
+		local about = {}
+		if e.level then about[#about + 1] = "level " .. e.level end
+		if e.family then about[#about + 1] = e.family end
+		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, " ")) end
+		return e.pet and ("%s, named %s"):format(text, e.pet) or text
+	end,
 	equip = function(e)
 		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
 		local text = ("Equipped %s (%s%s)"):format(e.item or "?", slot, e.ilvl and ", item level " .. e.ilvl or "")
@@ -425,7 +434,7 @@ local LOG_GROUP = {
 	duel = "Life", honorkill = "Life", honor = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
-	standing = "Progress", mount = "Progress", equip = "Progress",
+	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
 }
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
@@ -440,7 +449,7 @@ local LOG_LABEL = {
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
-	mount = "Mount", equip = "Gear",
+	mount = "Mount", tame = "Pet tamed", equip = "Gear",
 }
 
 function ns.LogGroup(e)

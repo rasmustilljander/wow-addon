@@ -173,7 +173,7 @@ RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
 GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
 TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
-PLAYER_PVP_KILLS_CHANGED]]):gmatch("%S+") do
+PLAYER_PVP_KILLS_CHANGED UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -601,6 +601,11 @@ function UnitLevel(unit)
 	local u = M.units[unit]
 	return u and u.level or 0
 end
+-- u.family is a beast's creature family ("Cat").
+function UnitCreatureFamily(unit)
+	local u = M.units[unit]
+	if u and u.family then return u.family, u.familyID or 1 end
+end
 function UnitXP() return M.xp end
 -- /played: the server answers a second later with the time played then.
 M.playedAsks = 0
@@ -787,7 +792,7 @@ function C_QuestLog.GetTimeAllowed(id)
 	end
 end
 C_Spell = {}
-M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball", [921] = "Pick Pocket" }
+M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening", [8613] = "Skinning", [133] = "Fireball", [921] = "Pick Pocket", [1515] = "Tame Beast" }
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
 M.spellRanks = {}
 function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end
@@ -998,6 +1003,27 @@ function M.cast(spellID, target)
 	local guid = "Cast-" .. spellID .. "-" .. M.gametime
 	M.fire("UNIT_SPELLCAST_SENT", "player", target or "", guid, spellID)
 	M.fire("UNIT_SPELLCAST_SUCCEEDED", "player", guid, spellID)
+end
+
+-- Channeling: M.channel(spellID, seconds) starts one (CHANNEL_START), and
+-- M.channelStop(interrupted) ends it (INTERRUPTED first if interrupted).
+function M.channel(spellID, seconds)
+	M.channeling = { spellID = spellID, guid = "Cast-" .. spellID .. "-" .. M.gametime,
+		started = M.gametime, ends = M.gametime + seconds }
+	M.fire("UNIT_SPELLCAST_CHANNEL_START", "player", M.channeling.guid, spellID)
+end
+function M.channelStop(interrupted)
+	local c = M.channeling
+	M.channeling = nil
+	if interrupted then M.fire("UNIT_SPELLCAST_INTERRUPTED", "player", c.guid, c.spellID, "") end
+	M.fire("UNIT_SPELLCAST_CHANNEL_STOP", "player", c.guid, c.spellID, "")
+end
+function UnitChannelInfo(unit)
+	local c = unit == "player" and M.channeling
+	if c then
+		local name = M.spellNames[c.spellID] or ""
+		return name, name, 136243, c.started * 1000, c.ends * 1000, false, false, c.spellID, false, 0, nil
+	end
 end
 
 -- Loot window
