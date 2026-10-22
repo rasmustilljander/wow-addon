@@ -191,4 +191,5 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Guild bank items are read from what your bags gain or lose within 10 s of a guild bank click, so equipping or destroying an item in those seconds counts as a move, and an item held on the cursor longer is missed. Moves between tabs aren't logged.
 - Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
+- Vendor buys, buybacks and repairs are logged only after the bag count, buyback list or repair cost confirms them within 5 seconds. Failed clicks aren't logged; a confirmation delayed longer than that is missed.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.
