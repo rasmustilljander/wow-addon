@@ -184,9 +184,9 @@ local function ShowStats(arg)
 	ns.Print("Duels won %s, lost %s, no winner %s; honorable kills %s, honor %s",
 		Count(duels.won), Count(duels.lost), Count(duels.interrupted), Count(st.honorKills), Count(st.honor))
 	local instances = st.instances or {}
-	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
+	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, screenshots %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
-		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0))
+		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0), Count(st.screenshots))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts), Count(st.gear))
 
@@ -331,6 +331,7 @@ local DESCRIBE = {
 	end,
 	instanceleave = function(e) return ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0)) end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
+	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"
 		if e.target then text = ("%s fighting %s"):format(text, e.target) end
@@ -429,7 +430,7 @@ end
 local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
-	instance = "Travel", instanceleave = "Travel",
+	instance = "Travel", instanceleave = "Travel", screenshot = "Travel",
 	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
@@ -446,7 +447,7 @@ local LOG_LABEL = {
 	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
-	instanceleave = "Instance left", death = "Death",
+	instanceleave = "Instance left", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor",
