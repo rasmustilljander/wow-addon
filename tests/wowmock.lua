@@ -1053,6 +1053,11 @@ function GetGuildBankItemInfo(tab, slot)
 	return item.icon or 134400, e.count or 1, false, false, item.quality or 1
 end
 function GetGuildBankItemLink(tab, slot) local e = GuildBankItem(tab, slot); return e and e.link end
+-- Moving items in or out happens on the server: tests change M.bags and
+-- fire BAG_UPDATE_DELAYED.
+function PickupGuildBankItem(tab, slot) end
+function AutoStoreGuildBankItem(tab, slot) end
+function SplitGuildBankItem(tab, slot, amount) end
 
 -- The game's Options window. M.settings[name] is an addon's page under
 -- AddOns ({ name, controls = { { setting, tooltip } } }). Ticking a checkbox

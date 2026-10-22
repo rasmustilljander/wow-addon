@@ -1,5 +1,6 @@
 -- Items that leave your bags: handed over in a trade, sent by mail, put up
--- for auction or destroyed. Money that goes with them is the money ledger's.
+-- for auction or destroyed, and items moved to and from the guild bank.
+-- Money that goes with them is the money ledger's.
 local _, ns = ...
 
 -- Counts can come back as nil or 0 for single items.
@@ -162,3 +163,99 @@ hooksecurefunc("DeleteCursorItem", function()
 	end
 	held = nil
 end)
+
+--------------------------------------------------------------------------------
+-- Guild bank
+--------------------------------------------------------------------------------
+
+-- Items moved between your bags and the guild bank, one entry per visit. The
+-- server does the moving, so it's read from your bags: what they gained or
+-- lost soon after a guild bank click. Other bag changes (equipping) don't
+-- count.
+local GUILD_BANK_CLICK = 10 -- seconds a click's move may take, holding the item on the cursor included
+local bagCounts -- item link -> count in your bags, while the guild bank is open
+local moved     -- this visit's { deposited = { link -> count }, withdrawn = { link -> count } }
+
+local function CountBags()
+	local counts = {}
+	for bag = 0, NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4 do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			local link = info and ns.Clean(info.hyperlink)
+			if link then
+				counts[link] = (counts[link] or 0) + Count(info.stackCount)
+			end
+		end
+	end
+	return counts
+end
+
+local function Clicked()
+	if ns.open.guildbank then
+		ns.Mark("guildbankitem")
+	end
+end
+for _, name in ipairs({ "PickupGuildBankItem", "AutoStoreGuildBankItem", "SplitGuildBankItem" }) do
+	if _G[name] then
+		hooksecurefunc(name, Clicked)
+	end
+end
+-- Right-clicking a bag item with the guild bank open deposits it.
+hooksecurefunc(C_Container, "UseContainerItem", Clicked)
+
+-- Adds what grew from "from" to "to" into "into".
+local function AddGrowth(into, from, to)
+	for link, n in pairs(to) do
+		local was = from[link] or 0
+		if n > was then
+			into[link] = (into[link] or 0) + n - was
+		end
+	end
+end
+
+-- By name, so the order is the same every time.
+local function List(counts)
+	local items = {}
+	for link, n in pairs(counts) do
+		items[#items + 1] = { item = link, count = n }
+	end
+	local function Name(it) return it.item:match("%[(.-)%]") or it.item end
+	table.sort(items, function(a, b) return Name(a) < Name(b) end)
+	return #items > 0 and items or nil
+end
+
+local function LeaveGuildBank()
+	if not moved then
+		return
+	end
+	local deposited, withdrawn = List(moved.deposited), List(moved.withdrawn)
+	bagCounts, moved = nil, nil
+	if deposited or withdrawn then
+		ns.Log("guildbank", { deposited = deposited, withdrawn = withdrawn, guild = ns.char.guild and ns.char.guild.name })
+		for _, it in ipairs(deposited or {}) do ns.Add(it.count, "guildBank", "deposited") end
+		for _, it in ipairs(withdrawn or {}) do ns.Add(it.count, "guildBank", "withdrawn") end
+	end
+end
+
+ns.On("TL_OPEN", function(context)
+	if context == "guildbank" then
+		bagCounts, moved = CountBags(), { deposited = {}, withdrawn = {} }
+	end
+end)
+ns.On("BAG_UPDATE_DELAYED", function()
+	if not bagCounts then
+		return
+	end
+	local counts = CountBags()
+	if ns.Recent("guildbankitem", GUILD_BANK_CLICK) then
+		AddGrowth(moved.withdrawn, bagCounts, counts)
+		AddGrowth(moved.deposited, counts, bagCounts)
+	end
+	bagCounts = counts
+end)
+ns.On("TL_CLOSE", function(context)
+	if context == "guildbank" then
+		LeaveGuildBank()
+	end
+end)
+ns.On("PLAYER_LOGOUT", LeaveGuildBank)
