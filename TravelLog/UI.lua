@@ -103,6 +103,9 @@ ns.AddStat("Travel", "Instances", function(st)
 	local i = st.instances or {}
 	return ("%s dungeons, %s raids, %s inside"):format(Count(i.dungeon), Count(i.raid), ns.Duration(st.instanceTime or 0))
 end)
+ns.AddStat("Travel", "Resting", function(st)
+	return ("%s stays, %s"):format(Count(st.rests), ns.Duration(st.restTime or 0))
+end)
 ns.AddStat("Travel", "Screenshots", function(st) return Count(st.screenshots) end)
 ns.AddStat("Loot", "Looted", function(st)
 	local loot = st.loot or {}

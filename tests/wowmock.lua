@@ -195,7 +195,7 @@ PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAIL
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
-ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END]]):gmatch("%S+") do
+ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -637,6 +637,7 @@ function RequestTimePlayed()
 end
 function UnitXPMax() return M.xpMax end
 function GetXPExhaustion() return M.rested end
+function IsResting() return M.resting == true end
 function GetMaxPlayerLevel() return M.maxLevel end
 function IsXPUserDisabled() return M.xpDisabled end
 function IsInInstance() return M.instance ~= nil, M.instance or "none" end

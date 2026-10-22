@@ -206,9 +206,10 @@ local function ShowStats(arg)
 		Count(bgs.won), Count(bgs.lost), Count(bgs.draw), Count(bgs.left), Count(st.honorKills), Count(st.honor))
 	ns.Print("Guild: %s", ns.GuildText(st, key))
 	local instances = st.instances or {}
-	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, screenshots %s",
+	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, rested stays %s, %s resting, screenshots %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
-		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0), Count(st.screenshots))
+		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0),
+		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
@@ -370,6 +371,11 @@ local DESCRIBE = {
 		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
 	end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
+	rest = function(e) return ("Started resting in %s"):format(e.subzone or e.zone or "?") end,
+	restleave = function(e)
+		local text = ("Stopped resting after %s"):format(ns.Duration(e.seconds or 0))
+		return e.rested and ("%s, %s XP rested"):format(text, Count(e.rested)) or text
+	end,
 	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"
@@ -531,7 +537,7 @@ end
 local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
-	instance = "Travel", instanceleave = "Travel", screenshot = "Travel",
+	instance = "Travel", instanceleave = "Travel", rest = "Travel", restleave = "Travel", screenshot = "Travel",
 	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
@@ -550,7 +556,7 @@ local LOG_LABEL = {
 	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
-	instanceleave = "Instance left", screenshot = "Screenshot", death = "Death",
+	instanceleave = "Instance left", rest = "Resting", restleave = "Resting ended", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", boss = "Boss", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",

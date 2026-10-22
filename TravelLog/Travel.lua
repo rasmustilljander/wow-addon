@@ -1,7 +1,7 @@
 -- Travel: zone and subzone changes, flights (and landing), hearthstones and
 -- other teleports, summons, boats and zeppelins, dungeons and raids, where
--- you set your hearthstone, and screenshots. Your path itself is
--- TravelLog_Path's.
+-- you set your hearthstone, resting in inns and cities, and screenshots.
+-- Your path itself is TravelLog_Path's.
 local _, ns = ...
 
 local HEARTHSTONE = 8690
@@ -383,6 +383,82 @@ ns.On("ENCOUNTER_END", function(id, name, difficultyID, size, success)
 	if inst then
 		local key = result == "kill" and "kills" or "wipes"
 		inst[key] = (inst[key] or 0) + 1
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- Resting: inns and cities
+--------------------------------------------------------------------------------
+
+local REST_SETTLE = 5 -- seconds a change must hold, so walking through an inn's door isn't a stay
+
+-- The stay you're on is kept in the character file, like an instance, so a
+-- reload or a night logged out in the inn is one stay. Logging in rested
+-- starts one without an entry: the session already says where you were.
+-- A change is noted where it happens and saved once it has held.
+local change -- { resting, entry }
+
+local function SettleRest()
+	local c = change
+	change = nil
+	if not c or (IsResting() and true or false) ~= c.resting then
+		return
+	end
+	ns.Save(c.entry)
+	if c.resting then
+		ns.char.rest = { inside = 0, since = c.entry.time }
+		ns.Add(1, "rests")
+	else
+		ns.char.rest = nil
+		ns.Add(c.entry.seconds, "restTime")
+	end
+end
+
+local function CheckRest()
+	local resting = IsResting() and true or false
+	local was = ns.char.rest
+	if resting == (was ~= nil) then
+		change = nil
+		return
+	end
+	if change and change.resting == resting then
+		return
+	end
+	-- Resting can be known a moment after the login's loading screen.
+	if resting and ns.Recent("restlogin", REST_SETTLE * 2) then
+		ns.char.rest = { inside = 0, since = time() }
+		return
+	end
+	local entry
+	if resting then
+		entry = ns.NewEvent("rest")
+	else
+		entry = ns.NewEvent("restleave", {
+			seconds = was.inside + (was.since and time() - was.since or 0),
+			rested = ns.Clean(GetXPExhaustion()),
+		})
+	end
+	change = { resting = resting, entry = entry }
+	C_Timer.After(REST_SETTLE, function()
+		if change and change.entry == entry then
+			SettleRest()
+		end
+	end)
+end
+
+ns.On("PLAYER_LOGIN", function()
+	ns.Mark("restlogin")
+	if ns.char.rest then
+		ns.char.rest.since = time()
+	end
+end)
+ns.On("PLAYER_ENTERING_WORLD", CheckRest)
+ns.On("PLAYER_UPDATE_RESTING", CheckRest)
+
+ns.On("PLAYER_LOGOUT", function()
+	local r = ns.char.rest
+	if r and r.since then
+		r.inside, r.since = r.inside + time() - r.since, nil
 	end
 end)
 
