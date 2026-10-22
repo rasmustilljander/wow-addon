@@ -792,8 +792,8 @@ function C_SkillInfo.GetSkillLineInfo(i)
 end
 -- Bags: M.bags["bag:slot"] is an item link, or { link, count, locked }.
 -- M.bagSlots[bag] is each bag's size and M.items[itemID] = { quality, price,
--- icon, noValue, uncached } what the client knows about an item (uncached:
--- GetItemInfo returns nothing yet).
+-- icon, noValue, level, uncached } what the client knows about an item
+-- (uncached: GetItemInfo returns nothing yet).
 NUM_BAG_SLOTS, NUM_TOTAL_EQUIPPED_BAG_SLOTS = 4, 5
 M.bagSlots, M.items = { [0] = 16 }, {}
 local function BagItem(key)
@@ -869,6 +869,13 @@ end
 INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED = 1, 19
 M.equipped = {}
 function GetInventoryItemID(_, slot) local link = M.equipped[slot]; return link and LinkID(link) end
+function GetInventoryItemLink(_, slot) return M.equipped[slot] end
+-- Puts on a worn item (or takes it off with nil), as the client reports it.
+function M.equip(slot, link)
+	M.equipped[slot] = link
+	M.fire("PLAYER_EQUIPMENT_CHANGED", slot, link == nil)
+end
+
 -- Worn items' durability: M.durability[inventorySlot] = { current, max }.
 M.durability = {}
 function GetInventoryItemDurability(slot)
@@ -897,8 +904,14 @@ function C_Item.GetItemInfo(item)
 	local it = M.items[id]
 	if not it or it.uncached then return nil end
 	local link = it.link or ("|cff9d9d9d|Hitem:" .. id .. "::::|h[Item " .. id .. "]|h|r")
-	return link:match("%[(.-)%]"), link, it.quality or 1, 1, 1, "Junk", "Junk", 20, "", it.icon or 134400,
+	return link:match("%[(.-)%]"), link, it.quality or 1, it.level or 1, 1, "Junk", "Junk", 20, "", it.icon or 134400,
 		it.price or 0, 15, 0, 0, 0, nil, false, ""
+end
+-- Actual item level, preview flag and base item level.
+function C_Item.GetDetailedItemLevelInfo(item)
+	local it = M.items[tonumber(item) or LinkID(item)]
+	if not it or it.uncached then return nil end
+	return it.level or 1, false, it.level or 1
 end
 -- Item locations: only bag slots.
 ItemLocation = {}

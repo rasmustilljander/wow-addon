@@ -1,6 +1,7 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, flight paths found, reputation standings
--- reached and the first ride on each mount.
+-- reached, the first ride on each mount and the first time you put on each
+-- piece of gear.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -233,6 +234,67 @@ ns.On("PLAYER_LOGIN", function()
 		end)
 	end
 end)
+
+--------------------------------------------------------------------------------
+-- Gear: the first time you put on each item
+--------------------------------------------------------------------------------
+
+local FIRST_SLOT, LAST_SLOT = INVSLOT_FIRST_EQUIPPED or 1, INVSLOT_LAST_EQUIPPED or 19
+-- Shirts and tabards are only for looks, so they're left out.
+local SKIP_SLOT = { [INVSLOT_BODY or 4] = true, [INVSLOT_TABARD or 19] = true }
+local worn = {} -- slot -> item link, to say what a new item replaced
+
+local function WornLink(slot)
+	return ns.Clean(GetInventoryItemLink("player", slot))
+end
+
+-- Remembers what each slot holds. Item IDs are kept in the character file,
+-- so swapping back to an item (another weapon, an equipment set, after a
+-- reload) isn't news. The first scan only remembers what you already wear.
+local function ReadWorn()
+	local seed = not ns.char.gear and {}
+	for slot = FIRST_SLOT, LAST_SLOT do
+		worn[slot] = WornLink(slot)
+		local id = seed and worn[slot] and not SKIP_SLOT[slot] and ns.Clean(GetInventoryItemID("player", slot))
+		if id then
+			seed[id] = 0
+			ns.char.gear = seed
+		end
+	end
+end
+
+local function CheckGear(slot)
+	slot = ns.Clean(slot)
+	if type(slot) ~= "number" or slot < FIRST_SLOT or slot > LAST_SLOT then
+		return
+	end
+	if not ns.char.gear then
+		return ReadWorn()
+	end
+	local link, replaced = WornLink(slot), worn[slot]
+	worn[slot] = link
+	local id = link and not SKIP_SLOT[slot] and ns.Clean(GetInventoryItemID("player", slot))
+	if not id or ns.char.gear[id] then
+		return
+	end
+	ns.char.gear[id] = time()
+	local _, _, quality, level = C_Item.GetItemInfo(link)
+	if C_Item.GetDetailedItemLevelInfo then
+		level = C_Item.GetDetailedItemLevelInfo(link) or level
+	end
+	level = ns.Clean(level)
+	ns.Log("equip", {
+		slot = slot,
+		item = link,
+		ilvl = level and level > 0 and level or nil,
+		quality = ns.Clean(quality),
+		replaced = replaced,
+	})
+	ns.Add(1, "gear")
+end
+
+ns.On("PLAYER_LOGIN", ReadWorn)
+ns.On("PLAYER_EQUIPMENT_CHANGED", CheckGear)
 
 --------------------------------------------------------------------------------
 -- Chat

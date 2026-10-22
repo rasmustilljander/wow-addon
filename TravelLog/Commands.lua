@@ -177,8 +177,8 @@ local function ShowStats(arg)
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, flight paths found %s, mounts %s",
-		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.flightPaths), Count(st.mounts))
+	ns.Print("Spells learned %s, new skills %s, skill points %s, flight paths found %s, mounts %s, new gear %s",
+		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.flightPaths), Count(st.mounts), Count(st.gear))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
@@ -227,6 +227,12 @@ local function Items(items)
 	end
 	return table.concat(parts, ", ")
 end
+
+-- Inventory slots by number, for equip entries.
+local SLOT_NAMES = {
+	"head", "neck", "shoulder", "shirt", "chest", "waist", "legs", "feet", "wrist", "hands",
+	"finger", "finger", "trinket", "trinket", "back", "main hand", "off hand", "ranged", "tabard",
+}
 
 -- "4:05" for times under an hour, "1h 12m" from there.
 local function Clock(s)
@@ -358,6 +364,11 @@ local DESCRIBE = {
 	taxipath = function(e) return e.npc and ("Found the flight path at %s"):format(e.npc) or "Found a flight path" end,
 	standing = function(e) return ("Now %s with %s"):format(e.standing, e.faction) end,
 	mount = function(e) return (e.first and "First mount: %s" or "First ride on %s"):format(e.name or e.id) end,
+	equip = function(e)
+		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
+		local text = ("Equipped %s (%s%s)"):format(e.item or "?", slot, e.ilvl and ", item level " .. e.ilvl or "")
+		return e.replaced and ("%s, replacing %s"):format(text, e.replaced) or text
+	end,
 }
 
 -- A log entry as text, and where it happened. TravelLog_Share sends these.
@@ -383,7 +394,7 @@ local LOG_GROUP = {
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", taxipath = "Progress",
-	standing = "Progress", mount = "Progress",
+	standing = "Progress", mount = "Progress", equip = "Progress",
 }
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
@@ -396,7 +407,7 @@ local LOG_LABEL = {
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", taxipath = "Flight path", standing = "Reputation",
-	mount = "Mount",
+	mount = "Mount", equip = "Gear",
 }
 
 function ns.LogGroup(e)
