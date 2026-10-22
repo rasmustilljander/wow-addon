@@ -194,7 +194,8 @@ DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTO
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
-PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST ENCOUNTER_START ENCOUNTER_END]]):gmatch("%S+") do
+PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
+ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -1298,6 +1299,22 @@ end
 C_GuildInfo = {}
 M.rosterRequests = 0
 function C_GuildInfo.GuildRoster() M.rosterRequests = M.rosterRequests + 1 end
+
+-- Achievements (Forever's Legacy Challenges): M.achievements[id] = { name,
+-- points, category, reward, guild } and M.achievementCategories[id] = { name,
+-- parent }. Tests fire ACHIEVEMENT_EARNED themselves.
+M.achievements, M.achievementCategories = {}, {}
+function GetAchievementInfo(id)
+	local a = M.achievements[id]
+	if a then
+		return id, a.name, a.points or 0, true, 10, 22, 26, a.description or "", 0, 134400, a.reward or "", a.guild or false, true, nil
+	end
+end
+function GetAchievementCategory(id) return M.achievements[id] and M.achievements[id].category end
+function GetCategoryInfo(id)
+	local c = M.achievementCategories[id]
+	if c then return c.name, c.parent or -1, 0 end
+end
 function JumpOrAscendStart() end
 
 -- World map: Blizzard's frames survive reloads, addon frames don't.
