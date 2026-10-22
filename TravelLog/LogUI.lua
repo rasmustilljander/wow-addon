@@ -70,10 +70,23 @@ local function RefreshEvents()
 	SetGroupButtons()
 end
 
+local function ShowTooltip(row)
+	local lines = row.tooltip(row.element)
+	if not lines then
+		return
+	end
+	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+	for _, line in ipairs(lines) do
+		GameTooltip:AddLine(line, 1, 1, 1, true)
+	end
+	GameTooltip:Show()
+end
+
 -- A scrolling list of two-line rows, for the Events view and other History
 -- views. fill(element) returns a row's texts: top left, top right, bottom left
--- and bottom right. A row keeps its element as row.element.
-function ns.HistoryList(parent, fill)
+-- and bottom right. A row keeps its element as row.element. tooltip(element),
+-- if given, returns the lines shown while a row is hovered, or nil for none.
+function ns.HistoryList(parent, fill, tooltip)
 	local function InitRow(row, element)
 		if not row.what then
 			local highlight = row:CreateTexture(nil, "HIGHLIGHT")
@@ -95,6 +108,14 @@ function ns.HistoryList(parent, fill)
 			row.where:SetPoint("RIGHT", row.kind, "LEFT", -8, 0)
 			row.where:SetJustifyH("LEFT")
 			row.where:SetWordWrap(false)
+			if tooltip then
+				row.tooltip = tooltip
+				row:EnableMouse(true)
+				row:SetScript("OnEnter", ShowTooltip)
+				row:SetScript("OnLeave", function()
+					GameTooltip:Hide()
+				end)
+			end
 		end
 		local what, when, where, kind = fill(element)
 		row.element = element

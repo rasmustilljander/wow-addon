@@ -36,11 +36,11 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
-- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played too, and reputation per faction, most changed first: the top three here, all in `/tl stats`) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
+- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played; reputation per faction, most changed first, the top three here and all in `/tl stats`; XP by source, largest first) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options, Path's interval, and whether gold and XP per hour leave out AFK time (on by default).
 - **History**: what's still in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
-  - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths.
+  - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths. Hover a session for its XP by source.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
@@ -56,7 +56,7 @@ Companions add their rows to the matching section.
 | `/tl` | Open or close the window |
 | `/tl stats [all\|name]` | Totals (and time played) for this character, all of them added up, or another by `Name` or `Name-Realm` |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
-| `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view |
+| `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view, with XP by source |
 | `/tl archive [now]` | Archive size; `now` archives old history right away |
 | `/tl wipe confirm` | Delete everything for this character, including its archive and its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
@@ -179,6 +179,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Boss fights come from the game's encounter events, which Forever's own UI never uses (its boss banner is retail-only), so it's unconfirmed that every boss sends them. A boss with no encounter isn't logged. After a reload during a fight, its length may count only from the reload.
 - Legacy Challenges come from the `ACHIEVEMENT_EARNED` event, which Blizzard's own Legacy Challenges window listens for. Whether Forever fires it (its window only opens once you have renown with the legacy reward faction) is unchecked in the live game; `/tl log achievement` shows what was recorded.
 - AFK time is the time the game marks you AFK (`/afk`, or idle long enough), so the idle minutes before that count as active. A change while the client hides it (in dungeons) is missed.
+- XP by source splits the XP bar's gain into quests, kills, discoveries and other. Other is the rest, including kills and discoveries the client hides in dungeons. The totals count from the oldest session in the character file that recorded experience gained, so earlier XP isn't in them.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Without the combat log, a death's `cause` comes only from the breath and fatigue bars (run out in the last minute) and from falls over 1.5 s that end within a second of dying. Lava, fire and slime aren't told apart, and a mob kill right after a long fall counts as the fall.
 - How you came back is known when you chose it in the game's dialogs (resurrection, spirit healer, soulstone and the like, corpse) in the 30 s before. Battleground spirit healers aren't. A resurrection names the player but not the spell.

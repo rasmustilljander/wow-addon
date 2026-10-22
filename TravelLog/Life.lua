@@ -340,6 +340,7 @@ ns.On("QUEST_TURNED_IN", function(questID, xp, money)
 	local title = Note(questID, "done")
 	ns.Log("questdone", { id = questID, title = title, xp = xp, money = money })
 	ns.Add(1, "quests", "completed")
+	ns.Add(tonumber(ns.Clean(xp)) or 0, "experience", "quests")
 end)
 
 -- The quest log's Abandon button calls SetAbandonQuest, which picks the
@@ -455,7 +456,7 @@ ns.On("CHAT_MSG_COMBAT_XP_GAIN", function(text)
 	end
 	ns.Log("kill", { name = name, xp = tonumber(xp) })
 	ns.Add(1, "kills")
-	ns.Add(tonumber(xp) or 0, "xp", "kills")
+	ns.Add(tonumber(xp) or 0, "experience", "kills")
 end)
 
 --------------------------------------------------------------------------------
@@ -485,6 +486,7 @@ local function CheckDiscovery(text)
 				ns.Mark("discovery")
 				ns.Log("discover", { place = place, xp = tonumber(xp) })
 				ns.Add(1, "discoveries")
+				ns.Add(tonumber(xp) or 0, "experience", "discoveries")
 			end
 			return
 		end
