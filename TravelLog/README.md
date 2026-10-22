@@ -27,7 +27,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds. |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, discoveries. |
 | **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
-| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount. |
+| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, flight paths found, reputation standings reached, the first ride on each mount, and the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards). |
 
 ## Window
 
@@ -66,7 +66,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, mounts and the instance you're in |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, mounts, gear and the instance you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 | `SavedVariables/TravelLog_Archive.lua` | Older history of all characters |
@@ -93,10 +93,11 @@ TravelLogCharDB = {
   skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
   instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ... },  -- while you're in one
+  gear = { [25] = 0, [2361] = 1760000000 },  -- item ID -> first put on (0: worn when gear recording began)
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
+Log entry types: `area`, `loot`, `receive`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `bind`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `discover`, `spell`, `skill`, `skillup`, `taxipath`, `standing`, `mount`, `equip`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -113,6 +114,7 @@ Some types have more:
 | `level` | `played`: seconds played in all. `took`: seconds played at the level before. |
 | `death` | `target`: the hostile unit you had targeted. `level`. `cause`: `drowning`, `fatigue` or `falling`, when known. |
 | `revive` | `how`: `corpse`, `spirithealer`, `player` or `selfres`, when known. `by`: who resurrected you. `spell`: the self-resurrection used (Soulstone, Reincarnation, ...). `sickness`: `true` with resurrection sickness. `took` and `ghost`: seconds since the death and since the release. `durability`: average percentage points lost on worn items since before the death. |
+| `equip` | `slot` (inventory slot, 1 head to 18 ranged), `item` (link), `ilvl`, `quality` (0 poor, 1 common, 2 uncommon, ...), `replaced` (the link it replaced). `ilvl` and `quality` are missing if the item wasn't loaded yet. |
 
 The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {...}, log = {...}, path = {...} } } }`. `path` holds TravelLog_Path's sessions; sessions archived before TravelLog_Path existed carry `track` and `jumps` themselves, and TravelLog_Path reads both.
 
@@ -130,6 +132,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Time in a dungeon or raid counts only while you're logged in, and a reload inside is the same visit.
 - A failed quest is noticed when the quest log next updates, and logged once each time you take it: not again after a reload, and abandoning it afterwards is a `questabandon`. One that failed while you were offline or before TravelLog was installed is logged when it's first seen. The client doesn't say why a quest failed, so only a timer running out is told apart, and a failed quest the server drops from the log at once isn't seen.
 - Mounts count from when TravelLog was installed, so "First mount" is only your real first if you hadn't ridden before.
+- Gear counts from the first login that records it: what you wear then is remembered, not logged, and gear in your bags is logged the first time you put it on. Gear is kept by item ID, so a second copy of an item, or the same item with another random enchantment, isn't logged again.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Without the combat log, a death's `cause` comes only from the breath and fatigue bars (run out in the last minute) and from falls over 1.5 s that end within a second of dying. Lava, fire and slime aren't told apart, and a mob kill right after a long fall counts as the fall.
 - How you came back is known when you chose it in the game's dialogs (resurrection, spirit healer, soulstone and the like, corpse) in the 30 s before. Battleground spirit healers aren't. A resurrection names the player but not the spell.
