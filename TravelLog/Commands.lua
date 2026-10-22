@@ -85,6 +85,25 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning)".
+function ns.DeathsText(st)
+	local causes = {}
+	for _, cause in ipairs({ "falling", "drowning", "fatigue" }) do
+		local n = (st.deathCauses or {})[cause]
+		if n then causes[#causes + 1] = Count(n) .. " " .. cause end
+	end
+	local text = Count(st.deaths)
+	return #causes > 0 and ("%s (%s)"):format(text, table.concat(causes, ", ")) or text
+end
+
+-- How you came back: "corpse run 2, spirit healer 1, by a player 1, self-res 0; 12m dead".
+function ns.RevivalsText(st)
+	local r = st.revives or {}
+	local text = ("corpse run %s, spirit healer %s, by a player %s, self-res %s"):format(
+		Count(r.corpse), Count(r.spirithealer), Count(r.player), Count(r.selfres))
+	return (st.deadTime or 0) > 0 and ("%s; %s dead"):format(text, ns.Duration(st.deadTime)) or text
+end
+
 -- Money gained or spent ("gained" or "spent") with its reasons, largest
 -- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
 function ns.MoneyByReason(st, way)
@@ -151,7 +170,8 @@ local function ShowStats(arg)
 
 	local quests = st.quests or {}
 	ns.Print("Deaths %s, kills %s, quests done %s, flights %s, places visited %s",
-		Count(st.deaths), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited(st)))
+		ns.DeathsText(st), Count(st.kills), Count(quests.completed), Count(st.flights), Count(ns.PlacesVisited(st)))
+	ns.Print("Came back: %s", ns.RevivalsText(st))
 	local instances = st.instances or {}
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
@@ -207,10 +227,15 @@ local function Items(items)
 	return table.concat(parts, ", ")
 end
 
--- "4:05": seconds as minutes and seconds.
-local function MinSec(seconds)
-	return ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60)
+-- "4:05" for times under an hour, "1h 12m" from there.
+local function Clock(s)
+	if s >= 3600 then
+		return ns.Duration(s)
+	end
+	return ("%d:%02d"):format(math.floor(s / 60), s % 60)
 end
+
+local DEATH_CAUSE = { falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue" }
 
 -- Adds what got you there, e.g. " (Teleport: Stormwind)".
 local function Via(text, e)
@@ -262,7 +287,7 @@ local DESCRIBE = {
 		return ("Bought %sbank slot %d for %s"):format(e.bank == "account" and "account " or "", e.slot or 0, ns.MoneyText(e.price))
 	end,
 	flight = function(e) return ("Flew from %s to %s for %s"):format(e.from or "?", e.to or "?", ns.MoneyText(e.price)) end,
-	landed = function(e) return e.seconds and ("Landed after %s"):format(MinSec(e.seconds)) or "Landed" end,
+	landed = function(e) return e.seconds and ("Landed after %s"):format(Clock(e.seconds)) or "Landed" end,
 	hearth = function(e)
 		local text = e.from and ("Hearthed from %s to %s"):format(e.from, e.to or "?") or ("Hearthed to %s"):format(e.to or "?")
 		return Via(text, e)
@@ -275,7 +300,7 @@ local DESCRIBE = {
 	board = function(e) return ("Boarded a boat or zeppelin at %s"):format(e.subzone or e.zone or "?") end,
 	disembark = function(e)
 		local text = ("Rode a boat or zeppelin from %s to %s"):format(e.from or "?", e.to or "?")
-		return e.seconds and ("%s in %s"):format(text, MinSec(e.seconds)) or text
+		return e.seconds and ("%s in %s"):format(text, Clock(e.seconds)) or text
 	end,
 	instance = function(e)
 		local about = e.difficulty and e.kind .. ", " .. e.difficulty or e.kind
@@ -284,11 +309,30 @@ local DESCRIBE = {
 	instanceleave = function(e) return ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0)) end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	death = function(e)
-		local text = e.target and ("Died fighting %s"):format(e.target) or "Died"
+		local text = DEATH_CAUSE[e.cause] or "Died"
+		if e.target then text = ("%s fighting %s"):format(text, e.target) end
 		return e.level and ("%s at level %d"):format(text, e.level) or text
 	end,
 	release = function() return "Released spirit" end,
-	revive = function() return "Came back to life" end,
+	revive = function(e)
+		local text = "Came back to life"
+		if e.how == "corpse" then
+			text = "Ran back to corpse"
+		elseif e.how == "spirithealer" then
+			text = "Revived by a spirit healer"
+		elseif e.how == "player" then
+			text = "Resurrected by " .. (e.by or "another player")
+		elseif e.how == "selfres" then
+			text = "Came back with " .. (e.spell or "a self-resurrection")
+		end
+		if e.took then
+			text = ("%s after %s"):format(text, Clock(e.took))
+			if e.ghost then text = ("%s (%s as a ghost)"):format(text, Clock(e.ghost)) end
+		end
+		if e.sickness then text = text .. ", with resurrection sickness" end
+		if e.durability then text = ("%s, lost %d%% durability"):format(text, e.durability) end
+		return text
+	end,
 	level = function(e)
 		local text = ("Reached level %d"):format(e.level)
 		return e.took and ("%s after %s at level %d"):format(text, ns.Duration(e.took), e.level - 1) or text

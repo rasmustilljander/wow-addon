@@ -62,7 +62,7 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
 check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Teleports, Boat rides, Instances, Jumps, Distance, Looted, Vendors, Items out, Money in, Money out, Nodes, "
-	.. "Played, Quests done, Learned, XP kills, Deaths, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+	.. "Played, Quests done, Learned, XP kills, Deaths, Came back, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
@@ -89,6 +89,7 @@ check(Stat(w, "Played") == "1d 1h, 1h 0m at this level", "played: " .. Stat(w, "
 check(Stat(w, "Jumps") == "1 (1 this session)", "jumps: " .. Stat(w, "Jumps"))
 check(Stat(w, "XP kills") == "1", "xp kills: " .. Stat(w, "XP kills"))
 check(Stat(w, "Deaths") == "1", "deaths: " .. Stat(w, "Deaths"))
+check(Stat(w, "Came back") == "corpse run 0, spirit healer 0, by a player 0, self-res 0", "came back: " .. Stat(w, "Came back"))
 check(Stat(w, "All kills") == "1 of 1 mobs", "all kills: " .. Stat(w, "All kills"))
 check(Stat(w, "Most killed") == "Kobold Worker (1)", "most killed: " .. Stat(w, "Most killed"))
 
