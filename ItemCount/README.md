@@ -9,7 +9,7 @@ Rasmus    60 (bags 20, bank 40)
 Altie     15 (bags 10, AH 5)
 ```
 
-Names are in class colors, this character first, then whoever has the most. Characters on other realms show as `Name-Realm`. **Total** only shows when more than one character (or the account bank) has the item.
+Names are in class colors, this character first, then whoever has the most. Characters on other realms show as `Name-Realm`. **Total** only shows when more than one character (or the account bank) has the item. A **Guild bank** line comes last and isn't part of the total.
 
 ## What's counted
 
@@ -21,14 +21,23 @@ Names are in class colors, this character first, then whoever has the most. Char
 | `mail` | The inbox while the mailbox is open, plus items you mail to your own characters as soon as they're sent |
 | `AH` | Your active auctions, when you open the auction house and after posting or canceling |
 | Account bank | Its own line, while the bank is open (if the account bank is available) |
+| Guild bank | Its own line, each tab as you view it. Shown only while you play a character in that guild |
 
-Bank, mail and AH counts are from your last visit with that character, so log in each character and visit them once. Auctions stop counting when their time runs out. Sales made while you're away still count until your next AH visit. COD mail and currencies aren't counted, and neither is mail the client hasn't loaded yet in an overfull inbox.
+Bank, mail, AH and guild bank counts are from your last visit with that character, so log in each character and visit them once. Auctions stop counting when their time runs out. Sales made while you're away still count until your next AH visit. COD mail and currencies aren't counted, and neither is mail the client hasn't loaded yet in an overfull inbox.
+
+## Settings
+
+Options → AddOns → ItemCount:
+
+| Setting | Default | |
+| --- | --- | --- |
+| Guild bank | On | Count and show your guild's bank. Off, it's neither counted nor shown |
 
 ## Commands
 
 | | |
 | --- | --- |
-| `/itemcount` | When each character's bank, mail and AH were last counted |
+| `/itemcount` | When each character's bank, mail and AH, the account bank and your guild's bank were last counted |
 | `/itemcount forget <name>` | Drop a deleted character (`Name` or `Name-Realm`) |
 
 ## Saved data
@@ -39,3 +48,5 @@ Bank, mail and AH counts are from your last visit with that character, so log in
 | --- | --- |
 | `chars["Name-Realm"]` | `class`; `bags`, `equipped`, `bank`, `mail` as item ID → count; `auctions` as `{ id, count, ends }` lists; `bankTime`, `mailTime`, `auctionTime` (nil until first counted) |
 | `accountBank`, `accountBankTime` | The account bank's item ID → count, and when it was counted |
+| `guildBanks["Guild-Realm"]` | `tabs[tab]` as item ID → count; `time` it was last counted |
+| `settings` | `guildBank` (true/false) |

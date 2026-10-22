@@ -7,3 +7,4 @@
 
 ItemCount.lua
 Tooltip.lua
+Settings.lua

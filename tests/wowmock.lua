@@ -188,7 +188,7 @@ AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
 GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON
 RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
-GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
+GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED GUILDBANKBAGSLOTS_CHANGED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
 TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
@@ -1018,6 +1018,64 @@ function C_Item.GetItemInfoInstant(item)
 	local id = tonumber(item) or LinkID(item)
 	return id, "Junk", "Junk", "", (M.items[id] or {}).icon or 134400, 15, 0
 end
+-- The guild bank: M.guildBankItems["tab:slot"] is an item link or { link,
+-- count }, M.guildBankTabs how many tabs the guild has, M.guildBankTab the
+-- one shown and M.guildBankHidden[tab] the tabs you may not view. Tests fire
+-- GUILDBANKBAGSLOTS_CHANGED when a tab's items arrive.
+M.guildBankItems, M.guildBankTabs, M.guildBankTab, M.guildBankHidden = {}, 0, 1, {}
+local function GuildBankItem(tab, slot)
+	local entry = M.guildBankItems[tab .. ":" .. slot]
+	if type(entry) == "string" then return { link = entry, count = 1 } end
+	return entry
+end
+function GetNumGuildBankTabs() return M.guildBankTabs end
+function GetCurrentGuildBankTab() return M.guildBankTab end
+function GetGuildBankTabInfo(tab)
+	return "Tab " .. tab, 134400, not M.guildBankHidden[tab], true, -1, -1, false
+end
+function GetGuildBankItemInfo(tab, slot)
+	local e = GuildBankItem(tab, slot)
+	if not e then return nil, 0, false, false, nil end
+	local item = M.items[LinkID(e.link)] or {}
+	return item.icon or 134400, e.count or 1, false, false, item.quality or 1
+end
+function GetGuildBankItemLink(tab, slot) local e = GuildBankItem(tab, slot); return e and e.link end
+
+-- The game's Options window. M.settings[name] is an addon's page under
+-- AddOns ({ name, controls = { { setting, tooltip } } }). Ticking a checkbox
+-- is control.setting:SetValue(value).
+Settings = { VarType = { Boolean = "boolean", String = "string", Number = "number" } }
+M.settings = {}
+local SettingMixin = {}
+SettingMixin.__index = SettingMixin
+function SettingMixin:GetVariable() return self.variable end
+function SettingMixin:GetName() return self.name end
+function SettingMixin:GetVariableType() return self.variableType end
+function SettingMixin:GetDefaultValue() return self.defaultValue end
+function SettingMixin:GetValue() return self.variableTbl[self.variableKey] end
+function SettingMixin:SetValue(value) self.variableTbl[self.variableKey] = value end
+local CategoryMixin = {}
+CategoryMixin.__index = CategoryMixin
+function CategoryMixin:GetID() return self.id end
+function CategoryMixin:GetName() return self.name end
+function Settings.RegisterVerticalLayoutCategory(name)
+	local category = setmetatable({ id = name, name = name, controls = {} }, CategoryMixin)
+	return category, {}
+end
+function Settings.RegisterAddOnSetting(category, variable, variableKey, variableTbl, variableType, name, defaultValue)
+	assert(type(variableTbl) == "table", "'variableTbl' argument must be a table.")
+	assert(type(defaultValue) == variableType)
+	if variableTbl[variableKey] == nil then variableTbl[variableKey] = defaultValue end
+	return setmetatable({ variable = variable, variableKey = variableKey, variableTbl = variableTbl,
+		variableType = variableType, name = name, defaultValue = defaultValue }, SettingMixin)
+end
+function Settings.CreateCheckbox(category, setting, tooltip)
+	assert(setting:GetVariableType() == "boolean")
+	local control = { setting = setting, tooltip = tooltip }
+	category.controls[#category.controls + 1] = control
+	return control
+end
+function Settings.RegisterAddOnCategory(category) M.settings[category:GetName()] = category end
 
 -- Casting: fires SENT then SUCCEEDED like the client does.
 function M.cast(spellID, target)
@@ -1481,6 +1539,7 @@ function M.Logout()
 	namedFrames, UISpecialFrames, M.focus, M.cursorItem, M.cursorSplit = {}, {}, nil, nil, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
+	M.settings = {}
 	M.chatFilters, M.prefixes = {}, {}
 	M.reloadRequested = nil
 end
