@@ -126,6 +126,12 @@ ERR_NEWTAXIPATH = "New flight path discovered!"
 FACTION_STANDING_CHANGED = "You are now %s with %s."
 ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 ERR_TRADE_COMPLETE = "Trade complete."
+DUEL_WINNER_KNOCKOUT = "%1$s has defeated %2$s in a duel"
+DUEL_WINNER_RETREAT = "%2$s has fled from %1$s in a duel"
+COMBATLOG_HONORGAIN = "%s dies (Honorable Kill: %s). You gain %d Honor."
+COMBATLOG_HONORGAIN_EXHAUSTION1 = "%s dies (Honorable Kill: %s). You gain %d Honor (%s %s bonus)."
+COMBATLOG_HONORGAIN_NO_RANK = "%s dies (Honorable Kill). You gain %d Honor."
+COMBATLOG_HONORAWARD = "You have been awarded %d Honor."
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
@@ -165,7 +171,9 @@ NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED M
 GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON
 RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
 GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
-TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED]]):gmatch("%S+") do
+TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED
+DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
+PLAYER_PVP_KILLS_CHANGED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -1121,6 +1129,16 @@ function GetTrainerServiceCost(i) return M.trainerServices[i] and M.trainerServi
 function BuyTrainerService() end
 
 function GetQuestReward() end
+
+-- Duels: tests fire DUEL_REQUESTED, DUEL_FINISHED and the result line
+-- themselves.
+function StartDuel() end
+function AcceptDuel() end
+function CancelDuel() end
+-- Honorable and dishonorable kills today; fire PLAYER_PVP_KILLS_CHANGED
+-- after changing M.honorKills.
+M.honorKills = 0
+function GetPVPSessionStats() return M.honorKills, 0 end
 function JumpOrAscendStart() end
 
 -- World map: Blizzard's frames survive reloads, addon frames don't.

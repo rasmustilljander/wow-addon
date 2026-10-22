@@ -173,6 +173,9 @@ local function ShowStats(arg)
 		ns.DeathsText(st), Count(st.kills), Count(quests.completed), Count(quests.failed), Count(st.flights),
 		Count(ns.PlacesVisited(st)))
 	ns.Print("Came back: %s", ns.RevivalsText(st))
+	local duels = st.duels or {}
+	ns.Print("Duels won %s, lost %s, no winner %s; honorable kills %s, honor %s",
+		Count(duels.won), Count(duels.lost), Count(duels.interrupted), Count(st.honorKills), Count(st.honor))
 	local instances = st.instances or {}
 	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
@@ -353,6 +356,23 @@ local DESCRIBE = {
 	end,
 	kill = function(e) return ("Killed %s (+%s xp)"):format(e.name, e.xp or "?") end,
 	discover = function(e) return ("Discovered %s"):format(e.place) end,
+	duel = function(e)
+		local opponent = e.opponent or "?"
+		local text = e.result == "won" and ("Won a duel against %s"):format(opponent)
+			or e.result == "lost" and ("Lost a duel to %s"):format(opponent)
+			or ("Duel with %s ended without a winner"):format(opponent)
+		local notes = {}
+		if e.fled then notes[#notes + 1] = e.result == "won" and "they fled" or "you fled" end
+		if e.challenger then notes[#notes + 1] = e.challenger == "you" and "you challenged" or "they challenged" end
+		return #notes > 0 and ("%s (%s)"):format(text, table.concat(notes, ", ")) or text
+	end,
+	honorkill = function(e)
+		if not e.name then return "Honorable kill" end
+		local text = "Honorable kill: " .. e.name
+		if e.rank then text = ("%s (%s)"):format(text, e.rank) end
+		return e.honor and ("%s, +%d honor"):format(text, e.honor) or text
+	end,
+	honor = function(e) return ("Awarded %d honor"):format(e.honor) end,
 	spell = function(e)
 		local text = "Learned " .. (e.name or e.id or "?")
 		if e.rank then text = ("%s (%s)"):format(text, e.rank) end
@@ -402,6 +422,7 @@ local LOG_GROUP = {
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
+	duel = "Life", honorkill = "Life", honor = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", equip = "Progress",
@@ -415,7 +436,8 @@ local LOG_LABEL = {
 	instanceleave = "Instance left", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
-	discover = "Discovery", spell = "Spell",
+	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor",
+	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", equip = "Gear",
