@@ -85,6 +85,12 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Items moved to and from the guild bank: "4 deposited, 2 withdrawn".
+function ns.GuildBankText(st)
+	local g = st.guildBank or {}
+	return ("%s deposited, %s withdrawn"):format(Count(g.deposited), Count(g.withdrawn))
+end
+
 -- Loot rolls by outcome: "2 won, 5 lost, 9 passed".
 function ns.RollsText(st)
 	local rolls = st.rolls or {}
@@ -126,6 +132,38 @@ end
 -- Legacy Challenges earned and their points: "12 earned, 120 points".
 function ns.ChallengesText(st)
 	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
+end
+
+-- Reputation gained and lost per faction, most changed first: "Stormwind
+-- +800, Booty Bay +200 -600". With most, only that many factions and how
+-- many more.
+function ns.ReputationText(st, most)
+	local list = {}
+	for faction, t in pairs(st.reputation or {}) do
+		list[#list + 1] = { faction = faction, gained = t.gained or 0, lost = t.lost or 0 }
+	end
+	if #list == 0 then
+		return "none"
+	end
+	table.sort(list, function(a, b)
+		local x, y = a.gained + a.lost, b.gained + b.lost
+		if x ~= y then
+			return x > y
+		end
+		return a.faction < b.faction
+	end)
+	local parts = {}
+	for i, r in ipairs(list) do
+		if most and i > most then
+			parts[#parts + 1] = ("%d more"):format(#list - most)
+			break
+		end
+		local text = r.faction
+		if r.gained > 0 then text = text .. " +" .. Count(r.gained) end
+		if r.lost > 0 then text = text .. " -" .. Count(r.lost) end
+		parts[i] = text
+	end
+	return table.concat(parts, ", ")
 end
 
 -- Where experience came from, largest first: "quests 2,000, kills 1,000,
@@ -220,6 +258,7 @@ local function ShowStats(arg)
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 	ns.Print("Rolls: %s", ns.RollsText(st))
 	ns.Print("Items out: %s", ns.GivenText(st))
+	ns.Print("Guild bank items: %s", ns.GuildBankText(st))
 	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
 
@@ -245,6 +284,7 @@ local function ShowStats(arg)
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
+	ns.Print("Reputation: %s", ns.ReputationText(st))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
@@ -355,6 +395,12 @@ local DESCRIBE = {
 		return text
 	end,
 	destroy = function(e) return ("Destroyed %s"):format(Item(e.item, e.count)) end,
+	guildbank = function(e)
+		local parts = {}
+		if e.deposited then parts[#parts + 1] = "deposited " .. Items(e.deposited) end
+		if e.withdrawn then parts[#parts + 1] = "withdrew " .. Items(e.withdrawn) end
+		return ("Guild bank%s: %s"):format(e.guild and " of " .. e.guild or "", table.concat(parts, "; "))
+	end,
 	money = function(e)
 		local who = e.partner or e.sender or e.recipient
 		who = who and (e.amount > 0 and " from " or " to ") .. who or ""
@@ -571,7 +617,7 @@ local LOG_GROUP = {
 	instance = "Travel", instanceleave = "Travel", rest = "Travel", restleave = "Travel", screenshot = "Travel",
 	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
-	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
+	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade", guildbank = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
@@ -584,7 +630,8 @@ local LOG_GROUP = {
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
-	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", flight = "Flight",
+	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
+	flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
 	instanceleave = "Instance left", rest = "Resting", restleave = "Resting ended", screenshot = "Screenshot", death = "Death",

@@ -124,6 +124,8 @@ ERR_LEARN_ABILITY_S = "You have learned a new ability: %s."
 ERR_LEARN_RECIPE_S = "You have learned how to create a new item: %s."
 ERR_NEWTAXIPATH = "New flight path discovered!"
 FACTION_STANDING_CHANGED = "You are now %s with %s."
+FACTION_STANDING_INCREASED = "Reputation with %s increased by %d."
+FACTION_STANDING_DECREASED = "Reputation with %s decreased by %d."
 ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 ERR_TRADE_COMPLETE = "Trade complete."
 DUEL_WINNER_KNOCKOUT = "%1$s has defeated %2$s in a duel"
@@ -1053,6 +1055,11 @@ function GetGuildBankItemInfo(tab, slot)
 	return item.icon or 134400, e.count or 1, false, false, item.quality or 1
 end
 function GetGuildBankItemLink(tab, slot) local e = GuildBankItem(tab, slot); return e and e.link end
+-- Moving items in or out happens on the server: tests change M.bags and
+-- fire BAG_UPDATE_DELAYED.
+function PickupGuildBankItem(tab, slot) end
+function AutoStoreGuildBankItem(tab, slot) end
+function SplitGuildBankItem(tab, slot, amount) end
 
 -- The game's Options window. M.settings[name] is an addon's page under
 -- AddOns ({ name, controls = { { setting, tooltip } } }). Ticking a checkbox

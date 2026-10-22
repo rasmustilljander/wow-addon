@@ -1,5 +1,7 @@
 -- Items that leave your bags: given in a trade, mailed, put up for auction or
--- destroyed, with who got them, their stats, the log and History, a reload.
+-- destroyed, with who got them, and items moved to and from the guild bank;
+-- their stats, the log and History, a reload.
+M.guild = { name = "Wanderers", rank = "Member", rankIndex = 3 }
 local ns = M.Login()
 
 local function last(kind)
@@ -179,15 +181,94 @@ check(count("destroy") == 3 and M.bags["0:8"] == JUNK, "nothing destroyed when p
 check(ns.stats.given.destroy == 8, "destroyed items counted")
 
 --------------------------------------------------------------------------------
+-- Guild bank
+--------------------------------------------------------------------------------
+
+local function bagUpdate()
+	M.fire("BAG_UPDATE_DELAYED")
+end
+
+-- Bag changes while the guild bank is closed aren't moves.
+M.guildBankItems["1:1"] = { link = ORE, count = 10 }
+M.bags["0:9"] = { link = BREAD, count = 4 }
+PickupGuildBankItem(1, 1)
+bagUpdate()
+
+M.fire("PLAYER_INTERACTION_MANAGER_FRAME_SHOW", Enum.PlayerInteractionType.GuildBanker)
+M.fire("GUILDBANKFRAME_OPENED")
+
+-- Withdrawn by right-click: a new stack in the bags.
+AutoStoreGuildBankItem(1, 1)
+M.bags["0:10"] = { link = ORE, count = 10 }
+bagUpdate()
+
+-- Deposited by dragging part of a stack, held on the cursor a few seconds.
+C_Container.SplitContainerItem(0, 9, 3)
+M.advance(4)
+PickupGuildBankItem(1, 2)
+M.bags["0:9"] = { link = BREAD, count = 1 }
+ClearCursor()
+bagUpdate()
+
+-- Deposited by right-click, then more ore withdrawn into the same stack.
+C_Container.UseContainerItem(0, 3)
+M.bags["0:3"] = nil
+bagUpdate()
+M.advance(2)
+PickupGuildBankItem(1, 3)
+C_Container.PickupContainerItem(0, 10)
+M.bags["0:10"] = { link = ORE, count = 15 }
+bagUpdate()
+
+-- Equipping from the bags long after a click isn't a deposit.
+M.advance(30)
+M.bags["0:9"] = nil
+M.equip(5, BREAD)
+bagUpdate()
+check(count("guildbank") == 0, "nothing logged while the guild bank is open")
+
+M.fire("PLAYER_INTERACTION_MANAGER_FRAME_HIDE", Enum.PlayerInteractionType.GuildBanker)
+M.fire("GUILDBANKFRAME_CLOSED")
+local gb = last("guildbank")
+check(count("guildbank") == 1 and gb.guild == "Wanderers", "one entry per visit, with the guild")
+check(gb.withdrawn and #gb.withdrawn == 1 and gb.withdrawn[1].item == ORE and gb.withdrawn[1].count == 15,
+	"withdrawn items added up")
+check(gb.deposited and #gb.deposited == 2 and gb.deposited[1].item == SWORD and gb.deposited[1].count == 1
+	and gb.deposited[2].item == BREAD and gb.deposited[2].count == 3, "deposited items by name, split stack too")
+check(ns.stats.guildBank.deposited == 4 and ns.stats.guildBank.withdrawn == 15, "guild bank items counted")
+check(Log(1):find("Guild bank of Wanderers: deposited " .. SWORD .. ", " .. BREAD .. "x3; withdrew " .. ORE .. "x15", 1, true),
+	"log shows the visit")
+
+-- A visit that only looks moves nothing.
+M.fire("GUILDBANKFRAME_OPENED")
+M.fire("GUILDBANKFRAME_CLOSED")
+check(count("guildbank") == 1, "a visit without moves isn't logged")
+
+-- Leaving by logging out with the guild bank open still logs the visit.
+M.fire("GUILDBANKFRAME_OPENED")
+AutoStoreGuildBankItem(1, 4)
+M.bags["0:11"] = AXE
+bagUpdate()
+ns = M.Reload()
+gb = last("guildbank")
+check(count("guildbank") == 2 and not gb.deposited and gb.withdrawn[1].item == AXE and gb.withdrawn[1].count == 1,
+	"visit logged on logout")
+check(ns.stats.guildBank.withdrawn == 16, "counted on logout")
+
+--------------------------------------------------------------------------------
 -- Totals, History and a reload
 --------------------------------------------------------------------------------
 
 M.out = {}
 SlashCmdList.TRAVELLOG("stats")
-check(table.concat(M.out, "\n"):find("Items out: 5 traded, 21 mailed, 21 auctioned, 8 destroyed", 1, true), "/tl stats line")
+local stats = table.concat(M.out, "\n")
+check(stats:find("Items out: 5 traded, 21 mailed, 21 auctioned, 8 destroyed", 1, true), "/tl stats line")
+check(stats:find("Guild bank items: 4 deposited, 16 withdrawn", 1, true), "/tl stats guild bank line")
 check(ns.LogMatches(last("give"), "", "Trade") and ns.LogMatches(last("send"), "", "Trade")
-	and ns.LogMatches(last("post"), "", "Trade") and ns.LogMatches(last("destroy"), "", "Loot"), "History groups")
-check(ns.LogMatches(last("send"), "mail sent jaina") and ns.LogMatches(last("destroy"), "destroyed axe"), "History search")
+	and ns.LogMatches(last("post"), "", "Trade") and ns.LogMatches(last("destroy"), "", "Loot")
+	and ns.LogMatches(last("guildbank"), "", "Trade"), "History groups")
+check(ns.LogMatches(last("send"), "mail sent jaina") and ns.LogMatches(last("destroy"), "destroyed axe")
+	and ns.LogMatches(last("guildbank"), "guild bank axe"), "History search")
 
 ns = M.Reload()
 check(last("give").partner == "Thrall-Orgrimmar" and last("send").recipient == "Jaina" and last("post").buyout == 3000

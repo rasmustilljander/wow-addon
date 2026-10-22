@@ -22,6 +22,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Other items** | Quest rewards, crafts, roll wins (with your roll), trades and mail, and other items that arrive without a loot window. |
 | **Rolls** | Group loot rolls you lost or passed on: your choice and roll, and who won with what. |
 | **Items out** | Items you hand over in a trade, mail, put up for auction (with bid and buyout) or destroy. |
+| **Guild bank** | Items you put in and take out, one entry per visit, with the guild's name. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
@@ -29,13 +30,13 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, the experience gained and time AFK. |
-| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills (a dropped profession learned again counts), every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, beasts tamed (name, level and family), the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards), and Legacy Challenges (Forever's achievements) earned, with points, category and reward. |
+| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills (a dropped profession learned again counts), every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, reputation gained and lost per faction (totals only), the first ride on each mount, beasts tamed (name, level and family), the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards), and Legacy Challenges (Forever's achievements) earned, with points, category and reward. |
 
 ## Window
 
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
-- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played, and XP by source, largest first) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
+- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played; reputation per faction, most changed first, the top three here and all in `/tl stats`; XP by source, largest first) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options, Path's interval, and whether gold and XP per hour leave out AFK time (on by default).
 - **History**: what's still in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
@@ -106,7 +107,7 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `rest`, `restleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `boss`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`, `achievement`. Fields the game doesn't reveal (coordinates in dungeons) are left empty. A `questfail` entry has `reason = "time"` when the quest's timer ran out.
+Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `guildbank`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `rest`, `restleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `boss`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`, `achievement`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
 
 A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
 
@@ -114,6 +115,7 @@ Some types have more:
 
 | Type | Fields |
 | --- | --- |
+| `guildbank` | `deposited` and `withdrawn`: lists of `item` (link) and `count`; `guild` |
 | `hearth`, `teleport` | `from`, `to` (place names); `spell` and `via` (its name) when your cast did it |
 | `summon` | `from`, `to`, `by` (the summoner) |
 | `board` | none: it's stamped where the ride started |
@@ -123,6 +125,12 @@ Some types have more:
 | `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` the fight lasted (from the pull, when seen), `instance` |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken) |
+| `quest`, `questabandon` | `id`, `title` |
+| `questdone` | `id`, `title`, `xp` and `money` (copper) it gave |
+| `questfail` | `id`, `title`, `reason` (`time` when its timer ran out) |
+| `kill` | `name`, `xp` |
+| `discover` | `place`, `xp` |
+| `standing` | `faction`, `standing` reached |
 | `level` | `played`: seconds played in all. `took`: seconds played at the level before. |
 | `death` | `target`: the hostile unit you had targeted. `level`. `cause`: `drowning`, `fatigue` or `falling`, when known. |
 | `revive` | `how`: `corpse`, `spirithealer`, `player` or `selfres`, when known. `by`: who resurrected you. `spell`: the self-resurrection used (Soulstone, Reincarnation, ...). `sickness`: `true` with resurrection sickness. `took` and `ghost`: seconds since the death and since the release. `durability`: average percentage points lost on worn items since before the death. |
@@ -148,7 +156,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Only items whose loot slot empties are recorded, so items left behind aren't. With free-for-all loot, another player's pick from a window you have open can count as yours.
 - A loot window combining several corpses is credited to the first one.
 - Objects are named from the cast that opened them. One that opens without a cast (some quest crates) gets its object ID but no name.
-- Addons get no coordinates in dungeons and raids. The Midnight-era client also hides some chat there, so crafted items, quest rewards, kills, discoveries and reputation standings may be missing. Loot windows and rolls still work.
+- Addons get no coordinates in dungeons and raids. The Midnight-era client also hides some chat there, so crafted items, quest rewards, kills, discoveries and reputation may be missing. Loot windows and rolls still work.
 - Time played comes from `/played`, which TravelLog asks for at each login and keeps out of chat. A `/played` you type before that answer arrives (usually within a second of login) doesn't show, and a level-up before the answer arrives gets no times.
 - Teleports are found by a jump in your position: more than 100 yards beyond what you could have walked or ridden since the last look a second before. A cast in the 5 seconds before is named as the cause, and one that lands you where your hearthstone is set counts as a hearth. A jump without a cast of yours (another mage's portal, an NPC that sends you somewhere) is a teleport with no spell, since the client doesn't say whose portal it was.
 - The Hearthstone always counts, even next to the inn. Other teleports shorter than 100 yards, teleports inside dungeons (no positions there), and teleports out of a dungeon that don't land at your hearthstone are missed: leaving a dungeon is logged either way.
@@ -159,6 +167,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Resting comes from the game's rested state, so it can't tell an inn from a city. A change is logged where it happened once it has held for 5 s, so stepping through an inn's door isn't a stay. Logging in rested starts a stay without a `rest` entry (the session says where you were), a reload or a night logged out inside is the same stay, and its time counts only while you're logged in.
 - Talent points count when applied, not when placed in the talent frame. Points spent before TravelLog was installed, or on the other spec before you first switch to it with TravelLog, are remembered without being logged. Re-spent points count again in the total. A reset is logged without its cost.
 - A failed quest is noticed when the quest log next updates, and logged once each time you take it: not again after a reload, and abandoning it afterwards is a `questabandon`. One that failed while you were offline or before TravelLog was installed is logged when it's first seen. The client doesn't say why a quest failed, so only a timer running out is told apart, and a failed quest the server drops from the log at once isn't seen.
+- Reputation totals come from the "Reputation with Stormwind increased by 25." chat lines, counted from when TravelLog was installed. A line without an amount isn't counted.
 - Mounts and pets count from when TravelLog was installed, so "First mount" and "First pet" are only your real firsts if you hadn't ridden or tamed before.
 - No event says a tame worked. It's a Tame Beast channel that runs its full length, then a pet appearing within 5 seconds; the beast is your target when the channel began.
 - Gear counts from the first login that records it: what you wear then is remembered, not logged, and gear in your bags is logged the first time you put it on. Gear is kept by item ID, so a second copy of an item, or the same item with another random enchantment, isn't logged again.
@@ -179,6 +188,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Items used up (potions, food, reagents) aren't recorded: no event says an item was consumed.
 - Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
 - Destroyed items are recorded only when picked up from your bags or gear first, so a gamepad delete isn't.
+- Guild bank items are read from what your bags gain or lose within 10 s of a guild bank click, so equipping or destroying an item in those seconds counts as a move, and an item held on the cursor longer is missed. Moves between tabs aren't logged.
 - Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.

@@ -61,13 +61,14 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
-check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Teleports, Boat rides, Instances, Resting, Screenshots, Jumps, Distance, Looted, Vendors, Rolls, Items out, Money in, Money out, Nodes, "
-	.. "Played, Quests, Learned, New gear, Legacy Challenges, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+check(Texts(totals, 18) == "Character, Places visited, Flights, Flight paths, Teleports, Boat rides, Instances, Resting, Screenshots, Jumps, Distance, Looted, Vendors, Rolls, Items out, Guild bank items, Money in, Money out, Nodes, "
+	.. "Played, Quests, Learned, New gear, Legacy Challenges, Reputation, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Items out") == "0 traded, 0 mailed, 0 auctioned, 0 destroyed", "items out: " .. Stat(w, "Items out"))
+check(Stat(w, "Guild bank items") == "0 deposited, 0 withdrawn", "guild bank items: " .. Stat(w, "Guild bank items"))
 check(Stat(w, "Money in") == "0c" and Stat(w, "Money out") == "0c", "no money in or out yet")
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Quests") == "0 done, 0 failed", "quests: " .. Stat(w, "Quests"))
