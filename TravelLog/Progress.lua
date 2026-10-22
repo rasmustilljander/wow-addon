@@ -1,7 +1,7 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, talent points spent, flight paths found,
--- reputation standings reached, the first ride on each mount, beasts tamed
--- and the first time you put on each piece of gear.
+-- reputation standings reached, the first ride on each mount, beasts tamed,
+-- the first time you put on each piece of gear and Legacy Challenges earned.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -105,21 +105,26 @@ end
 local SKILL_STEP = 25
 
 -- Ranks are kept in the character file, so a skill hidden under a collapsed
--- header and shown again isn't taken for a new one. The first scan only
--- remembers what you already have.
+-- header and shown again isn't taken for a new one. A skill missing from a
+-- scan with every header open was dropped, and is forgotten so learning it
+-- again counts. The first scan only remembers what you already have.
 local function CheckSkills()
 	if not (C_SkillInfo and C_SkillInfo.GetNumSkillLines) then
 		return
 	end
 	local known = ns.char.skills
 	local skills = known or {}
-	local any
+	local any, collapsed, seen = false, false, {}
 	for i = 1, C_SkillInfo.GetNumSkillLines() do
 		local info = C_SkillInfo.GetSkillLineInfo(i)
+		if info and info.isHeader and ns.Clean(info.isCollapsed) then
+			collapsed = true
+		end
 		local id = info and not info.isHeader and ns.Clean(info.skillID)
 		local rank = id and ns.Clean(info.rank)
 		if rank then
 			any = true
+			seen[id] = true
 			local old = skills[id]
 			if not old then
 				if known then
@@ -133,6 +138,13 @@ local function CheckSkills()
 				end
 			end
 			skills[id] = rank
+		end
+	end
+	if any and not collapsed then
+		for id in pairs(skills) do
+			if not seen[id] then
+				skills[id] = nil
+			end
 		end
 	end
 	if any then
@@ -470,6 +482,37 @@ end
 
 ns.On("PLAYER_LOGIN", ReadWorn)
 ns.On("PLAYER_EQUIPMENT_CHANGED", CheckGear)
+
+--------------------------------------------------------------------------------
+-- Legacy Challenges: Forever's achievements
+--------------------------------------------------------------------------------
+
+-- alreadyEarned: another character on the account earned it first.
+ns.On("ACHIEVEMENT_EARNED", function(id, alreadyEarned)
+	id = ns.Clean(id)
+	if not id then
+		return
+	end
+	local name, points, reward, guild
+	if GetAchievementInfo then
+		local _
+		_, name, points, _, _, _, _, _, _, _, reward, guild = GetAchievementInfo(id)
+		name, points, reward = ns.Clean(name), ns.Clean(points), ns.Clean(reward)
+	end
+	local category = GetAchievementCategory and ns.Clean(GetAchievementCategory(id))
+	category = category and GetCategoryInfo and ns.Clean((GetCategoryInfo(category))) or nil
+	ns.Log("achievement", {
+		id = id,
+		name = name,
+		points = points ~= 0 and points or nil,
+		category = category,
+		reward = reward ~= "" and reward or nil,
+		already = ns.Clean(alreadyEarned) or nil,
+		guild = ns.Clean(guild) or nil,
+	})
+	ns.Add(1, "achievements")
+	ns.Add(points or 0, "achievementPoints")
+end)
 
 --------------------------------------------------------------------------------
 -- Chat

@@ -323,7 +323,7 @@ local function CheckInstance()
 	if was then
 		ns.Fire("TL_INSTANCE_LEFT", was)
 		local seconds = was.inside + (was.since and time() - was.since or 0)
-		ns.Log("instanceleave", { name = was.name, kind = was.kind, seconds = seconds })
+		ns.Log("instanceleave", { name = was.name, kind = was.kind, seconds = seconds, kills = was.kills, wipes = was.wipes })
 		ns.Add(seconds, "instanceTime")
 		ns.char.instance = nil
 	end
@@ -352,6 +352,37 @@ ns.On("PLAYER_LOGOUT", function()
 	local i = ns.char.instance
 	if i and i.since then
 		i.inside, i.since = i.inside + time() - i.since, nil
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- Boss fights
+--------------------------------------------------------------------------------
+
+-- The fight in progress is kept in the character file, so its length
+-- survives a reload during it. A new pull always restarts it.
+ns.On("ENCOUNTER_START", function(id)
+	ns.char.fight = { id = ns.Clean(id), since = time() }
+end)
+
+-- success is 1 for a kill, 0 for a wipe.
+ns.On("ENCOUNTER_END", function(id, name, difficultyID, size, success)
+	id, name, difficultyID, size = ns.Clean(id), ns.Clean(name), ns.Clean(difficultyID), ns.Clean(size)
+	local result = ns.Clean(success) == 1 and "kill" or "wipe"
+	local fight, inst = ns.char.fight, ns.char.instance
+	ns.char.fight = nil
+	local difficulty = difficultyID and GetDifficultyInfo and ns.Clean((GetDifficultyInfo(difficultyID)))
+	ns.Log("boss", {
+		name = name ~= "" and name or nil, id = id, result = result,
+		difficulty = difficulty ~= "" and difficulty or nil,
+		size = size and size > 0 and size or nil,
+		seconds = fight and id and fight.id == id and time() - fight.since or nil,
+		instance = inst and inst.name,
+	})
+	ns.Add(1, "bosses", result)
+	if inst then
+		local key = result == "kill" and "kills" or "wipes"
+		inst[key] = (inst[key] or 0) + 1
 	end
 end)
 

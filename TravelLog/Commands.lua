@@ -123,6 +123,11 @@ function ns.GuildText(st, key)
 	return text
 end
 
+-- Legacy Challenges earned and their points: "12 earned, 120 points".
+function ns.ChallengesText(st)
+	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
+end
+
 -- Money gained or spent ("gained" or "spent") with its reasons, largest
 -- first: "5g 20s 0c: quest 3g 0s 0c, loot 2g 20s 0c".
 function ns.MoneyByReason(st, way)
@@ -189,9 +194,10 @@ local function ShowStats(arg)
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
 
 	local quests = st.quests or {}
-	ns.Print("Deaths %s, kills %s, quests done %s, failed %s, flights %s, places visited %s",
-		ns.DeathsText(st), Count(st.kills), Count(quests.completed), Count(quests.failed), Count(st.flights),
-		Count(ns.PlacesVisited(st)))
+	local bosses = st.bosses or {}
+	ns.Print("Deaths %s, kills %s, bosses killed %s, wipes %s, quests done %s, failed %s, flights %s, places visited %s",
+		ns.DeathsText(st), Count(st.kills), Count(bosses.kill), Count(bosses.wipe), Count(quests.completed),
+		Count(quests.failed), Count(st.flights), Count(ns.PlacesVisited(st)))
 	ns.Print("Came back: %s", ns.RevivalsText(st))
 	local duels = st.duels or {}
 	local bgs = st.battlegrounds or {}
@@ -207,6 +213,7 @@ local function ShowStats(arg)
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
+	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
 
 	-- Companion addons add their own lines here, for these totals and this
 	-- character (nil for all of them).
@@ -347,7 +354,22 @@ local DESCRIBE = {
 		local about = e.difficulty and e.kind .. ", " .. e.difficulty or e.kind
 		return ("Entered %s (%s)"):format(e.name or "?", about or "instance")
 	end,
-	instanceleave = function(e) return ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0)) end,
+	instanceleave = function(e)
+		local text = ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0))
+		if e.kills or e.wipes then
+			text = ("%s: %d bosses killed, %d wipes"):format(text, e.kills or 0, e.wipes or 0)
+		end
+		return text
+	end,
+	boss = function(e)
+		local name = e.name or (e.id and "boss " .. e.id) or "a boss"
+		local text = e.result == "kill" and "Killed " .. name or "Wiped on " .. name
+		if e.seconds then text = ("%s %s %s"):format(text, e.result == "kill" and "in" or "after", Clock(e.seconds)) end
+		local about = {}
+		if e.difficulty then about[#about + 1] = e.difficulty end
+		if e.size then about[#about + 1] = e.size .. " players" end
+		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
+	end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	rest = function(e) return ("Started resting in %s"):format(e.subzone or e.zone or "?") end,
 	restleave = function(e)
@@ -482,6 +504,16 @@ local DESCRIBE = {
 		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, " ")) end
 		return e.pet and ("%s, named %s"):format(text, e.pet) or text
 	end,
+	achievement = function(e)
+		local text = "Legacy Challenge: " .. (e.name or e.id or "?")
+		local about = {}
+		if e.points then about[#about + 1] = e.points .. " points" end
+		if e.category then about[#about + 1] = e.category end
+		if e.guild then about[#about + 1] = "guild" end
+		if e.already then about[#about + 1] = "already earned on another character" end
+		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
+		return e.reward and ("%s; %s"):format(text, e.reward) or text
+	end,
 	equip = function(e)
 		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
 		local text = ("Equipped %s (%s%s)"):format(e.item or "?", slot, e.ilvl and ", item level " .. e.ilvl or "")
@@ -511,11 +543,12 @@ local LOG_GROUP = {
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
-	duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
+	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
 	guildjoin = "Life", guildleave = "Life", guildrank = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
+	achievement = "Progress",
 }
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
@@ -526,13 +559,13 @@ local LOG_LABEL = {
 	instanceleave = "Instance left", rest = "Resting", restleave = "Resting ended", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
-	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
+	discover = "Discovery", boss = "Boss", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
 	battleground = "Battleground",
 	guildjoin = "Guild joined", guildleave = "Guild left", guildrank = "Guild rank",
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
-	mount = "Mount", tame = "Pet tamed", equip = "Gear",
+	mount = "Mount", tame = "Pet tamed", equip = "Gear", achievement = "Legacy Challenge",
 }
 
 function ns.LogGroup(e)

@@ -188,13 +188,14 @@ AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
 GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON
 RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
-GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
+GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED GUILDBANKBAGSLOTS_CHANGED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
 TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
-PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST PLAYER_UPDATE_RESTING]]):gmatch("%S+") do
+PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
+ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -648,6 +649,14 @@ function GetInstanceInfo()
 	return i.name or M.zone, M.instance, 1, i.difficultyName or "Normal", i.maxPlayers or 5, 0, false,
 		i.instanceID or 36, i.maxPlayers or 5, nil, false
 end
+-- Name, instance type, isHeroic, ... maxPlayers of a difficulty ID; only
+-- the ones the tests use.
+local DIFFICULTIES = { [1] = { "Normal", "party", 5 }, [2] = { "Heroic", "party", 5 }, [9] = { "40 Player", "raid", 40 } }
+function GetDifficultyInfo(id)
+	local d = DIFFICULTIES[id]
+	if not d then return nil end
+	return d[1], d[2], id == 2, false, id == 2, false, nil, false, 1, d[3], true
+end
 -- Your own speed in yards a second: running (7) unless M.speed says
 -- otherwise, such as 0 standing on a boat.
 function GetUnitSpeed() return M.speed or 7, 7, 7, 4.72 end
@@ -818,13 +827,14 @@ M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
 M.spellRanks = {}
 function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end
--- Skill lines as the skills frame lists them: { skillID, name, rank, isHeader }.
+-- Skill lines as the skills frame lists them: { skillID, name, rank, isHeader,
+-- isCollapsed }. A collapsed header's skills are left out of the list.
 M.skills = {}
 C_SkillInfo = {}
 function C_SkillInfo.GetNumSkillLines() return #M.skills end
 function C_SkillInfo.GetSkillLineInfo(i)
 	local s = M.skills[i]
-	return s and { skillID = s.skillID or 0, name = s.name, rank = s.rank or 0, isHeader = s.isHeader or false, maxRank = s.maxRank or 0 }
+	return s and { skillID = s.skillID or 0, name = s.name, rank = s.rank or 0, isHeader = s.isHeader or false, isCollapsed = s.isCollapsed or false, maxRank = s.maxRank or 0 }
 end
 -- Talents, as Forever's trait system: M.talentConfig is the active loadout's
 -- ID (nil before the client has one) and M.loadouts[configID][nodeID] =
@@ -1019,6 +1029,64 @@ function C_Item.GetItemInfoInstant(item)
 	local id = tonumber(item) or LinkID(item)
 	return id, "Junk", "Junk", "", (M.items[id] or {}).icon or 134400, 15, 0
 end
+-- The guild bank: M.guildBankItems["tab:slot"] is an item link or { link,
+-- count }, M.guildBankTabs how many tabs the guild has, M.guildBankTab the
+-- one shown and M.guildBankHidden[tab] the tabs you may not view. Tests fire
+-- GUILDBANKBAGSLOTS_CHANGED when a tab's items arrive.
+M.guildBankItems, M.guildBankTabs, M.guildBankTab, M.guildBankHidden = {}, 0, 1, {}
+local function GuildBankItem(tab, slot)
+	local entry = M.guildBankItems[tab .. ":" .. slot]
+	if type(entry) == "string" then return { link = entry, count = 1 } end
+	return entry
+end
+function GetNumGuildBankTabs() return M.guildBankTabs end
+function GetCurrentGuildBankTab() return M.guildBankTab end
+function GetGuildBankTabInfo(tab)
+	return "Tab " .. tab, 134400, not M.guildBankHidden[tab], true, -1, -1, false
+end
+function GetGuildBankItemInfo(tab, slot)
+	local e = GuildBankItem(tab, slot)
+	if not e then return nil, 0, false, false, nil end
+	local item = M.items[LinkID(e.link)] or {}
+	return item.icon or 134400, e.count or 1, false, false, item.quality or 1
+end
+function GetGuildBankItemLink(tab, slot) local e = GuildBankItem(tab, slot); return e and e.link end
+
+-- The game's Options window. M.settings[name] is an addon's page under
+-- AddOns ({ name, controls = { { setting, tooltip } } }). Ticking a checkbox
+-- is control.setting:SetValue(value).
+Settings = { VarType = { Boolean = "boolean", String = "string", Number = "number" } }
+M.settings = {}
+local SettingMixin = {}
+SettingMixin.__index = SettingMixin
+function SettingMixin:GetVariable() return self.variable end
+function SettingMixin:GetName() return self.name end
+function SettingMixin:GetVariableType() return self.variableType end
+function SettingMixin:GetDefaultValue() return self.defaultValue end
+function SettingMixin:GetValue() return self.variableTbl[self.variableKey] end
+function SettingMixin:SetValue(value) self.variableTbl[self.variableKey] = value end
+local CategoryMixin = {}
+CategoryMixin.__index = CategoryMixin
+function CategoryMixin:GetID() return self.id end
+function CategoryMixin:GetName() return self.name end
+function Settings.RegisterVerticalLayoutCategory(name)
+	local category = setmetatable({ id = name, name = name, controls = {} }, CategoryMixin)
+	return category, {}
+end
+function Settings.RegisterAddOnSetting(category, variable, variableKey, variableTbl, variableType, name, defaultValue)
+	assert(type(variableTbl) == "table", "'variableTbl' argument must be a table.")
+	assert(type(defaultValue) == variableType)
+	if variableTbl[variableKey] == nil then variableTbl[variableKey] = defaultValue end
+	return setmetatable({ variable = variable, variableKey = variableKey, variableTbl = variableTbl,
+		variableType = variableType, name = name, defaultValue = defaultValue }, SettingMixin)
+end
+function Settings.CreateCheckbox(category, setting, tooltip)
+	assert(setting:GetVariableType() == "boolean")
+	local control = { setting = setting, tooltip = tooltip }
+	category.controls[#category.controls + 1] = control
+	return control
+end
+function Settings.RegisterAddOnCategory(category) M.settings[category:GetName()] = category end
 
 -- Casting: fires SENT then SUCCEEDED like the client does.
 function M.cast(spellID, target)
@@ -1232,6 +1300,22 @@ end
 C_GuildInfo = {}
 M.rosterRequests = 0
 function C_GuildInfo.GuildRoster() M.rosterRequests = M.rosterRequests + 1 end
+
+-- Achievements (Forever's Legacy Challenges): M.achievements[id] = { name,
+-- points, category, reward, guild } and M.achievementCategories[id] = { name,
+-- parent }. Tests fire ACHIEVEMENT_EARNED themselves.
+M.achievements, M.achievementCategories = {}, {}
+function GetAchievementInfo(id)
+	local a = M.achievements[id]
+	if a then
+		return id, a.name, a.points or 0, true, 10, 22, 26, a.description or "", 0, 134400, a.reward or "", a.guild or false, true, nil
+	end
+end
+function GetAchievementCategory(id) return M.achievements[id] and M.achievements[id].category end
+function GetCategoryInfo(id)
+	local c = M.achievementCategories[id]
+	if c then return c.name, c.parent or -1, 0 end
+end
 function JumpOrAscendStart() end
 
 -- World map: Blizzard's frames survive reloads, addon frames don't.
@@ -1482,6 +1566,7 @@ function M.Logout()
 	namedFrames, UISpecialFrames, M.focus, M.cursorItem, M.cursorSplit = {}, {}, nil, nil, nil
 	SlashCmdList = {}
 	M.tooltipPostCalls = {}
+	M.settings = {}
 	M.chatFilters, M.prefixes = {}, {}
 	M.reloadRequested = nil
 end
