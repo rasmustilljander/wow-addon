@@ -85,6 +85,12 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Loot rolls by outcome: "2 won, 5 lost, 9 passed".
+function ns.RollsText(st)
+	local rolls = st.rolls or {}
+	return ("%s won, %s lost, %s passed"):format(Count((st.received or {}).roll), Count(rolls.lost), Count(rolls.passed))
+end
+
 -- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning)".
 function ns.DeathsText(st)
 	local causes = {}
@@ -164,6 +170,7 @@ local function ShowStats(arg)
 	ns.Print("Vendors: %s bought, %s sold, %s repairs; spent %s, earned %s",
 		Count(v.bought), Count(v.sold), Count(v.repairs),
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
+	ns.Print("Rolls: %s", ns.RollsText(st))
 	ns.Print("Items out: %s", ns.GivenText(st))
 	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
@@ -272,6 +279,12 @@ local DESCRIBE = {
 		local how = e.roll and ("won with a roll of %d"):format(e.roll) or e.how or "?"
 		local from = e.partner or e.sender
 		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from and " from " .. from or "")
+	end,
+	roll = function(e)
+		local mine = e.roll and ("%s %d"):format(e.choice, e.roll) or e.choice or "?"
+		local won = e.winner and ("won by %s%s"):format(e.winner, e.winnerRoll and " with " .. e.winnerRoll or "")
+			or "everyone passed"
+		return ("%s %s (%s; %s)"):format(e.choice == "pass" and "Passed on" or "Lost the roll for", Item(e.item), mine, won)
 	end,
 	buy = function(e) return ("Bought %s for %s from %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
 	sell = function(e) return ("Sold %s for %s to %s"):format(Item(e.item, e.count), ns.MoneyText(e.price), e.vendor or "?") end,
@@ -418,7 +431,7 @@ local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
 	instance = "Travel", instanceleave = "Travel", screenshot = "Travel",
-	loot = "Loot", receive = "Loot", destroy = "Loot",
+	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
@@ -429,7 +442,7 @@ local LOG_GROUP = {
 	standing = "Progress", mount = "Progress", equip = "Progress",
 }
 local LOG_LABEL = {
-	area = "Area", loot = "Loot", receive = "Item", buy = "Purchase", sell = "Sale",
+	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
 	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",

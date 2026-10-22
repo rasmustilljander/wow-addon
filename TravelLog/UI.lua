@@ -112,6 +112,7 @@ ns.AddStat("Loot", "Vendors", function(st)
 	local v = st.vendor or {}
 	return ("spent %s, earned %s"):format(ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 end)
+ns.AddStat("Loot", "Rolls", ns.RollsText)
 ns.AddStat("Loot", "Items out", ns.GivenText)
 ns.AddStat("Loot", "Money in", function(st) return ns.MoneyByReason(st, "gained") end)
 ns.AddStat("Loot", "Money out", function(st) return ns.MoneyByReason(st, "spent") end)

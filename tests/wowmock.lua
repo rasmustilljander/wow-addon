@@ -143,6 +143,7 @@ Enum = {
 	ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
 	BagIndex = { Keyring = -1, Backpack = 0, CharacterBankTab_1 = 6, AccountBankTab_1 = 15 },
 	BankType = { Character = 0, Guild = 1, Account = 2 },
+	EncounterLootDropRollState = { NeedMainSpec = 0, NeedOffSpec = 1, Transmog = 2, Greed = 3, NoRoll = 4, Pass = 5 },
 	AuctionStatus = { Active = 0, Sold = 1 },
 	SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3, InvalidChatType = 4,
 		NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10,
@@ -173,7 +174,7 @@ RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
 GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE
 TRAIT_CONFIG_UPDATED TRAIT_CONFIG_LIST_UPDATED PLAYER_TALENT_UPDATE ACTIVE_TALENT_GROUP_CHANGED
 DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTOFBOUNDS CHAT_MSG_COMBAT_HONOR_GAIN
-PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED]]):gmatch("%S+") do
+PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -1007,6 +1008,15 @@ function GetLootSlotLink(i) return M.loot[i].link end
 function GetLootSlotType(i) return M.loot[i].type or 1 end
 function GetLootSourceInfo(i) return M.loot[i].guid, M.loot[i].qty end
 function IsFishingLoot() return M.fishing or false end
+
+-- Group loot rolls. M.lootDrops[encounterID][lootListKey] is the drop's
+-- EncounterLootDropInfo: { itemHyperlink, playerRollState, winner, allPassed,
+-- rollInfos = { { playerName, isSelf, state, isWinner, roll }, ... } }.
+M.lootDrops = {}
+C_LootHistory = {}
+function C_LootHistory.GetSortedInfoForDrop(encounterID, lootListKey)
+	return (M.lootDrops[encounterID] or {})[lootListKey]
+end
 
 -- Opens a loot window on M.loot, takes the given slots (all when nil) and
 -- closes it, like autoloot.
