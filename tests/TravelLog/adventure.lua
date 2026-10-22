@@ -163,15 +163,32 @@ M.fire("UI_INFO_MESSAGE", 0, "Discovered Jerod's Landing: 30 experience gained")
 M.fire("CHAT_MSG_SYSTEM", "Discovered Jerod's Landing: 30 experience gained")
 check(count("discover") == 1 and last("discover").place == "Jerod's Landing" and last("discover").xp == 30, "discovery logged once")
 
--- Vendor: buy, sell three things, buy one back, repair
+-- Vendor: failed clicks do nothing; successful buys, sales, a buyback and a repair are confirmed from state
 M.units.npc = { name = "Brother Danil", guid = "Creature-0-1-0-1-152-0000" }
 M.merchantItems[1] = { name = "Refreshing Spring Water", price = 25, stackCount = 5, link = "|cffffffff|Hitem:159::::|h[Refreshing Spring Water]|h|r" }
 M.repairCost = 140
 M.fire("PLAYER_INTERACTION_MANAGER_FRAME_SHOW", Enum.PlayerInteractionType.Merchant)
 M.fire("MERCHANT_SHOW")
 check(ns.open.merchant, "merchant window tracked")
-BuyMerchantItem(1)    -- one stack of 5
+
+M.bagSlots[0] = 1 -- the clam still fills the only slot
+BuyMerchantItem(1)
+M.fire("BAG_UPDATE_DELAYED")
+check(count("buy") == 0, "purchase with full bags not logged")
+M.bagSlots[0] = 16
+local vendorMoney = M.money
+M.money = 0
+BuyMerchantItem(1, 2)
+M.fire("MERCHANT_UPDATE")
+check(count("buy") == 0, "purchase without enough money not logged")
+M.money = vendorMoney
+
+BuyMerchantItem(1) -- one stack of 5
+M.bags["0:2"] = { link = M.merchantItems[1].link, count = 5 }
+M.fire("BAG_UPDATE_DELAYED")
 BuyMerchantItem(1, 2) -- 2 bottles via split
+M.bags["0:2"].count = 7
+M.fire("BAG_UPDATE_DELAYED")
 check(last("buy").count == 2 and last("buy").price == 10, "split buy priced per item: " .. tostring(last("buy").price))
 check(count("buy") == 2 and ns.stats.vendor.spent == 35, "buy totals")
 M.buyback = { { name = "Ruined Pelt", link = "[Ruined Pelt]", price = 5, count = 1 } }
@@ -182,10 +199,18 @@ M.fire("BAG_UPDATE_DELAYED")
 check(count("sell") == 3 and ns.stats.vendor.earned == 36, "sales found via the buyback list: " .. count("sell"))
 check(last("sell").vendor == "Brother Danil", "vendor name on sale")
 BuybackItem(3)
+M.fire("MERCHANT_UPDATE")
+check(count("buyback") == 0, "failed buyback not logged")
+BuybackItem(3)
 table.remove(M.buyback, 3)
 M.fire("MERCHANT_UPDATE")
 check(last("buyback") and last("buyback").price == 26 and count("sell") == 3, "buyback logged, not a sale")
 RepairAllItems()
+M.fire("UPDATE_INVENTORY_DURABILITY")
+check(count("repair") == 0, "failed repair not logged")
+RepairAllItems()
+M.repairCost = 0
+M.fire("UPDATE_INVENTORY_DURABILITY")
 check(last("repair") and last("repair").price == 140, "repair cost logged")
 M.money = M.money - 140
 M.fire("PLAYER_MONEY")
