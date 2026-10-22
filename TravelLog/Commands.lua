@@ -189,9 +189,10 @@ local function ShowStats(arg)
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
 
 	local quests = st.quests or {}
-	ns.Print("Deaths %s, kills %s, quests done %s, failed %s, flights %s, places visited %s",
-		ns.DeathsText(st), Count(st.kills), Count(quests.completed), Count(quests.failed), Count(st.flights),
-		Count(ns.PlacesVisited(st)))
+	local bosses = st.bosses or {}
+	ns.Print("Deaths %s, kills %s, bosses killed %s, wipes %s, quests done %s, failed %s, flights %s, places visited %s",
+		ns.DeathsText(st), Count(st.kills), Count(bosses.kill), Count(bosses.wipe), Count(quests.completed),
+		Count(quests.failed), Count(st.flights), Count(ns.PlacesVisited(st)))
 	ns.Print("Came back: %s", ns.RevivalsText(st))
 	local duels = st.duels or {}
 	local bgs = st.battlegrounds or {}
@@ -346,7 +347,22 @@ local DESCRIBE = {
 		local about = e.difficulty and e.kind .. ", " .. e.difficulty or e.kind
 		return ("Entered %s (%s)"):format(e.name or "?", about or "instance")
 	end,
-	instanceleave = function(e) return ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0)) end,
+	instanceleave = function(e)
+		local text = ("Left %s after %s"):format(e.name or "?", ns.Duration(e.seconds or 0))
+		if e.kills or e.wipes then
+			text = ("%s: %d bosses killed, %d wipes"):format(text, e.kills or 0, e.wipes or 0)
+		end
+		return text
+	end,
+	boss = function(e)
+		local name = e.name or (e.id and "boss " .. e.id) or "a boss"
+		local text = e.result == "kill" and "Killed " .. name or "Wiped on " .. name
+		if e.seconds then text = ("%s %s %s"):format(text, e.result == "kill" and "in" or "after", Clock(e.seconds)) end
+		local about = {}
+		if e.difficulty then about[#about + 1] = e.difficulty end
+		if e.size then about[#about + 1] = e.size .. " players" end
+		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
+	end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
 	death = function(e)
@@ -505,7 +521,7 @@ local LOG_GROUP = {
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
-	duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
+	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
 	guildjoin = "Life", guildleave = "Life", guildrank = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
@@ -520,7 +536,7 @@ local LOG_LABEL = {
 	instanceleave = "Instance left", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
-	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
+	discover = "Discovery", boss = "Boss", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
 	battleground = "Battleground",
 	guildjoin = "Guild joined", guildleave = "Guild left", guildrank = "Guild rank",
 	spell = "Spell",

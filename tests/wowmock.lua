@@ -194,7 +194,7 @@ DUEL_REQUESTED DUEL_TO_THE_DEATH_REQUESTED DUEL_FINISHED DUEL_INBOUNDS DUEL_OUTO
 PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAILED LOOT_HISTORY_UPDATE_DROP
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
-PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST]]):gmatch("%S+") do
+PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST ENCOUNTER_START ENCOUNTER_END]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -646,6 +646,14 @@ function GetInstanceInfo()
 	local i = M.instanceInfo or {}
 	return i.name or M.zone, M.instance, 1, i.difficultyName or "Normal", i.maxPlayers or 5, 0, false,
 		i.instanceID or 36, i.maxPlayers or 5, nil, false
+end
+-- Name, instance type, isHeroic, ... maxPlayers of a difficulty ID; only
+-- the ones the tests use.
+local DIFFICULTIES = { [1] = { "Normal", "party", 5 }, [2] = { "Heroic", "party", 5 }, [9] = { "40 Player", "raid", 40 } }
+function GetDifficultyInfo(id)
+	local d = DIFFICULTIES[id]
+	if not d then return nil end
+	return d[1], d[2], id == 2, false, id == 2, false, nil, false, 1, d[3], true
 end
 -- Your own speed in yards a second: running (7) unless M.speed says
 -- otherwise, such as 0 standing on a boat.
