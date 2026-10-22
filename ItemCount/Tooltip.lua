@@ -1,5 +1,5 @@
--- ItemCount tooltip lines: how many of the item you have in all, and each
--- character's count by place.
+-- ItemCount tooltip lines: how many of the item you have in all, each
+-- character's count by place, and your guild's bank (not in the total).
 local _, ns = ...
 
 local LABELS = { bags = "bags", bank = "bank", mail = "mail", auctions = "AH", equipped = "equipped" }
@@ -29,7 +29,8 @@ local function AddLines(tooltip, data)
 		return
 	end
 	local holders, account, total = ns.Holders(id)
-	if total == 0 then
+	local guild = ns.GuildBankCount(id)
+	if total == 0 and guild == 0 then
 		return
 	end
 	if #holders + (account > 0 and 1 or 0) > 1 then
@@ -41,6 +42,9 @@ local function AddLines(tooltip, data)
 	end
 	if account > 0 then
 		tooltip:AddDoubleLine("Account bank", WHITE .. account .. "|r", 1, 0.82, 0)
+	end
+	if guild > 0 then
+		tooltip:AddDoubleLine("Guild bank", WHITE .. guild .. "|r", 1, 0.82, 0)
 	end
 end
 

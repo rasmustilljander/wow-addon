@@ -1,13 +1,14 @@
 -- ItemCount: counts the items each of your characters has in their bags,
 -- bank, mailbox and on the auction house. Bags and equipped items are
--- counted whenever they change; the bank, mail and auctions only while you
--- visit them, so those are as of your last visit. The tooltip lines are in
--- Tooltip.lua.
+-- counted whenever they change; the bank, mail, auctions and guild bank
+-- only while you visit them, so those are as of your last visit. The tooltip
+-- lines are in Tooltip.lua, the Options page in Settings.lua.
 local _, ns = ...
 
 local NUM_BANK_TABS = 9         -- CharacterBankTab_1-9 and AccountBankTab_1-9
 local ATTACHMENTS_RECEIVE = 16  -- ATTACHMENTS_MAX_RECEIVE and _SEND, which only
 local ATTACHMENTS_SEND = 12     -- exist once Blizzard_MailFrame has loaded
+local GUILD_BANK_SLOTS = 98     -- MAX_GUILDBANK_SLOTS_PER_TAB, local to Blizzard_GuildBankUI
 
 -- The places a character keeps items, in tooltip order.
 ns.PLACES = { "bags", "bank", "mail", "auctions", "equipped" }
@@ -46,6 +47,10 @@ end
 --     },
 --   },
 --   accountBank = { [itemID] = count }, accountBankTime = 1760000000,
+--   guildBanks = {
+--     ["Guild-Realm"] = { tabs = { [tab] = { [itemID] = count } }, time = 1760000000 },
+--   },
+--   settings = { guildBank = true },
 -- }
 
 local db, me
@@ -125,6 +130,45 @@ local function ScanMail()
 	me.mail, me.mailTime = counts, time()
 end
 
+-- "Guild-Realm" for the guild of the character you're playing, or nil.
+local function GuildKey()
+	local name, _, _, realm = GetGuildInfo("player")
+	name = ns.Clean(name)
+	if name then
+		return name .. "-" .. (ns.Clean(realm) or ns.realm)
+	end
+end
+
+-- Only while the guild bank is open. The client only has the items of the
+-- tab you're looking at, so each tab is counted when you view it.
+local function ScanGuildBank()
+	local key = GuildKey()
+	if not key or not db.settings.guildBank then
+		return
+	end
+	local bank = db.guildBanks[key] or { tabs = {} }
+	db.guildBanks[key] = bank
+	local numTabs = GetNumGuildBankTabs()
+	for tab in pairs(bank.tabs) do
+		if tab > numTabs then
+			bank.tabs[tab] = nil
+		end
+	end
+	local tab = GetCurrentGuildBankTab()
+	if tab > numTabs or not select(3, GetGuildBankTabInfo(tab)) then
+		return
+	end
+	local counts = {}
+	for slot = 1, GUILD_BANK_SLOTS do
+		local link = GetGuildBankItemLink(tab, slot)
+		if link then
+			local _, count = GetGuildBankItemInfo(tab, slot)
+			Add(counts, (C_Item.GetItemInfoInstant(link)), count or 1)
+		end
+	end
+	bank.tabs[tab], bank.time = counts, time()
+end
+
 local function ScanAuctions()
 	if not C_AuctionHouse.HasFullOwnedAuctionResults() then
 		return
@@ -193,6 +237,17 @@ function ns.Holders(id)
 	return list, account, total + account
 end
 
+-- How many of an item the guild bank of the character you're playing has,
+-- or 0 when the guild bank is turned off.
+function ns.GuildBankCount(id)
+	local bank = db.settings.guildBank and db.guildBanks[GuildKey() or ""]
+	local n = 0
+	for _, counts in pairs(bank and bank.tabs or {}) do
+		n = n + (counts[id] or 0)
+	end
+	return n
+end
+
 -- The key of your character called `name` ("Name" or "Name-Realm", in any
 -- case), or nil if it isn't one of yours.
 local function Squash(text)
@@ -213,7 +268,7 @@ end
 -- Events
 --------------------------------------------------------------------------------
 
-local bankOpen, mailOpen
+local bankOpen, mailOpen, guildBankOpen
 
 -- Items mailed to one of your characters, until the mail has gone.
 local outgoing
@@ -238,6 +293,8 @@ local handlers = {
 		ItemCountDB = ItemCountDB or {}
 		db = ItemCountDB
 		db.chars = db.chars or {}
+		db.guildBanks = db.guildBanks or {}
+		ns.SetUpSettings(db)
 		ns.realm = GetRealmName()
 		ns.charKey = UnitName("player") .. "-" .. ns.realm
 		db.chars[ns.charKey] = db.chars[ns.charKey] or {}
@@ -260,6 +317,18 @@ local handlers = {
 	end,
 	BANKFRAME_CLOSED = function()
 		bankOpen = false
+	end,
+	GUILDBANKFRAME_OPENED = function()
+		guildBankOpen = true
+	end,
+	GUILDBANKFRAME_CLOSED = function()
+		guildBankOpen = false
+	end,
+	-- The shown tab's items have arrived or changed.
+	GUILDBANKBAGSLOTS_CHANGED = function()
+		if guildBankOpen then
+			ScanGuildBank()
+		end
 	end,
 	MAIL_SHOW = function()
 		mailOpen = true
@@ -347,6 +416,10 @@ SlashCmdList.ITEMCOUNT = function(msg)
 		end
 		if db.accountBankTime then
 			ns.Print("Account bank: %s", Ago(db.accountBankTime))
+		end
+		local guild = GuildKey()
+		if db.settings.guildBank and guild and db.guildBanks[guild] then
+			ns.Print("Guild bank (%s): %s", guild, Ago(db.guildBanks[guild].time))
 		end
 	elseif cmd == "forget" and rest ~= "" then
 		local key = ns.Find(rest)
