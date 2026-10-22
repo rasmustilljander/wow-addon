@@ -27,7 +27,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and time inside when you leave), hearthstone binds, screenshots (with the file's name, to match pictures to the log). |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, discoveries. |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), honorable kills (victim, rank, honor) and honor awards. |
-| **Sessions** | Each login or reload: start, end, level, money and the experience gained. |
+| **Sessions** | Each login or reload: start and end (time and place), level, money and the experience gained. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills, every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, and the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards). |
 
 ## Window
@@ -38,7 +38,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 - **Settings**: the companions' map options and Path's interval.
 - **History**: what's still in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
-  - **Sessions**: each session's length, levels, money and experience gained (per hour once it's 10 minutes long), and its quests done and failed, XP kills and deaths.
+  - **Sessions**: each session's length, levels, where it started and ended, money and experience gained (per hour once it's 10 minutes long), and its quests done and failed, XP kills and deaths.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
@@ -88,7 +88,9 @@ TravelLogCharDB = {
     ...
   },
   sessions = {   -- one per login or reload
-    { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500, xp = 5600 },
+    { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500, xp = 5600,
+      zone = "Elwynn Forest", subzone = "Goldshire", map = 1429, x = 42.1, y = 65.3,   -- where you logged in
+      zoneEnd = "Stormwind City", subzoneEnd = "Old Town", mapEnd = 1453, xEnd = 75.2, yEnd = 61.8 },  -- and out
   },
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ..., failed = ... } },  -- last time of each
   skills = { [129] = 75 },           -- skill ID -> rank, to tell new skills and milestones

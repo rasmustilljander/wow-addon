@@ -1,5 +1,6 @@
--- Sessions: experience gained (across a level-up), money, what happened in
--- each, /tl sessions and the History tab's Sessions view, across a reload.
+-- Sessions: where they start and end, experience gained (across a level-up),
+-- money, what happened in each, /tl sessions and the History tab's Sessions
+-- view, across a reload.
 local ns = M.Login()
 local loggedIn = date("%m-%d %H:%M")
 
@@ -15,6 +16,11 @@ local function Rows(list)
 	end
 	return out
 end
+
+-- Where it started.
+local s = ns.session
+check(s.zone == "Elwynn Forest" and s.subzone == "Goldshire" and s.map == 1429 and s.x == 42 and s.y == 65,
+	"login place: " .. tostring(s.subzone) .. " " .. tostring(s.x))
 
 -- Experience: gains add up, a level-up's wrap is counted, other units' updates aren't.
 M.xp = 1000
@@ -34,12 +40,13 @@ M.fire("QUEST_TURNED_IN", 54, 250, 75)
 M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 45 experience.")
 M.fire("PLAYER_DEAD")
 M.advance(2 * 3600)
+M.zone, M.subzone, M.mapID, M.x, M.y = "Stormwind City", "Trade District", 1453, 0.6, 0.7
 
 M.out = {}
 SlashCmdList.TRAVELLOG("sessions")
 check(Said("Last 1 session:"), "sessions heading")
 local line = Said("Now")
-check(line == "  " .. loggedIn .. "  |cff20ff20Now|r, 2h 0m, level 5 to 6  +1g 20s 0c (60s 0c/h), 3,300 xp (1,650/h)  1 quest, 1 XP kill, 1 death",
+check(line == "  " .. loggedIn .. "  |cff20ff20Now|r, 2h 0m, level 5 to 6, Goldshire to Trade District  +1g 20s 0c (60s 0c/h), 3,300 xp (1,650/h)  1 quest, 1 XP kill, 1 death",
 	"current session: " .. tostring(line))
 
 -- After a reload: the first session is closed and kept, a new one starts.
@@ -48,6 +55,9 @@ local reloaded = date("%Y-%m-%d %H:%M")
 local first = TravelLogCharDB.sessions[1]
 check(#TravelLogCharDB.sessions == 2 and first.stop == first.start + 7200 and first.xp == 3300
 	and first.levelEnd == 6 and first.moneyEnd == 22000, "first session saved")
+check(first.zone == "Elwynn Forest" and first.zoneEnd == "Stormwind City" and first.subzoneEnd == "Trade District"
+	and first.mapEnd == 1453 and first.xEnd == 60 and first.yEnd == 70, "logout place saved")
+check(ns.session.zone == "Stormwind City" and ns.session.subzone == "Trade District", "next session starts there")
 M.advance(120)
 M.xp = 600
 M.fire("PLAYER_XP_UPDATE", "player")
@@ -56,11 +66,11 @@ M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 45 experience.")
 
 M.out = {}
 SlashCmdList.TRAVELLOG("sessions 1")
-check(Said("Last 1 session:") and Said("Now|r, 2m, level 6  100 xp  2 XP kills$"),
+check(Said("Last 1 session:") and Said("Now|r, 2m, level 6, Trade District  100 xp  2 XP kills$"),
 	"short sessions show no rates: " .. tostring(Said("Now")))
 M.out = {}
 SlashCmdList.TRAVELLOG("sessions")
-check(Said("Last 2 sessions:") and Said("  " .. loggedIn .. "  2h 0m, level 5 to 6", true), "older session listed")
+check(Said("Last 2 sessions:") and Said("  " .. loggedIn .. "  2h 0m, level 5 to 6, Goldshire to Trade District  ", true), "older session listed")
 M.out = {}
 SlashCmdList.TRAVELLOG("sessions lots")
 check(Said("/tl sessions %[n%]"), "a bad count shows the help")
@@ -74,8 +84,23 @@ history.viewButtons[2]:Click()
 local view = history.views[2]
 check(view:IsShown() and not history.views[1]:IsShown(), "sessions view shown")
 local rows = Rows(view.sessions)
-check(#rows == 2 and rows[1] == "|cff20ff20Now|r, 2m, level 6 | " .. reloaded .. " | 100 xp | 2 XP kills",
+check(#rows == 2 and rows[1] == "|cff20ff20Now|r, 2m, level 6, Trade District | " .. reloaded .. " | 100 xp | 2 XP kills",
 	"current session row: " .. tostring(rows[1]))
-check(rows[2] == "2h 0m, level 5 to 6 | " .. date("%Y-%m-%d %H:%M", first.start) .. " | +1g 20s 0c (60s 0c/h), 3,300 xp (1,650/h) | 1 quest, 1 XP kill, 1 death",
+check(rows[2] == "2h 0m, level 5 to 6, Goldshire to Trade District | " .. date("%Y-%m-%d %H:%M", first.start) .. " | +1g 20s 0c (60s 0c/h), 3,300 xp (1,650/h) | 1 quest, 1 XP kill, 1 death",
 	"older session row: " .. tostring(rows[2]))
 check(view.found:GetText() == "2 sessions, 2h 2m in all", "total: " .. view.found:GetText())
+
+-- A zone still unknown at login is filled in at the first loading screen, and
+-- later loading screens don't move it. Sessions without places show none.
+M.zone, M.subzone = "", ""
+ns = M.Reload()
+check(ns.session.zone == nil and ns.session.map == 1453, "zone unknown at login")
+M.out = {}
+SlashCmdList.TRAVELLOG("sessions 1")
+check(Said("Now|r, under a minute, level 6  "), "no place, no route: " .. tostring(Said("Now")))
+M.zone, M.subzone = "Stormwind City", "Old Town"
+M.fire("PLAYER_ENTERING_WORLD", false, false)
+check(ns.session.zone == "Stormwind City" and ns.session.subzone == "Old Town", "filled in at the loading screen")
+M.zone, M.subzone = "Elwynn Forest", "Goldshire"
+M.fire("PLAYER_ENTERING_WORLD", false, false)
+check(ns.session.subzone == "Old Town", "kept after the next loading screen")

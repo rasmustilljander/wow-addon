@@ -1,5 +1,6 @@
--- Sessions: one per login or reload, with how long it lasted, levels, money
--- and experience gained, and what happened in it. Shown in the History tab's
+-- Sessions: one per login or reload, with how long it lasted, where it
+-- started and ended, levels, money and experience gained, and what happened
+-- in it. Shown in the History tab's
 -- Sessions view and by /tl sessions.
 local _, ns = ...
 
@@ -54,6 +55,7 @@ function ns.SessionSummaries()
 		local current = s == ns.session
 		local stop = current and now or s.stop
 		local moneyEnd = current and GetMoney() or s.moneyEnd
+		local here = current and ns.StampPlace({}) or {}
 		list[i] = {
 			start = s.start,
 			stop = stop,
@@ -62,6 +64,8 @@ function ns.SessionSummaries()
 			levelEnd = current and UnitLevel("player") or s.levelEnd,
 			money = moneyEnd and s.money and moneyEnd - s.money,
 			xp = s.xp,
+			from = s.subzone or s.zone,
+			to = current and (here.subzone or here.zone) or s.subzoneEnd or s.zoneEnd,
 			quests = 0, failed = 0, kills = 0, deaths = 0,
 		}
 	end
@@ -101,7 +105,16 @@ local function Seconds(sum)
 	return sum.stop and sum.stop - sum.start
 end
 
--- "2h 12m, level 12 to 13", or "Now, 45m, level 13" for the current one.
+-- "Goldshire to Old Town", or just "Goldshire" when it ended where it began.
+local function Route(sum)
+	if sum.from and sum.to then
+		return sum.from == sum.to and sum.from or sum.from .. " to " .. sum.to
+	end
+	return sum.from and "from " .. sum.from or sum.to and "to " .. sum.to
+end
+
+-- "2h 12m, level 12 to 13, Goldshire to Old Town", or "Now, 45m, level 13,
+-- Goldshire" for the current one.
 local function Headline(sum)
 	local seconds = Seconds(sum)
 	local length = seconds and ns.Ago(sum.start, sum.stop) or "length unknown"
@@ -111,7 +124,8 @@ local function Headline(sum)
 	elseif sum.level then
 		level = ("level %d"):format(sum.level)
 	end
-	local text = level and length .. ", " .. level or length
+	local route = Route(sum)
+	local text = length .. (level and ", " .. level or "") .. (route and ", " .. route or "")
 	return sum.current and "|cff20ff20Now|r, " .. text or text
 end
 

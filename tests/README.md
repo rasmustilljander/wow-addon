@@ -34,7 +34,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/talents.lua` | Talent points: existing ones remembered, each applied point (staged ones wait), several ranks at once, a respec and a full reset, the second spec, a secret name, History, `/tl log`, `/tl stats`, the Totals row, a reload. |
 | `TravelLog/storage.lua` | Per-character files, migrations, rotation into the archive (Path's too), TravelLog alone (History with only Events and Sessions), moving old path and nodes into the companions. |
 | `TravelLog/money.lua` | Money reasons: bank slots (with their entry), the account and guild banks, the barber, talent resets, stable slots, auction deposits and sales, COD; `/tl log`, `/tl stats`, a reload. |
-| `TravelLog/sessions.lua` | Experience gained per session (across a level-up), money and what happened in each, `/tl sessions`, the Sessions view, a reload. |
+| `TravelLog/sessions.lua` | Where each session starts and ends (a zone unknown at login too), experience gained per session (across a level-up), money and what happened in each, `/tl sessions`, the Sessions view, a reload. |
 | `TravelLog/window.lua` | The window and its addon compartment entry: sections, totals, settings, the History tab's searchable event log and Kills view, companion tabs, moving, a reload, and an alt's view of other characters' and everyone's totals (`/tl stats all`/`name` too). |
 | `TravelLog/stress.lua` | Six hours of non-stop movement: speed, file size, map drawing. Prints its measurements. |
 | `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
