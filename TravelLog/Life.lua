@@ -1,5 +1,5 @@
--- Life on the road: deaths and corpse runs, level-ups, quests, kills and
--- newly discovered places.
+-- Life on the road: deaths (what killed you and how you came back),
+-- level-ups, quests, kills and newly discovered places.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -12,15 +12,221 @@ ns.On("PLAYER_LOGIN", function()
 	state = UnitIsGhost("player") and "ghost" or UnitIsDead("player") and "dead" or "alive"
 end)
 
+-- What killed you, when it wasn't (only) a mob: drowning and fatigue from
+-- the breath and fatigue bars, falling from a long fall just before. There's
+-- no combat log for addons, so lava, fire and slime can't be told.
+
+-- The breath and fatigue bars by the client's timer name: { scale, ends =
+-- GetTime() it runs out while draining, stopped = GetTime() it went away }.
+local timers = {}
+local TIMER_CAUSES = { BREATH = "drowning", EXHAUSTION = "fatigue" }
+
+ns.On("MIRROR_TIMER_START", function(name, value, _, scale, paused)
+	name, value, scale, paused = ns.Clean(name), ns.Clean(value), ns.Clean(scale), ns.Clean(paused)
+	if not name then
+		return
+	end
+	local t = { scale = scale }
+	if value and scale and scale < 0 and paused ~= 1 then
+		t.ends = GetTime() + value / 1000 / -scale -- value is in milliseconds
+	end
+	timers[name] = t
+end)
+
+ns.On("MIRROR_TIMER_PAUSE", function(name, paused)
+	local t = timers[ns.Clean(name)]
+	if not t then
+		return
+	end
+	t.ends = nil
+	if ns.Clean(paused) == 0 and t.scale and t.scale < 0 then
+		local left = ns.Clean(GetMirrorTimerProgress(name))
+		t.ends = left and GetTime() + left / 1000 / -t.scale
+	end
+end)
+
+ns.On("MIRROR_TIMER_STOP", function(name)
+	local t = timers[ns.Clean(name)]
+	if t then
+		t.stopped = GetTime()
+	end
+end)
+
+-- Falls, sampled every frame: { falling, start, stop } in GetTime().
+local fall = {}
+local FALL_SECONDS = 1.5 -- shorter falls do little or no damage
+local watcher = CreateFrame("Frame")
+watcher:SetScript("OnUpdate", function()
+	local falling = IsFalling() and true or false
+	if falling and not fall.falling then
+		fall.start = GetTime()
+	elseif fall.falling and not falling then
+		fall.stop = GetTime()
+	end
+	fall.falling = falling
+end)
+
+-- A bar that ran out in the last DAMAGE_SECONDS, and is still up or went
+-- away with the death, killed you; it counts once.
+local DAMAGE_SECONDS = 60
+
+local function Cause()
+	local now = GetTime()
+	for name, cause in pairs(TIMER_CAUSES) do
+		local t = timers[name]
+		if t and t.ends and now >= t.ends and now - t.ends <= DAMAGE_SECONDS and now - (t.stopped or now) <= 2 then
+			timers[name] = nil
+			return cause
+		end
+	end
+	-- Still falling, or landed within the last second.
+	local landed = fall.falling and now or fall.stop
+	if fall.start and landed and now - landed <= 1 and landed - fall.start >= FALL_SECONDS then
+		return "falling"
+	end
+end
+
+-- Worn items' durability, kept while alive, to tell how much dying (and the
+-- spirit healer) cost: { [slot] = { now, max } }.
+local worn
+
+local function Durability()
+	local list = {}
+	for slot = INVSLOT_FIRST_EQUIPPED or 1, INVSLOT_LAST_EQUIPPED or 19 do
+		local now, max = GetInventoryItemDurability(slot)
+		now, max = ns.Clean(now), ns.Clean(max)
+		if now and max and max > 0 then
+			list[slot] = { now = now, max = max }
+		end
+	end
+	return list
+end
+
+local function KeepDurability()
+	if state == "alive" and not UnitIsDeadOrGhost("player") then
+		worn = Durability()
+	end
+end
+ns.On("PLAYER_LOGIN", KeepDurability)
+ns.On("UPDATE_INVENTORY_DURABILITY", KeepDurability)
+ns.On("PLAYER_EQUIPMENT_CHANGED", KeepDurability)
+
+-- Average percentage points lost since before, over items worn both times
+-- (so gear swapped while dead doesn't count), or nothing when none was.
+local function DurabilityLost(before)
+	local lost, n = 0, 0
+	for slot, now in pairs(Durability()) do
+		local was = before[slot]
+		if was and was.max == now.max then
+			lost, n = lost + (was.now - now.now) / now.max * 100, n + 1
+		end
+	end
+	lost = n > 0 and ns.Round(lost / n) or 0
+	return lost > 0 and lost or nil
+end
+
 ns.On("PLAYER_DEAD", function()
 	state = "dead"
 	local target
 	if UnitExists("target") and UnitCanAttack("player", "target") then
 		target = ns.Clean(UnitName("target"))
 	end
-	ns.Log("death", { target = target, level = UnitLevel("player") })
+	local cause = Cause()
+	ns.Log("death", { target = target, level = UnitLevel("player"), cause = cause })
 	ns.Add(1, "deaths")
+	if cause then
+		ns.Add(1, "deathCauses", cause)
+	end
+	fall.start = nil
 end)
+
+-- How you're coming back, from what you last chose: { how, by, spell,
+-- sickness, at = GetTime() }. how is "corpse", "spirithealer", "player" or
+-- "selfres". A choice older than COMEBACK_SECONDS didn't work.
+local comeback
+local COMEBACK_SECONDS = 30
+
+local function ComingBack(data)
+	data.at = GetTime()
+	comeback = data
+end
+
+-- The last resurrection offered. The event names only the player, not the
+-- spell.
+local offer -- { by, sickness }
+
+ns.On("RESURRECT_REQUEST", function(inviter)
+	offer = { by = ns.Clean(inviter), sickness = ns.Clean(ResurrectHasSickness()) or nil }
+end)
+
+hooksecurefunc("AcceptResurrect", function()
+	local by = offer and offer.by or ns.Clean(ResurrectGetOfferer())
+	ComingBack({ how = "player", by = by ~= "" and by or nil, sickness = offer and offer.sickness })
+end)
+
+hooksecurefunc("RetrieveCorpse", function()
+	ComingBack({ how = "corpse" })
+end)
+
+-- The spirit healer's dialog confirms the interaction. Resurrection sickness
+-- comes with it from MIN_RES_SICKNESS_LEVEL, as that dialog says.
+hooksecurefunc(C_PlayerInteractionManager, "ConfirmationInteraction", function(kind)
+	if kind ~= Enum.PlayerInteractionType.SpiritHealer then
+		return
+	end
+	local levels = Constants and Constants.LevelConstsExposed
+	local sicknessLevel = levels and levels.MIN_RES_SICKNESS_LEVEL or 10
+	ComingBack({ how = "spirithealer", sickness = UnitLevel("player") >= sicknessLevel or nil })
+end)
+
+-- Soulstone, Reincarnation and other ways back in the death dialog.
+hooksecurefunc(C_DeathInfo, "UseSelfResurrectOption", function(kind, id)
+	local spell
+	for _, option in ipairs(C_DeathInfo.GetSelfResurrectOptions() or {}) do
+		if option.optionType == kind and option.id == id then
+			spell = ns.Clean(option.name)
+		end
+	end
+	ComingBack({ how = "selfres", spell = spell })
+end)
+
+-- Seconds since the last death and since the spirit release after it, read
+-- from the log so a reload while dead keeps them.
+local function SinceDeath()
+	local log, now = ns.char.log, time()
+	local released
+	for i = #log, math.max(#log - 500, 1), -1 do
+		local e = log[i]
+		if e.type == "release" then
+			released = released or now - e.time
+		elseif e.type == "death" then
+			return now - e.time, released
+		elseif e.type == "revive" then
+			return
+		end
+	end
+end
+
+local function Revive()
+	state = "alive"
+	local data = {}
+	if comeback and GetTime() - comeback.at <= COMEBACK_SECONDS then
+		data.how, data.by, data.spell, data.sickness = comeback.how, comeback.by, comeback.spell, comeback.sickness
+	end
+	comeback, offer = nil, nil
+	data.took, data.ghost = SinceDeath()
+	local e = ns.Log("revive", data)
+	ns.Add(1, "revives", data.how or "other")
+	ns.Add(data.took or 0, "deadTime")
+	-- The spirit healer's durability loss can arrive just after.
+	local before = worn
+	if before then
+		C_Timer.After(1, function()
+			e.durability = DurabilityLost(before)
+			KeepDurability()
+		end)
+	end
+end
 
 -- Fires both when you release your spirit and when you're resurrected.
 ns.On("PLAYER_ALIVE", function()
@@ -30,15 +236,13 @@ ns.On("PLAYER_ALIVE", function()
 			ns.Log("release")
 		end
 	elseif state ~= "alive" then
-		state = "alive"
-		ns.Log("revive")
+		Revive()
 	end
 end)
 
 ns.On("PLAYER_UNGHOST", function()
 	if state ~= "alive" then
-		state = "alive"
-		ns.Log("revive")
+		Revive()
 	end
 end)
 

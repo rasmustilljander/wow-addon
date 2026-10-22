@@ -129,7 +129,7 @@ ERR_TRADE_COMPLETE = "Trade complete."
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
-		Binder = 20, Auctioneer = 21, StableMaster = 22 },
+		SpiritHealer = 18, Binder = 20, Auctioneer = 21, StableMaster = 22 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
 	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
 	ConsoleCommandType = { Cvar = 0, Command = 1, Macro = 2, Script = 3 },
@@ -163,6 +163,7 @@ PLAYER_EQUIPMENT_CHANGED MAIL_INBOX_UPDATE MAIL_SEND_SUCCESS MAIL_FAILED OWNED_A
 AUCTION_HOUSE_AUCTION_CREATED AUCTION_CANCELED CHAT_MSG_ADDON SKILL_LINES_CHANGED LEARNED_SPELL_IN_SKILL_LINE
 NEW_RECIPE_LEARNED CHAT_MSG_COMBAT_FACTION_CHANGE PLAYER_MOUNT_DISPLAY_CHANGED MERCHANT_FILTER_ITEM_UPDATE
 GROUP_ROSTER_UPDATE PLAYER_XP_UPDATE TIME_PLAYED_MSG TRADE_PLAYER_ITEM_CHANGED TRADE_ACCEPT_UPDATE CONFIRM_SUMMON
+RESURRECT_REQUEST MIRROR_TIMER_START MIRROR_TIMER_STOP MIRROR_TIMER_PAUSE
 GUILDBANKFRAME_OPENED GUILDBANKFRAME_CLOSED BARBER_SHOP_OPEN BARBER_SHOP_CLOSE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
@@ -640,6 +641,28 @@ function UnitIsDead(unit)
 	return u and u.dead or false
 end
 function UnitIsGhost() return M.ghost end
+-- Coming back to life. These only answer or do nothing; tests set M.dead and
+-- M.ghost and fire PLAYER_ALIVE or PLAYER_UNGHOST themselves.
+-- M.resurrecter: who's offering a resurrection, M.resSickness: whether it
+-- brings resurrection sickness, M.selfRes: the death dialog's self-resurrect
+-- options ({ name, optionType, id, canUse, isLimited, priority }).
+function ResurrectGetOfferer() return M.resurrecter end
+function ResurrectHasSickness() return M.resSickness == true end
+function AcceptResurrect() end
+function DeclineResurrect() end
+function RetrieveCorpse() end
+function RepopMe() end
+C_DeathInfo = {}
+function C_DeathInfo.GetSelfResurrectOptions() return M.selfRes end
+function C_DeathInfo.UseSelfResurrectOption() end
+C_PlayerInteractionManager = {}
+function C_PlayerInteractionManager.ConfirmationInteraction() end
+function C_PlayerInteractionManager.ClearInteraction() end
+Constants = { LevelConstsExposed = { MIN_RES_SICKNESS_LEVEL = 10 } }
+-- Breath and fatigue bars: milliseconds left by timer name ("BREATH",
+-- "EXHAUSTION"). Tests fire MIRROR_TIMER_START/STOP/PAUSE themselves.
+M.mirrorTimers = {}
+function GetMirrorTimerProgress(name) return M.mirrorTimers[name] end
 function UnitAffectingCombat() return M.combat end
 function GetRealZoneText() return M.zone end
 function GetSubZoneText() return M.subzone end
@@ -825,6 +848,12 @@ end
 INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED = 1, 19
 M.equipped = {}
 function GetInventoryItemID(_, slot) local link = M.equipped[slot]; return link and LinkID(link) end
+-- Worn items' durability: M.durability[inventorySlot] = { current, max }.
+M.durability = {}
+function GetInventoryItemDurability(slot)
+	local d = M.durability[slot]
+	if d then return d[1], d[2] end
+end
 -- The bank: its tabs are bags (Enum.BagIndex.CharacterBankTab_1 and up, the
 -- account bank's from AccountBankTab_1), in M.bags and M.bagSlots like the
 -- others. M.accountBank: the account bank can be seen. M.bankTabs[bankType]
