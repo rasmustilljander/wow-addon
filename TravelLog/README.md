@@ -28,7 +28,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Travel** | Zone and subzone changes (first visits marked), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log). |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
-| **Sessions** | Each login or reload: start and end (time and place), level, money and the experience gained. |
+| **Sessions** | Each login or reload: start and end (time and place), level, money, the experience gained and time AFK. |
 | **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills (a dropped profession learned again counts), every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, the first ride on each mount, beasts tamed (name, level and family), the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards), and Legacy Challenges (Forever's achievements) earned, with points, category and reward. |
 
 ## Window
@@ -36,10 +36,10 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (time played too) and Log. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
-- **Settings**: the companions' map options and Path's interval.
+- **Settings**: the companions' map options, Path's interval, and whether gold and XP per hour leave out AFK time (on by default).
 - **History**: what's still in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
-  - **Sessions**: each session's length, levels, where it started and ended, money and experience gained (per hour once it's 10 minutes long), and its quests done and failed, XP kills and deaths.
+  - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
@@ -89,7 +89,7 @@ TravelLogCharDB = {
     ...
   },
   sessions = {   -- one per login or reload
-    { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500, xp = 5600,
+    { start = 1760000000, stop = 1760007200, level = 12, levelEnd = 13, money = 10000, moneyEnd = 12500, xp = 5600, afk = 1200,  -- seconds AFK
       zone = "Elwynn Forest", subzone = "Goldshire", map = 1429, x = 42.1, y = 65.3,   -- where you logged in
       zoneEnd = "Stormwind City", subzoneEnd = "Old Town", mapEnd = 1453, xEnd = 75.2, yEnd = 61.8 },  -- and out
   },
@@ -169,6 +169,7 @@ The archive is `TravelLogArchiveDB = { chars = { ["Name-Realm"] = { sessions = {
 - Guild changes come from your guild info and are logged 3 s after they're seen. The guild you're in at the first login with guild recording is remembered, not logged, and a change while you were offline is logged at the next login without `by` or `how`. Who did it comes from the system line, so others' arrivals and departures aren't logged. Totals count a disbanded guild or an unknown departure as left. A renamed guild counts as leaving one and joining another, and reordered ranks as promotions or demotions.
 - Boss fights come from the game's encounter events, which Forever's own UI never uses (its boss banner is retail-only), so it's unconfirmed that every boss sends them. A boss with no encounter isn't logged. After a reload during a fight, its length may count only from the reload.
 - Legacy Challenges come from the `ACHIEVEMENT_EARNED` event, which Blizzard's own Legacy Challenges window listens for. Whether Forever fires it (its window only opens once you have renown with the legacy reward faction) is unchecked in the live game; `/tl log achievement` shows what was recorded.
+- AFK time is the time the game marks you AFK (`/afk`, or idle long enough), so the idle minutes before that count as active. A change while the client hides it (in dungeons) is missed.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
 - Without the combat log, a death's `cause` comes only from the breath and fatigue bars (run out in the last minute) and from falls over 1.5 s that end within a second of dying. Lava, fire and slime aren't told apart, and a mob kill right after a long fall counts as the fall.
 - How you came back is known when you chose it in the game's dialogs (resurrection, spirit healer, soulstone and the like, corpse) in the 30 s before. Battleground spirit healers aren't. A resurrection names the player but not the spell.
