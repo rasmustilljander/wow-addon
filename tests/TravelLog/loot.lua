@@ -1,4 +1,4 @@
--- Loot sources (pickpockets too), roll wins, and who a trade or mail was with. Remembered chests and
+-- Loot sources (pickpockets too), roll wins, rolls lost or passed on, and who a trade or mail was with. Remembered chests and
 -- gathering nodes are TravelLog_Nodes' (tests/TravelLog_Nodes).
 local ns = M.Login()
 
@@ -96,6 +96,62 @@ check(count("receive") == 3 and last("receive").item == RING, "roll win recorded
 M.out = {}
 SlashCmdList.TRAVELLOG("log 1")
 check(table.concat(M.out, "\n"):find("won with a roll of 99"), "log shows the roll")
+
+-- Rolls lost or passed on, from the group loot history
+local S = Enum.EncounterLootDropRollState
+local function drop(key, state, done)
+	local d = { lootListKey = key, itemHyperlink = "[Drop " .. key .. "]", playerRollState = state, rollInfos = {
+		{ playerName = "Me", isSelf = true, state = state, roll = state ~= S.Pass and 40 or nil },
+		{ playerName = "Bob", isSelf = false, state = S.NeedMainSpec, roll = 95 },
+	} }
+	if done == "won" then
+		d.winner = d.rollInfos[1]
+	elseif done == "all" then
+		d.allPassed = true
+	elseif done then
+		d.winner = d.rollInfos[2]
+	end
+	M.lootDrops[7] = M.lootDrops[7] or {}
+	M.lootDrops[7][key] = d
+	M.fire("LOOT_HISTORY_UPDATE_DROP", 7, key)
+end
+
+drop(1, S.Greed)
+check(count("roll") == 0, "an undecided roll isn't logged")
+drop(1, S.Greed, true)
+drop(1, S.Greed, true)
+local lost = last("roll")
+check(count("roll") == 1 and lost.item == "[Drop 1]" and lost.choice == "greed" and lost.roll == 40
+	and lost.winner == "Bob" and lost.winnerRoll == 95, "a lost roll logged once, with both rolls")
+
+drop(2, S.Pass)
+drop(2, S.Pass, true)
+check(count("roll") == 2 and last("roll").choice == "pass" and last("roll").roll == nil, "a pass logged with the winner")
+drop(3, S.Pass)
+drop(3, S.Pass, "all")
+check(count("roll") == 3 and last("roll").winner == nil, "everyone passed")
+
+-- A win is the item received above; a drop you didn't roll on, or one first
+-- seen decided (history replayed after a reload), isn't logged
+drop(4, S.NeedMainSpec)
+drop(4, S.NeedMainSpec, "won")
+drop(5, S.NoRoll)
+drop(5, S.NoRoll, true)
+drop(6, S.Greed, true)
+check(count("roll") == 3, "wins, no-rolls and replayed rolls not logged")
+check(ns.stats.rolls.lost == 1 and ns.stats.rolls.passed == 2, "roll stats")
+
+M.out = {}
+SlashCmdList.TRAVELLOG("log 3 roll")
+local out = table.concat(M.out, "\n")
+check(out:find("Lost the roll for %[Drop 1%] %(greed 40; won by Bob with 95%)")
+	and out:find("Passed on %[Drop 3%] %(pass; everyone passed%)"), "log shows rolls lost and passed")
+M.out = {}
+SlashCmdList.TRAVELLOG("stats")
+check(table.concat(M.out, "\n"):find("Rolls: 3 won, 1 lost, 2 passed"), "stats show rolls")
+
+ns = M.Reload()
+check(count("roll") == 3 and ns.stats.rolls.passed == 2, "rolls survive a reload")
 
 --------------------------------------------------------------------------------
 -- Trades and mail

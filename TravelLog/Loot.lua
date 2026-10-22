@@ -1,6 +1,7 @@
 -- Loot: what you took from corpses, pickpockets, chests, herbs, ore, fishing
 -- and containers (with the source), plus items that arrive without a loot
--- window: quest rewards, crafts, roll wins and other pickups.
+-- window: quest rewards, crafts, roll wins and other pickups, and the rolls
+-- you lost or passed on.
 local _, ns = ...
 
 local MONEY_SLOT = Enum and Enum.LootSlotType and Enum.LootSlotType.Money or 2
@@ -257,4 +258,52 @@ ns.On("CHAT_MSG_LOOT", function(text)
 			return
 		end
 	end
+end)
+
+--------------------------------------------------------------------------------
+-- Rolls lost or passed on
+--------------------------------------------------------------------------------
+
+-- The group loot history reports every roll, in dungeons too. Wins are logged
+-- above as items received; this logs the rest once the roll is decided.
+local ROLL_STATE = Enum and Enum.EncounterLootDropRollState or {}
+local CHOICES = {
+	[ROLL_STATE.NeedMainSpec or 0] = "need",
+	[ROLL_STATE.NeedOffSpec or 1] = "offspec",
+	[ROLL_STATE.Transmog or 2] = "transmog",
+	[ROLL_STATE.Greed or 3] = "greed",
+	[ROLL_STATE.Pass or 5] = "pass",
+}
+-- "encounterID:lootListKey" -> true while undecided, false once handled. Only
+-- rolls seen undecided are logged, so history the client replays isn't.
+local drops = {}
+
+ns.On("LOOT_HISTORY_UPDATE_DROP", function(encounterID, lootListKey)
+	encounterID, lootListKey = ns.Clean(encounterID), ns.Clean(lootListKey)
+	local key = encounterID and lootListKey and encounterID .. ":" .. lootListKey
+	local drop = key and drops[key] ~= false and C_LootHistory.GetSortedInfoForDrop(encounterID, lootListKey)
+	if not drop then
+		return
+	end
+	local winner = ns.Clean(drop.winner)
+	if not winner and not ns.Clean(drop.allPassed) then
+		drops[key] = true
+		return
+	end
+	local pending, choice = drops[key], CHOICES[ns.Clean(drop.playerRollState)]
+	drops[key] = false
+	if not pending or not choice or (winner and ns.Clean(winner.isSelf)) then
+		return
+	end
+	local mine
+	for _, r in ipairs(ns.Clean(drop.rollInfos) or {}) do
+		if ns.Clean(r.isSelf) then
+			mine = ns.Clean(r.roll)
+		end
+	end
+	ns.Log("roll", {
+		item = ns.Clean(drop.itemHyperlink), choice = choice, roll = mine,
+		winner = winner and ns.Clean(winner.playerName), winnerRoll = winner and ns.Clean(winner.roll),
+	})
+	ns.Add(1, "rolls", choice == "pass" and "passed" or "lost")
 end)
