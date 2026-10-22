@@ -388,6 +388,12 @@ local DESCRIBE = {
 		return e.honor and ("%s, +%d honor"):format(text, e.honor) or text
 	end,
 	honor = function(e) return ("Awarded %d honor"):format(e.honor) end,
+	pvprank = function(e)
+		local text = ("PvP rank %d"):format(e.rank)
+		if e.title then text = ("%s, %s"):format(text, e.title) end
+		text = ("%s (%s from %d"):format(text, e.rank > e.old and "up" or "down", e.old)
+		return (e.newSeason and "%s, new season)" or "%s)"):format(text)
+	end,
 	spell = function(e)
 		local text = "Learned " .. (e.name or e.id or "?")
 		if e.rank then text = ("%s (%s)"):format(text, e.rank) end
@@ -445,7 +451,7 @@ local LOG_GROUP = {
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
-	duel = "Life", honorkill = "Life", honor = "Life",
+	duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
@@ -459,7 +465,7 @@ local LOG_LABEL = {
 	instanceleave = "Instance left", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
-	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor",
+	discover = "Discovery", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",

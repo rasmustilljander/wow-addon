@@ -1,7 +1,8 @@
 -- PvP: duels you challenge and are challenged to (won, lost, fled, without a
 -- winner, declined), others' duels nearby, honorable kills from chat and
--- from the kill count when chat is hidden, honor awards; stats, the window,
--- /tl log and a reload.
+-- from the kill count when chat is hidden, honor awards, your rank going up
+-- and down (online, offline, a new season); stats, the window, /tl log and a
+-- reload.
 local ns = M.Login()
 
 local function last(kind)
@@ -166,3 +167,56 @@ M.honorKills = 1
 M.fire("PLAYER_PVP_KILLS_CHANGED", "player")
 M.tick(3)
 check(count("honorkill") == 5 and ns.stats.honorKills == 5, "one more kill after the reload")
+
+--------------------------------------------------------------------------------
+-- Your rank
+--------------------------------------------------------------------------------
+
+-- The rank at the first login is remembered, not logged.
+check(count("pvprank") == 0 and TravelLogCharDB.pvpRank.rank == 0 and TravelLogCharDB.pvpRank.season == 1, "first rank remembered")
+
+-- Up to rank 3; another faction's renown and repeated events change nothing.
+M.pvpRank = 3
+M.fire("MAJOR_FACTION_RENOWN_LEVEL_CHANGED", 2800, 3, 0)
+M.fire("PLAYER_PVP_RANK_CHANGED", "player")
+M.fire("UPDATE_FACTION")
+M.fire("MAJOR_FACTION_RENOWN_LEVEL_CHANGED", 2600, 5, 4)
+local r = last("pvprank")
+check(count("pvprank") == 1 and r.rank == 3 and r.old == 0 and r.title == "Sergeant" and r.season == 1 and not r.newSeason, "rank up")
+check(ns.Describe(r) == "PvP rank 3, Sergeant (up from 0)", "rank up described: " .. ns.Describe(r))
+check(ns.LogGroup(r) == "Life" and ns.LogTypeLabel(r) == "PvP rank", "rank under Life")
+
+-- Only PLAYER_PVP_RANK_CHANGED, to a rank without a known title.
+M.pvpRank = 4
+M.fire("PLAYER_PVP_RANK_CHANGED", "target")
+check(count("pvprank") == 1, "another unit's rank ignored")
+M.fire("PLAYER_PVP_RANK_CHANGED", "player")
+r = last("pvprank")
+check(count("pvprank") == 2 and r.rank == 4 and not r.title, "rank without a title")
+check(ns.Describe(r) == "PvP rank 4 (up from 3)", "untitled described: " .. ns.Describe(r))
+
+-- Kept across a reload without being logged again.
+ns = M.Reload()
+check(count("pvprank") == 2 and TravelLogCharDB.pvpRank.rank == 4, "rank kept after a reload")
+
+-- A new season while offline, seen at the next login.
+M.Logout()
+M.pvpRank, M.pvpSeason = 0, 2
+ns = M.Login()
+r = last("pvprank")
+check(count("pvprank") == 3 and r.rank == 0 and r.old == 4 and r.title == "No Rank" and r.season == 2 and r.newSeason, "new season")
+check(ns.Describe(r) == "PvP rank 0, No Rank (down from 4, new season)", "new season described: " .. ns.Describe(r))
+
+-- Faction data that arrives after login.
+M.Logout()
+M.pvpRank = nil
+ns = M.Login()
+check(count("pvprank") == 3 and TravelLogCharDB.pvpRank.rank == 0, "no data, nothing changed")
+M.pvpRank = 1
+M.fire("UPDATE_FACTION")
+r = last("pvprank")
+check(count("pvprank") == 4 and r.rank == 1 and r.title == "Private" and not r.newSeason, "rank once faction data arrives")
+
+M.out = {}
+SlashCmdList.TRAVELLOG("log 1 pvp rank")
+check(#M.out == 2 and M.out[2]:find("PvP rank 1, Private (up from 0)", 1, true), "/tl log finds the rank change")
