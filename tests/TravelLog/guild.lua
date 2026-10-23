@@ -1,7 +1,7 @@
 -- Guilds: the guild you're in at the first login remembered, promotions and
 -- demotions (the line before or after the change), others' lines, a renamed
 -- rank, being kicked out, an invitation and a guild whose info loads late,
--- leaving, founding one, changes while offline, a secret guild name; stats,
+-- leaving, a declined invitation, founding one, changes while offline, a secret guild name; stats,
 -- /tl log, the Guild row and a reload.
 M.guild = { name = "Wanderers", rank = "Member", rankIndex = 3 }
 local ns = M.Login()
@@ -83,7 +83,10 @@ e = last("guildleave")
 check(count() == 5 and e.how == "left" and e.guild == "Night Watch" and e.seconds == 3603, "left: " .. tostring(e.seconds))
 check(ns.Describe(e) == "Left Night Watch after 1h 0m", "leave described: " .. ns.Describe(e))
 
--- Founding a guild from a charter.
+-- A declined invitation isn't credited if you join the same guild later by
+-- founding it from a charter.
+M.fire("GUILD_INVITE_REQUEST", "Eve", "Dawn", 0, "", false)
+DeclineGuild()
 M.guild = { name = "Dawn", rank = "Guild Master", rankIndex = 0 }
 M.chat("CHAT_MSG_SYSTEM", "Congratulations, you are a founding member of Dawn!")
 update()

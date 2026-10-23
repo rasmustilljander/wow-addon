@@ -131,6 +131,10 @@ ns.On("GUILD_INVITE_REQUEST", function(inviter, guildName)
 	invite = { by = ns.Clean(inviter), guild = ns.Clean(guildName) }
 end)
 
+hooksecurefunc("DeclineGuild", function()
+	invite = nil
+end)
+
 ns.On("CHAT_MSG_SYSTEM", function(text)
 	text = ns.Clean(text)
 	if type(text) ~= "string" then

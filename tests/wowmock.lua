@@ -1313,6 +1313,7 @@ end
 C_GuildInfo = {}
 M.rosterRequests = 0
 function C_GuildInfo.GuildRoster() M.rosterRequests = M.rosterRequests + 1 end
+function DeclineGuild() end
 
 -- Achievements (Forever's Legacy Challenges): M.achievements[id] = { name,
 -- points, category, reward, guild } and M.achievementCategories[id] = { name,
