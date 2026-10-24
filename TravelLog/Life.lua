@@ -353,6 +353,126 @@ end)
 -- The server tells time played only when asked (/played), so it's asked once
 -- per login and counted forward from there.
 local played -- { total, level, at }: seconds played in all and at this level, at GetTime() at
+local asking -- /played was asked at login and hasn't answered yet
+local PLAYED_WAIT = 10 -- seconds to wait for the answer
+
+-- Each level-up also saves your max health and power, base stats and item
+-- level once they can be read, and says in chat what the level gave.
+ns.Defaults({ levelChat = true })
+
+local STATS = { "Strength", "Agility", "Stamina", "Intellect", "Spirit" }
+local POWER = { MANA = "mana", RAGE = "rage", ENERGY = "energy", FOCUS = "focus" }
+local RETRY, TRIES = 1, 5 -- seconds between tries to read the stats, and how many
+local pending -- the last level-up, until it's said in chat: { entry, before, at, tries, waiting, filled }
+local FillLevel, FinishLevel, RetryLevel
+
+-- Your max health and power, power type, base stats and the average item
+-- level of worn gear, or nothing while any but the item level is unreadable.
+local function Snapshot()
+	local s = { hp = ns.Clean(UnitHealthMax("player")), power = ns.Clean(UnitPowerMax("player")), stats = {} }
+	if type(s.hp) ~= "number" or type(s.power) ~= "number" then return end
+	s.powerType = ns.Clean((select(2, UnitPowerType("player"))))
+	for i = 1, #STATS do
+		local base = ns.Clean((UnitStat("player", i)))
+		if type(base) ~= "number" then return end
+		s.stats[i] = base
+	end
+	local ilvl = GetAverageItemLevel and ns.Clean((select(2, GetAverageItemLevel())))
+	s.ilvl = type(ilvl) == "number" and ilvl > 0 and ns.Round(ilvl, 1) or nil
+	return s
+end
+
+-- The level-up entry before e with a snapshot, if it's for the level before.
+local function Previous(e)
+	local log = ns.char.log
+	for i = #log, 1, -1 do
+		local o = log[i]
+		if o ~= e and o.type == "level" and o.hp then
+			return o.level == e.level - 1 and o or nil
+		end
+	end
+end
+
+-- "+18 health, +15 mana, +1 Strength": what a level-up gave, or nothing.
+function ns.LevelGains(e)
+	local g = e.gain
+	if not g then return end
+	local list = {}
+	local function Add(n, what)
+		if n and n ~= 0 then list[#list + 1] = ("%+d %s"):format(n, what) end
+	end
+	Add(g.hp, "health")
+	Add(g.power, POWER[e.powerType] or e.powerType and e.powerType:lower() or "power")
+	for i, name in ipairs(STATS) do
+		Add(g.stats and g.stats[i], name)
+	end
+	return #list > 0 and table.concat(list, ", ") or nil
+end
+
+-- "Level 12 in 1h 23m played (2d 4h total). +18 health, +1 Strength."
+local function LevelLine(e)
+	local text = "Level " .. e.level
+	if e.took then
+		text = ("%s in %s played"):format(text, ns.Duration(e.took))
+		if e.played then text = ("%s (%s total)"):format(text, ns.Duration(e.played)) end
+	elseif e.played then
+		text = ("%s (%s played)"):format(text, ns.Duration(e.played))
+	end
+	local gains = ns.LevelGains(e)
+	return gains and ("%s. %s."):format(text, gains) or text .. "."
+end
+
+function FinishLevel()
+	local p = pending
+	pending = nil
+	if p and ns.settings.levelChat then
+		ns.Print(LevelLine(p.entry))
+	end
+end
+
+-- Saves the snapshot on the entry once it can be read and has caught up with
+-- the level-up (or after TRIES tries), then says the line in chat once
+-- /played has answered too.
+function FillLevel()
+	local p = pending
+	if not p then return end
+	local e = p.entry
+	if not p.filled then
+		if p.waiting or InCombatLockdown() then return end -- the retry or PLAYER_REGEN_ENABLED tries again
+		local s = Snapshot()
+		local stale = s and p.before and e.gain and e.gain.hp > 0 and s.hp == p.before.hp
+		if (not s or stale) and p.tries < TRIES then
+			return RetryLevel()
+		end
+		p.filled = true
+		if s then
+			e.hp, e.power, e.powerType, e.stats, e.ilvl = s.hp, s.power, s.powerType, s.stats, s.ilvl
+			-- Without the client's numbers, the gains are the change since the
+			-- level before.
+			local o = not e.gain and Previous(e)
+			if o then
+				local g = { hp = s.hp - o.hp, stats = {} }
+				g.power = o.powerType == s.powerType and s.power - o.power or nil
+				for i = 1, #STATS do
+					g.stats[i] = s.stats[i] - (o.stats and o.stats[i] or s.stats[i])
+				end
+				e.gain = g
+			end
+			ns.version = ns.version + 1
+		end
+	end
+	if not e.played and asking then return end -- the answer or its timeout tries again
+	FinishLevel()
+end
+
+function RetryLevel()
+	local p = pending
+	p.tries, p.waiting = p.tries + 1, true
+	C_Timer.After(RETRY, function()
+		p.waiting = nil
+		if pending == p then FillLevel() end
+	end)
+end
 
 -- Seconds played in all and at the current level, or nothing before the
 -- server has answered.
@@ -386,24 +506,68 @@ ns.On("PLAYER_LOGIN", function()
 		end
 	end
 	RequestTimePlayed()
-	C_Timer.After(10, Unmute) -- in case no answer comes
+	asking = true
+	C_Timer.After(PLAYED_WAIT, function() -- in case no answer comes
+		Unmute()
+		asking = false
+		FillLevel()
+	end)
 end)
 
 ns.On("TIME_PLAYED_MSG", function(total, level)
 	C_Timer.After(0, Unmute)
+	asking = false
 	total, level = ns.Clean(total), ns.Clean(level)
 	if total and level then
 		played = { total = total, level = level, at = GetTime() }
+		-- A level-up before the answer gets its total played, but not how long
+		-- the level took.
+		local e = pending and pending.entry
+		if e and not e.played then
+			e.played = total - math.floor(GetTime() - pending.at)
+		end
 	end
+	FillLevel()
 end)
 
-ns.On("PLAYER_LEVEL_UP", function(level)
+ns.On("PLAYER_LEVEL_UP", function(level, health, power, _, _, ...)
+	FinishLevel() -- one still waiting goes without the rest of its snapshot
+	level = ns.Clean(level) or UnitLevel("player")
 	ns.profile.level = level
 	local total, took = ns.Played()
-	ns.Log("level", { level = level, played = total, took = took })
+	local e = ns.Log("level", { level = level, played = total, took = took,
+		powerType = ns.Clean((select(2, UnitPowerType("player")))) })
 	if total then
 		played = { total = total, level = 0, at = GetTime() }
 	end
+	-- What the level gave, when the client says: health, power and each stat.
+	local gain, known = { hp = ns.Clean(health), power = ns.Clean(power), stats = {} }, 0
+	for i = 1, #STATS do
+		local n = ns.Clean((select(i, ...)))
+		if type(n) == "number" then
+			gain.stats[i], known = n, known + 1
+		end
+	end
+	if type(gain.hp) == "number" and type(gain.power) == "number" and known == #STATS then
+		e.gain = gain
+	end
+	-- The stats can still be the old ones during the event, so they're read
+	-- a little later.
+	pending = { entry = e, before = Snapshot(), at = GetTime(), tries = 0 }
+	RetryLevel()
+end)
+
+-- Stats can't be read in combat.
+ns.On("PLAYER_REGEN_ENABLED", function()
+	FillLevel()
+end)
+
+ns.On("PLAYER_LOGIN", function()
+	ns.AddSetting("General", "Say in chat what each level-up gave", function()
+		return ns.settings.levelChat
+	end, function(on)
+		ns.settings.levelChat = on
+	end)
 end)
 
 --------------------------------------------------------------------------------

@@ -642,6 +642,32 @@ function UnitCreatureFamily(unit)
 	if u and u.family then return u.family, u.familyID or 1 end
 end
 function UnitXP() return M.xp end
+-- Your max health and power, power type (a PowerType token), base stats
+-- (Strength, Agility, Stamina, Intellect, Spirit) and the average item level
+-- of worn gear.
+M.health, M.power, M.powerType, M.stats, M.itemLevel = 150, 260, "MANA", { 20, 21, 22, 30, 28 }, 0
+local POWER_TYPES = { MANA = 0, RAGE = 1, FOCUS = 2, ENERGY = 3 }
+function UnitHealthMax(unit) return unit == "player" and M.health or 0 end
+function UnitPowerMax(unit) return unit == "player" and M.power or 0 end
+function UnitPowerType() return POWER_TYPES[M.powerType] or 0, M.powerType, 0, 0, 1 end
+function UnitStat(_, i)
+	local base = M.stats[i] or 0
+	return base, base, 0, 0
+end
+function GetAverageItemLevel() return M.itemLevel, M.itemLevel, M.itemLevel end
+-- A level-up gaining g = { hp, power, str, agi, sta, int, spi }: PLAYER_LEVEL_UP
+-- with them, then the stats go up, right after the event or `late` seconds later.
+function M.levelUp(g, late)
+	g = g or {}
+	local d = { g.hp or 0, g.power or 0, g.str or 0, g.agi or 0, g.sta or 0, g.int or 0, g.spi or 0 }
+	local function Apply()
+		M.health, M.power = M.health + d[1], M.power + d[2]
+		for i = 1, 5 do M.stats[i] = M.stats[i] + d[i + 2] end
+	end
+	M.level = M.level + 1
+	M.fire("PLAYER_LEVEL_UP", M.level, d[1], d[2], M.level >= 10 and 1 or 0, 0, unpack(d, 3))
+	if late then C_Timer.After(late, Apply) else Apply() end
+end
 -- /played: the server answers a second later with the time played then.
 M.playedAsks = 0
 function RequestTimePlayed()
