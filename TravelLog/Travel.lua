@@ -1,6 +1,7 @@
 -- Travel: zone and subzone changes, flights (and landing), hearthstones and
--- other teleports, summons, boats and zeppelins, dungeons and raids, where
--- you set your hearthstone, resting in inns and cities, and screenshots.
+-- other teleports, summons, boats and zeppelins, dungeons and raids (with
+-- their resets and lockouts), where you set your hearthstone, resting in inns
+-- and cities, and screenshots.
 -- Your path itself is TravelLog_Path's.
 local _, ns = ...
 
@@ -400,6 +401,116 @@ ns.On("ENCOUNTER_END", function(id, name, difficultyID, size, success)
 	if inst then
 		local key = result == "kill" and "kills" or "wipes"
 		inst[key] = (inst[key] or 0) + 1
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- Instance resets and lockouts
+--------------------------------------------------------------------------------
+
+-- The system lines a reset gives, each naming the instance. Built on first
+-- use, since ns.ToPattern comes from Loot.lua, which loads after this file.
+local RESETS = {
+	{ "INSTANCE_RESET_SUCCESS" },
+	{ "INSTANCE_RESET_FAILED", "inside" },
+	{ "INSTANCE_RESET_FAILED_OFFLINE", "offline" },
+	{ "INSTANCE_RESET_FAILED_ZONING", "zoning" },
+}
+local resetPatterns
+
+local function CheckReset(text)
+	if not resetPatterns then
+		resetPatterns = {}
+		for _, entry in ipairs(RESETS) do
+			local format = _G[entry[1]]
+			if type(format) == "string" then
+				local pattern, order = ns.ToPattern(format)
+				resetPatterns[#resetPatterns + 1] = { pattern = pattern, order = order, failed = entry[2] }
+			end
+		end
+	end
+	for _, r in ipairs(resetPatterns) do
+		local name = ns.MatchPattern(text, r.pattern, r.order)
+		if name then
+			ns.Log("instancereset", { name = name, failed = r.failed })
+			if not r.failed then
+				ns.Add(1, "instanceResets")
+			end
+			return
+		end
+	end
+end
+
+-- Lockouts you have, kept in the character file by "name:difficulty ID:
+-- lockout ID" with the time() each resets. The first list seen is remembered
+-- without logging; after that a lockout not seen before is new. One stays
+-- remembered while the game lists it (expired ones too) or until it resets.
+local function CheckLockouts()
+	local now = time()
+	local known = ns.char.lockouts
+	local first = known == nil
+	known = known or {}
+	local listed = {}
+	for i = 1, ns.Clean(GetNumSavedInstances()) or 0 do
+		local name, id, reset, difficulty, locked, extended, _, isRaid, maxPlayers, difficultyName = GetSavedInstanceInfo(i)
+		name, id, reset, difficulty = ns.Clean(name), ns.Clean(id), ns.Clean(reset), ns.Clean(difficulty)
+		if name and id and reset then
+			local key = ("%s:%s:%s"):format(name, tostring(difficulty), tostring(id))
+			listed[key] = true
+			if not known[key] and not first and (ns.Clean(locked) or ns.Clean(extended)) and reset > 0 then
+				difficultyName, maxPlayers = ns.Clean(difficultyName), ns.Clean(maxPlayers)
+				ns.Log("lockout", {
+					name = name, lockout = id, kind = ns.Clean(isRaid) and "raid" or "dungeon",
+					difficulty = difficultyName ~= "" and difficultyName or nil,
+					size = maxPlayers and maxPlayers > 0 and maxPlayers or nil,
+					resets = now + reset,
+				})
+				ns.Add(1, "lockouts")
+			end
+			known[key] = now + reset
+		end
+	end
+	for key, resets in pairs(known) do
+		if not listed[key] and resets <= now then
+			known[key] = nil
+		end
+	end
+	ns.char.lockouts = known
+end
+
+-- The game says nothing when you become saved, so ask for your lockouts
+-- after each loading screen (as the game's Raid Info window does), a boss
+-- kill and the "You are now saved to this instance" line.
+local asking
+local function AskLockouts(delay)
+	if asking or not RequestRaidInfo then
+		return
+	end
+	asking = true
+	C_Timer.After(delay, function()
+		asking = nil
+		RequestRaidInfo()
+	end)
+end
+
+if GetNumSavedInstances and GetSavedInstanceInfo then
+	ns.On("UPDATE_INSTANCE_INFO", CheckLockouts)
+	ns.On("PLAYER_ENTERING_WORLD", function() AskLockouts(0) end)
+	ns.On("BOSS_KILL", function() AskLockouts(3) end)
+	ns.On("ENCOUNTER_END", function(_, _, _, _, success)
+		if ns.Clean(success) == 1 then AskLockouts(3) end
+	end)
+end
+
+ns.On("CHAT_MSG_SYSTEM", function(text)
+	text = ns.Clean(text)
+	if type(text) ~= "string" then
+		return
+	end
+	if text == INSTANCE_SAVED then
+		AskLockouts(1)
+	else
+		CheckReset(text)
 	end
 end)
 

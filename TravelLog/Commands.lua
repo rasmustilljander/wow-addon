@@ -11,8 +11,9 @@ local Count = ns.Count
 -- Subcommands added with ns.Command, in the order they were added.
 local commands, order = {}, {}
 
--- Adds "/tl <name> ...". run(arg) does it, and returns false when arg isn't
--- valid, which shows the help. help is its line there, after "/tl ", or a
+-- Adds "/tl <name> ...". run(arg, text) does it, and returns false when arg
+-- isn't valid, which shows the help: arg is the rest of the line in lower
+-- case, text the same as typed. help is its line there, after "/tl ", or a
 -- function returning that line.
 function ns.Command(name, help, run)
 	if not commands[name] then
@@ -303,15 +304,17 @@ local function ShowStats(arg)
 		Count(bgs.won), Count(bgs.lost), Count(bgs.draw), Count(bgs.left), Count(st.honorKills), Count(st.honor))
 	ns.Print("Guild: %s", ns.GuildText(st, key))
 	local instances = st.instances or {}
-	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, rested stays %s, %s resting, screenshots %s",
+	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, instance resets %s, lockouts %s, rested stays %s, %s resting, screenshots %s, notes %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0),
-		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots))
+		Count(st.instanceResets), Count(st.lockouts),
+		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots), Count(st.notes))
 	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s, bags %s, enchants %s",
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, pet levels %s, pets abandoned %s, new gear %s, bags %s, enchants %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
-		Count(st.tames), Count(st.gear), Count(st.bags), Count(st.enchants))
+		Count(st.tames), Count(st.petLevels), Count(st.petAbandons), Count(st.gear), Count(st.bags), Count(st.enchants))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
+	ns.Print("World buffs: %s", Count(st.worldBuffs))
 	ns.Print("Reputation: %s", ns.ReputationText(st))
 
 	-- Companion addons add their own lines here, for these totals and this
@@ -357,11 +360,34 @@ local function Clock(s)
 	return ("%d:%02d"):format(math.floor(s / 60), s % 60)
 end
 
+local RESET_FAILED = {
+	inside = "players still inside", offline = "players offline in your party", zoning = "players entering an instance",
+}
+
 local DEATH_CAUSE = { falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue" }
 
 -- Adds what got you there, e.g. " (Teleport: Stormwind)".
 local function Via(text, e)
 	return e.via and ("%s (%s)"):format(text, e.via) or text
+end
+
+-- A pet by its name, or "your Wolf" when it's named after its family.
+local function PetName(e)
+	if e.name and e.name ~= e.family then
+		return e.name
+	end
+	return e.family and "your " .. e.family or "your pet"
+end
+
+-- "Fang (level 12 Wolf)", or "your level 12 Wolf".
+local function PetText(e)
+	if e.name and e.name ~= e.family then
+		local about = {}
+		if e.level then about[#about + 1] = "level " .. e.level end
+		if e.family then about[#about + 1] = e.family end
+		return #about > 0 and ("%s (%s)"):format(e.name, table.concat(about, " ")) or e.name
+	end
+	return ("your %s%s"):format(e.level and "level " .. e.level .. " " or "", e.family or "pet")
 end
 
 local DESCRIBE = {
@@ -447,6 +473,18 @@ local DESCRIBE = {
 		end
 		return text
 	end,
+	instancereset = function(e)
+		if e.failed then
+			return ("Couldn't reset %s: %s"):format(e.name or "?", RESET_FAILED[e.failed] or e.failed)
+		end
+		return ("Reset %s"):format(e.name or "?")
+	end,
+	lockout = function(e)
+		local about = e.difficulty and e.kind .. ", " .. e.difficulty or e.kind or "instance"
+		local text = ("Saved to %s (%s)"):format(e.name or "?", about)
+		if e.lockout then text = ("%s, ID %s"):format(text, e.lockout) end
+		return e.resets and ("%s, resets %s"):format(text, date("%Y-%m-%d %H:%M", e.resets)) or text
+	end,
 	boss = function(e)
 		local name = e.name or (e.id and "boss " .. e.id) or "a boss"
 		local text = e.result == "kill" and "Killed " .. name or "Wiped on " .. name
@@ -463,6 +501,7 @@ local DESCRIBE = {
 		return e.rested and ("%s, %s XP rested"):format(text, Count(e.rested)) or text
 	end,
 	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
+	note = function(e) return "Note: " .. (e.text or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"
 		if e.target then text = ("%s fighting %s"):format(text, e.target) end
@@ -590,6 +629,13 @@ local DESCRIBE = {
 		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, " ")) end
 		return e.pet and ("%s, named %s"):format(text, e.pet) or text
 	end,
+	petlevel = function(e)
+		local text = (("%s reached level %d"):format(PetName(e), e.level or 0):gsub("^%l", string.upper))
+		return e.family and e.name ~= e.family and ("%s (%s)"):format(text, e.family) or text
+	end,
+	petabandon = function(e) return "Abandoned " .. PetText(e) end,
+	petstable = function(e) return "Stabled " .. PetText(e) end,
+	petunstable = function(e) return ("Took %s out of the stable"):format(PetText(e)) end,
 	achievement = function(e)
 		local text = "Legacy Challenge: " .. (e.name or e.id or "?")
 		local about = {}
@@ -599,6 +645,13 @@ local DESCRIBE = {
 		if e.already then about[#about + 1] = "already earned on another character" end
 		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
 		return e.reward and ("%s; %s"):format(text, e.reward) or text
+	end,
+	worldbuff = function(e)
+		local text = "Gained " .. (e.name or e.id or "a world buff")
+		local about = {}
+		if e.duration then about[#about + 1] = ns.Duration(e.duration) end
+		if e.by then about[#about + 1] = "from " .. e.by end
+		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
 	end,
 	equip = function(e)
 		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
@@ -632,18 +685,20 @@ end
 local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
-	instance = "Travel", instanceleave = "Travel", rest = "Travel", restleave = "Travel", screenshot = "Travel",
+	instance = "Travel", instanceleave = "Travel", instancereset = "Travel", lockout = "Travel", rest = "Travel",
+	restleave = "Travel", screenshot = "Travel", note = "Travel",
 	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade", guildbank = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
-	guildjoin = "Life", guildleave = "Life", guildrank = "Life",
+	guildjoin = "Life", guildleave = "Life", guildrank = "Life", worldbuff = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
 	enchant = "Progress", bag = "Progress",
+	petlevel = "Progress", petabandon = "Progress", petstable = "Progress", petunstable = "Progress",
 	achievement = "Progress",
 }
 local LOG_LABEL = {
@@ -653,17 +708,19 @@ local LOG_LABEL = {
 	flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
-	instanceleave = "Instance left", rest = "Resting", restleave = "Resting ended", screenshot = "Screenshot", death = "Death",
+	instanceleave = "Instance left", instancereset = "Instance reset", lockout = "Lockout", rest = "Resting",
+	restleave = "Resting ended", screenshot = "Screenshot", note = "Note", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", boss = "Boss", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
 	battleground = "Battleground",
 	guildjoin = "Guild joined", guildleave = "Guild left", guildrank = "Guild rank",
-	spell = "Spell",
+	worldbuff = "World buff", spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", tame = "Pet tamed", equip = "Gear", enchant = "Enchant", bag = "Bag",
 	achievement = "Legacy Challenge",
+	petlevel = "Pet level", petabandon = "Pet abandoned", petstable = "Pet stabled", petunstable = "Pet unstabled",
 }
 
 function ns.LogGroup(e)
@@ -751,6 +808,20 @@ local function ShowLog(arg)
 end
 
 --------------------------------------------------------------------------------
+-- /tl note
+--------------------------------------------------------------------------------
+
+ns.Command("note", "note <text> - add a note to the log, stamped with the time and place", function(_, text)
+	if text == "" then
+		ns.Print("usage: /tl note <text>")
+		return
+	end
+	ns.Log("note", { text = text })
+	ns.Add(1, "notes")
+	ns.Print("note added: %s", text)
+end)
+
+--------------------------------------------------------------------------------
 -- Dispatch
 --------------------------------------------------------------------------------
 
@@ -775,7 +846,9 @@ SlashCmdList.TRAVELLOG = function(msg)
 		end
 		return
 	end
-	local command, arg = msg:lower():match("^%s*(%S*)%s*(.-)%s*$")
+	local command, text = msg:match("^%s*(%S*)%s*(.-)%s*$")
+	command = command:lower()
+	local arg = text:lower()
 	if command == "" then
 		ns.Toggle()
 	elseif command == "stats" then
@@ -787,7 +860,7 @@ SlashCmdList.TRAVELLOG = function(msg)
 		TravelLogCharDB = nil
 		ns.Fire("TL_WIPE") -- companion addons drop their files too
 		ReloadUI()
-	elseif not (commands[command] and commands[command].run(arg) ~= false) then
+	elseif not (commands[command] and commands[command].run(arg, text) ~= false) then
 		Help()
 	end
 end

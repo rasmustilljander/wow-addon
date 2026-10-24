@@ -150,6 +150,11 @@ ERR_GUILD_DISBAND_S = "%s has disbanded the guild."
 ERR_GUILD_PROMOTE_SSS = "%s has promoted %s to %s."
 ERR_GUILD_DEMOTE_SSS = "%s has demoted %s to %s."
 ERR_GUILD_LEADER_CHANGED_SS = "%s has made %s the new Guild Master."
+INSTANCE_RESET_SUCCESS = "%s has been reset."
+INSTANCE_RESET_FAILED = "Cannot reset %s.  There are players still inside the instance."
+INSTANCE_RESET_FAILED_OFFLINE = "Cannot reset %s.  There are players offline in your party."
+INSTANCE_RESET_FAILED_ZONING = "Cannot reset %s.  There are players in your party attempting to zone into an instance."
+INSTANCE_SAVED = "You are now saved to this instance"
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
@@ -200,7 +205,9 @@ UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUP
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
 ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
-PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL
+PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA
+UPDATE_INSTANCE_INFO BOSS_KILL
+UNIT_LEVEL UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED
 UNIT_INVENTORY_CHANGED BAG_CONTAINER_UPDATE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
@@ -663,6 +670,23 @@ function GetDifficultyInfo(id)
 	if not d then return nil end
 	return d[1], d[2], id == 2, false, id == 2, false, nil, false, 1, d[3], true
 end
+-- Your lockouts: M.saves = { { name, id, reset (seconds left), difficulty,
+-- locked, extended, isRaid, maxPlayers, difficultyName }, ... }. Like the
+-- server, RequestRaidInfo answers a second later with UPDATE_INSTANCE_INFO;
+-- M.raidInfoRequests counts the requests.
+M.saves = {}
+M.raidInfoRequests = 0
+function GetNumSavedInstances() return #M.saves end
+function GetSavedInstanceInfo(index)
+	local s = M.saves[index]
+	if not s then return nil end
+	return s.name, s.id, s.reset, s.difficulty, s.locked, s.extended or false, 0, s.isRaid or false,
+		s.maxPlayers or 0, s.difficultyName or "", 0, 0, false, 0
+end
+function RequestRaidInfo()
+	M.raidInfoRequests = M.raidInfoRequests + 1
+	C_Timer.After(1, function() M.fire("UPDATE_INSTANCE_INFO") end)
+end
 -- Your own speed in yards a second: running (7) unless M.speed says
 -- otherwise, such as 0 standing on a boat.
 function GetUnitSpeed() return M.speed or 7, 7, 7, 4.72 end
@@ -675,6 +699,34 @@ function C_SummonInfo.ConfirmSummon() M.summon = nil end
 function C_SummonInfo.CancelSummon() M.summon = nil end
 C_UnitAuras = {}
 function C_UnitAuras.GetPlayerAuraBySpellID(spellID) return M.auras[spellID] end
+-- Gaining, refreshing and losing a player aura, with UNIT_AURA's incremental
+-- updateInfo as the client sends it. fields are AuraData fields (name,
+-- duration, sourceUnit, ...); an aura already on you is replaced.
+M.lastAuraInstance = 0
+function M.gainAura(spellID, fields)
+	local aura = fields or {}
+	M.lastAuraInstance = M.lastAuraInstance + 1
+	aura.spellId, aura.auraInstanceID, aura.isHelpful = spellID, M.lastAuraInstance, true
+	aura.name = aura.name or M.spellNames[spellID]
+	aura.duration = aura.duration or 0
+	aura.expirationTime = aura.duration > 0 and GetTime() + aura.duration or 0
+	aura.applications = aura.applications or 0
+	local old = M.auras[spellID]
+	M.auras[spellID] = aura
+	M.fire("UNIT_AURA", "player", { isFullUpdate = false, addedAuras = { aura },
+		removedAuraInstanceIDs = old and old.auraInstanceID and { old.auraInstanceID } or nil })
+	return aura
+end
+function M.refreshAura(spellID)
+	local aura = M.auras[spellID]
+	aura.expirationTime = aura.duration > 0 and GetTime() + aura.duration or 0
+	M.fire("UNIT_AURA", "player", { isFullUpdate = false, updatedAuraInstanceIDs = { aura.auraInstanceID } })
+end
+function M.loseAura(spellID)
+	local aura = M.auras[spellID]
+	M.auras[spellID] = nil
+	M.fire("UNIT_AURA", "player", { isFullUpdate = false, removedAuraInstanceIDs = { aura.auraInstanceID } })
+end
 -- M.group lists the other members' units ("party1", ...), set in M.units.
 function GetNumGroupMembers() return #M.group > 0 and #M.group + 1 or 0 end
 function IsInRaid() return M.raid end
@@ -711,7 +763,10 @@ function C_DeathInfo.UseSelfResurrectOption() end
 C_PlayerInteractionManager = {}
 function C_PlayerInteractionManager.ConfirmationInteraction() end
 function C_PlayerInteractionManager.ClearInteraction() end
-Constants = { LevelConstsExposed = { MIN_RES_SICKNESS_LEVEL = 10 } }
+Constants = {
+	LevelConstsExposed = { MIN_RES_SICKNESS_LEVEL = 10 },
+	PetConsts = { MAX_SUMMONABLE_HUNTER_PETS = 1, NUM_PET_SLOTS_HUNTER = 3 },
+}
 -- Breath and fatigue bars: milliseconds left by timer name ("BREATH",
 -- "EXHAUSTION"). Tests fire MIRROR_TIMER_START/STOP/PAUSE themselves.
 M.mirrorTimers = {}
@@ -1054,6 +1109,32 @@ function C_Bank.WithdrawMoney(bankType, amount) assert(type(bankType) == "number
 function ConfirmTalentWipe() end
 C_StableInfo = {}
 function C_StableInfo.BuyStableSlot() end
+-- The stable: slot 1 is the pet you can call, 2 and 3 are stabled, as in
+-- Forever's stable window. M.stable[slot] = { name, level, familyName,
+-- petNumber }. Moving a pet swaps two slots and sends PET_STABLE_UPDATE; tests
+-- change M.units.pet and fire UNIT_PET themselves.
+M.stable = {}
+function C_StableInfo.GetStablePetInfo(index)
+	assert(type(index) == "number")
+	local p = M.stable[index]
+	if not p then return nil end
+	local info = { slotID = index, icon = 132242, specialization = "", type = "", petAbilities = {}, specAbilities = {} }
+	for k, v in pairs(p) do info[k] = v end
+	return info
+end
+function C_StableInfo.SetPetSlot(index, slot)
+	assert(type(index) == "number" and type(slot) == "number")
+	M.stable[index], M.stable[slot] = M.stable[slot], M.stable[index]
+	M.fire("PET_STABLE_UPDATE")
+end
+-- Abandoning your pet: the pet goes away later, so tests clear M.units.pet and
+-- fire UNIT_PET themselves. M.abandoned counts the calls.
+C_PetInfo = {}
+M.abandoned = 0
+function C_PetInfo.PetAbandon(petNumber)
+	assert(petNumber == nil or type(petNumber) == "number")
+	M.abandoned = M.abandoned + 1
+end
 C_Item = {}
 function C_Item.GetWeaponEnchantInfo(weaponSlot)
 	local id = M.tempEnchants[weaponSlot]
@@ -1067,6 +1148,12 @@ function C_Item.GetItemInfo(item)
 	local link = it.link or ("|cff9d9d9d|Hitem:" .. id .. "::::|h[Item " .. id .. "]|h|r")
 	return link:match("%[(.-)%]"), link, it.quality or 1, it.level or 1, 1, "Junk", "Junk", 20, "", it.icon or 134400,
 		it.price or 0, 15, 0, 0, 0, nil, false, ""
+end
+-- Nil while the item isn't cached.
+function C_Item.GetItemQualityByID(item)
+	local it = M.items[tonumber(item) or LinkID(item)]
+	if not it or it.uncached then return nil end
+	return it.quality or 1
 end
 -- Actual item level, preview flag and base item level.
 function C_Item.GetDetailedItemLevelInfo(item)
@@ -1599,6 +1686,7 @@ function M.Login()
 	end
 	M.fire("PLAYER_LOGIN")
 	M.fire("PLAYER_ENTERING_WORLD", true, false)
+	M.fire("UNIT_AURA", "player", { isFullUpdate = true })
 	-- The addon compartment (the minimap's addons dropdown) lists the addons
 	-- whose .toc names an AddonCompartmentFunc. Clicking an entry calls that
 	-- global with the addon's name and the mouse button.

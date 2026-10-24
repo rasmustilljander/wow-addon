@@ -15,6 +15,7 @@ Vendor.lua
 Outgoing.lua
 Money.lua
 Life.lua
+WorldBuffs.lua
 PvP.lua
 Guild.lua
 Progress.lua
@@ -22,3 +23,4 @@ Commands.lua
 UI.lua
 LogUI.lua
 Sessions.lua
+Tooltip.lua
