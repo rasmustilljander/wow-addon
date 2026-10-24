@@ -33,12 +33,27 @@ end
 --------------------------------------------------------------------------------
 
 local lastZone, lastSubzone
+local zoneSince -- time() the zone you're in was last counted up to
+
+-- Adds the seconds since the last count to the zone you're in, in
+-- stats.zoneTime. Runs every second, on zone changes and on logout, so a
+-- reload counts each second once; time logged out isn't counted.
+local function CountZoneTime()
+	local now = time()
+	if lastZone and zoneSince and now > zoneSince then
+		ns.Add(now - zoneSince, "zoneTime", lastZone)
+	end
+	zoneSince = now
+end
 
 local function CheckArea()
 	local zone = ns.Clean(GetRealZoneText()) or ""
 	local subzone = ns.Clean(GetSubZoneText()) or ""
 	if zone == "" or (zone == lastZone and subzone == lastSubzone) then
 		return
+	end
+	if zone ~= lastZone then
+		CountZoneTime()
 	end
 	lastZone, lastSubzone = zone, subzone
 
@@ -56,6 +71,7 @@ end
 for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA" }) do
 	ns.On(event, CheckArea)
 end
+ns.On("PLAYER_LOGOUT", CountZoneTime)
 
 --------------------------------------------------------------------------------
 -- Flights, inn binding
@@ -295,6 +311,7 @@ ns.On("PLAYER_LOGIN", function()
 	C_Timer.NewTicker(1, function()
 		local ok, err = pcall(function()
 			CheckLanded()
+			CountZoneTime()
 			CheckRide(CheckJump(true))
 		end)
 		if not ok then
