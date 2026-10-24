@@ -8,7 +8,7 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | [TravelLog_Path](TravelLog_Path/) | Records your path and jumps and draws the trail, and your alts', on the world map. Needs TravelLog. |
 | [TravelLog_Nodes](TravelLog_Nodes/) | Pins chests, herbs and ore any of your characters looted on the minimap and world map, with when and by whom. Needs TravelLog. |
 | [TravelLog_Share](TravelLog_Share/) | Shares your nodes, and on request your log, with players you allow, and records who asked. Needs TravelLog. |
-| [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where), with map pins and tooltip counts. TravelLog optional. |
+| [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where) and what its corpses held, with map pins and tooltips showing counts and top drops. TravelLog optional. |
 | [TravelLog_NPCs](TravelLog_NPCs/) | Remembers vendors, trainers and other NPCs with what they sell: searchable, pinned on the minimap and world map, and named on item tooltips. TravelLog optional. |
 | [TravelLog_Group](TravelLog_Group/) | Records every player you group with (how often, when, how long, where), searchable in a window tab. TravelLog optional. |
 | [KillXP](KillXP/) | Shows a mob's kill XP (Forever XP buffs, rested and party bonus included) and kills to level on its tooltip. |

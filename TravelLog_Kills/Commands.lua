@@ -82,6 +82,8 @@ end
 
 local SHOW_KILLS = 10
 local SHOW_PLACES = 5
+local SHOW_DROPS = 10
+local TOOLTIP_DROPS = 5
 
 local function ShowMob(mob)
 	ns.Print("%s: killed %s.", mob.name, Times(mob.count))
@@ -109,6 +111,15 @@ local function ShowMob(mob)
 	if xp > 0 or assisted > 0 then
 		print(("  %s xp in total%s"):format(Count(xp),
 			assisted > 0 and (", %s finished by party members"):format(Count(assisted)) or ""))
+	end
+
+	local drops = ns.Drops(mob.name)
+	if drops then
+		local parts = {}
+		for _, e in ipairs(ns.TopDrops(drops, SHOW_DROPS)) do
+			parts[#parts + 1] = ("%s %s"):format(e.link, ns.DropChance(e, drops.looted))
+		end
+		print(("  Drops (looted %s): %s"):format(Times(drops.looted), #parts > 0 and table.concat(parts, ", ") or "no items"))
 	end
 
 	local first = math.max(#mob.kills - SHOW_KILLS + 1, 1)
@@ -256,7 +267,8 @@ SlashCmdList.TRAVELLOGKILLS = function(msg)
 end
 
 --------------------------------------------------------------------------------
--- Tooltips: "Killed 54 times, last 2h ago" on mobs you've killed
+-- Tooltips: "Killed 54 times, last 2h ago" on mobs you've killed, and what
+-- they dropped most often
 --------------------------------------------------------------------------------
 
 local function OnUnitTooltip(tooltip, data)
@@ -268,9 +280,18 @@ local function OnUnitTooltip(tooltip, data)
 	if kind ~= "Creature" and kind ~= "Vehicle" then
 		return
 	end
-	local mob = ns.Mob(UnitNameFromGUID and ns.Clean(UnitNameFromGUID(guid)), id)
+	local name = UnitNameFromGUID and ns.Clean(UnitNameFromGUID(guid))
+	local mob = ns.Mob(name, id)
 	if mob then
 		tooltip:AddLine(("Killed %s, last %s ago"):format(Times(mob.count), ns.Ago(mob.last)), 0.9, 0.45, 0.45)
+	end
+	local drops = ns.Drops(name, id)
+	if drops then
+		local top = ns.TopDrops(drops, TOOLTIP_DROPS)
+		tooltip:AddLine(("Looted %s, %s"):format(Times(drops.looted), #top > 0 and "drops:" or "no items"), 0.9, 0.45, 0.45)
+		for _, e in ipairs(top) do
+			tooltip:AddDoubleLine("  " .. ns.ItemName(e.link), ns.DropChance(e, drops.looted), 1, 1, 1, 1, 1, 1)
+		end
 	end
 end
 

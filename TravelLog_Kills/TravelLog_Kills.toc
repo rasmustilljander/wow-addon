@@ -1,12 +1,13 @@
 ## Interface: 16001
 ## Title: TravelLog Kills
-## Notes: Records every mob you kill: how many times, when and where.
+## Notes: Records every mob you kill: how many times, when, where and what they dropped.
 ## Author: rasmustilljander
 ## Version: 0.1.0
 ## OptionalDeps: TravelLog
 ## SavedVariablesPerCharacter: TravelLogKillsDB
 
 Core.lua
+Drops.lua
 Map.lua
 Commands.lua
 Window.lua

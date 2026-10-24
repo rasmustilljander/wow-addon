@@ -116,9 +116,13 @@ end)
 --       first = 1760000000, last = 1760100000,
 --       kills = { "1760000000,1436,52.10,51.04,2,45", ... } },  -- oldest first
 --   },
+--   drops = { ["Defias Thug"] = { looted = 40, items = { [2589] = { 12, 18 } } } },
+--   items = { [2589] = "|cffffffff|Hitem:2589::::::::|h[Linen Cloth]|h|r" },
 -- }
 -- Each kill: time, uiMapID, x, y (0-100), place (index into places), XP,
--- and who landed the killing blow when it wasn't you or your pet.
+-- and who landed the killing blow when it wasn't you or your pet. Drops (see
+-- Drops.lua): corpses looted, and per item ID the corpses holding it and how
+-- many there were in all.
 
 local placeIndex = {} -- "Zone|Subzone" -> index into db.places
 ns.byID = {}          -- NPC ID -> mob
@@ -130,6 +134,8 @@ local function Init()
 	db.total = db.total or 0
 	db.places = db.places or {}
 	db.mobs = db.mobs or {}
+	db.drops = db.drops or {}
+	db.items = db.items or {}
 	db.settings = db.settings or {}
 	if db.settings.map == nil then
 		db.settings.map = true -- kill spots on the world map
@@ -244,6 +250,7 @@ local function NameOf(guid)
 	end
 	return names[guid]
 end
+ns.NameOf = NameOf
 
 --------------------------------------------------------------------------------
 -- Recording
