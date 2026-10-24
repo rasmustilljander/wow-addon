@@ -29,7 +29,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, the experience gained and time AFK. |
-| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills (a dropped profession learned again counts), every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, reputation gained and lost per faction (totals only), the first ride on each mount, beasts tamed (name, level and family), the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards), and Legacy Challenges (Forever's achievements) earned, with points, category and reward. |
+| **Progress** | Spells, abilities and recipes learned (with rank, trainer and cost), new skills (a dropped profession learned again counts), every 25 points of a skill, talent points spent (talent, tree, new rank and your level) and taken back, flight paths found, reputation standings reached, reputation gained and lost per faction (totals only), the first ride on each mount, beasts tamed (name, level and family), the first time you put on each piece of gear (slot, item level, quality and what it replaced; not shirts or tabards) and each bag (size, quality and what it replaced), new permanent enchants on worn gear (and the one they replaced), and Legacy Challenges (Forever's achievements) earned, with points, category and reward. |
 
 ## Window
 
@@ -67,7 +67,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals (`stats`; seconds logged in per zone name in `stats.zoneTime`) |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank, guild, and the instance or rested area you're in |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, bags, PvP rank, guild, and the instance or rested area you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 
@@ -102,6 +102,7 @@ TravelLogCharDB = {
   fight = { id = 2972, since = 1760000000 },  -- the boss fight in progress
   rest = { inside = 600, since = ... },  -- while you're resting
   gear = { [25] = 0, [2361] = 1760000000 },  -- item ID -> first put on (0: worn when gear recording began)
+  bags = { [4496] = 0, [4245] = 1760000000 },  -- bag item ID -> first equipped (0: equipped when bag recording began)
   pvpRank = { rank = 3, season = 1 },  -- last rank seen, to tell changes
   guild = { name = "Wanderers", rank = "Officer", rankIndex = 2, since = 1760000000 },  -- {} for none; since: when you joined
 }
@@ -146,6 +147,8 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 | `revive` | `how`: `corpse`, `spirithealer`, `player` or `selfres`, when known. `by`: who resurrected you. `spell`: the self-resurrection used (Soulstone, Reincarnation, ...). `sickness`: `true` with resurrection sickness. `took` and `ghost`: seconds since the death and since the release. `durability`: average percentage points lost on worn items since before the death. |
 | `roll` | `item`, `choice` (`need`, `offspec`, `transmog`, `greed` or `pass`), `roll` (yours; none for a pass), `winner` and `winnerRoll` (none when everyone passed). A win is a `receive` entry with `how = "roll"`. |
 | `equip` | `slot` (inventory slot, 1 head to 18 ranged), `item` (link), `ilvl`, `quality` (0 poor, 1 common, 2 uncommon, ...), `replaced` (the link it replaced). `ilvl` and `quality` are missing if the item wasn't loaded yet. |
+| `enchant` | `slot`, `item` (link, with the new enchant), `enchant` (enchant ID), `name` (its tooltip line, such as `Crusader`); `old` and `oldName` for the enchant it replaced. Names are missing if the tooltip wasn't loaded. |
+| `bag` | `bag` (bag slot, 1 next to the backpack), `item` (link), `slots`, `quality`, `replaced` (the link it replaced) |
 | `spell` | `id`, `name`, `rank`; `trainer` and `cost` when bought from a trainer |
 | `skill`, `skillup` | `id`, `name`, `rank` (skill points) |
 | `taxipath` | `npc`: the flight master |
@@ -183,7 +186,8 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 - Reputation totals come from the "Reputation with Stormwind increased by 25." chat lines, counted from when TravelLog was installed. A line without an amount isn't counted.
 - Mounts and pets count from when TravelLog was installed, so "First mount" and "First pet" are only your real firsts if you hadn't ridden or tamed before.
 - No event says a tame worked. It's a Tame Beast channel that runs its full length, then a pet appearing within 5 seconds; the beast is your target when the channel began.
-- Gear counts from the first login that records it: what you wear then is remembered, not logged, and gear in your bags is logged the first time you put it on. Gear is kept by item ID, so a second copy of an item, or the same item with another random enchantment, isn't logged again.
+- Gear and bags count from the first login that records them: what you wear then is remembered, not logged, and gear in your bags is logged the first time you put it on. Both are kept by item ID, so a second copy of an item, or the same item with another random enchantment, isn't logged again. Only your own bag slots count: Forever's bank has tabs, not bag slots.
+- An enchant is a change of the permanent enchant on an item you keep on, within 5 s of a spell you cast (enchanting it, an armor kit). Swapping in another copy of the item with another enchant counts only if you cast something in the 5 s before. Enchants on items in your bags, and temporary ones (poisons, sharpening stones, oils), aren't logged.
 - Duel results come from the "Ann has defeated Bob in a duel" line. The client doesn't say when the other player accepts your challenge, so a duel you challenged that ends without a winner is logged only if one of you crossed the duel area's edge.
 - A battleground's result and scoreboard line are read when the match ends. Leaving earlier, or being away when it ends, counts as `left`. Scoreboard numbers the client hides are left empty.
 - Honorable kills and honor come from their chat lines. Where chat is hidden (battlegrounds), kills come from the day's honorable kill count instead, without name, rank or honor, and honor awards are missed. Deaths don't say whether a player killed you: no event names the killer.

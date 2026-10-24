@@ -2,7 +2,8 @@
 -- item you put on after that is logged once (with slot, item level, quality
 -- and what it replaced), not shirts or tabards, not swaps back, not after a
 -- reload; its totals, /tl log and History group; a character that logs in
--- with nothing on.
+-- with nothing on. Enchants on worn gear (after a cast, not swapped copies or
+-- temporary ones) and the first time each bag is equipped.
 local function Link(id, name, color)
 	return ("|cff%s|Hitem:%d::::::::5:::::|h[%s]|h|r"):format(color or "ffffff", id, name)
 end
@@ -90,7 +91,7 @@ M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
-check(line and line:find("new gear 5$"), "stats line: " .. tostring(line))
+check(line and line:find("new gear 5, bags 0, enchants 0$"), "stats line: " .. tostring(line))
 M.out = {}
 SlashCmdList.TRAVELLOG("log 2 gear")
 check(#M.out == 3 and M.out[2]:find("Equipped " .. CLOAK .. " (back)", 1, true) and M.out[3]:find("[Helm]", 1, true),
@@ -106,3 +107,110 @@ M.equip(5, VEST)
 check(TravelLogCharDB.gear[101] == 0 and count("equip") == 0, "first item remembered, not logged")
 M.equip(1, CAP)
 check(count("equip") == 1 and last("equip").item == CAP, "then new items are logged")
+
+-- Enchants and bags: what's on at the first login is remembered, not logged.
+local function Enchanted(id, enchant, name)
+	return ("|cffffffff|Hitem:%d:%d:::::::5:::::|h[%s]|h|r"):format(id, enchant, name)
+end
+local ENCHANT_SPELL = 20034
+M.enchantNames = { [1897] = "+5 Weapon Damage", [1900] = "Crusader", [41] = "+5 Health" }
+local SWORD_DMG, SWORD_CRUSADER = Enchanted(103, 1897, "Sword"), Enchanted(103, 1900, "Sword")
+local LINEN, POUCH, BIG_BAG = Link(300, "Linen Bag"), Link(301, "Small Pouch"), Link(302, "Traveler's Backpack", "1eff00")
+M.items[301], M.items[302] = { quality = 1 }, { quality = 2 }
+M.Logout()
+M.player = { name = "Enchanter", realm = "Forever" }
+M.equipped = { [5] = VEST, [16] = SWORD_DMG, [31] = LINEN }
+M.bagSlots[1] = 6
+ns = M.Login()
+check(TravelLogCharDB.bags and TravelLogCharDB.bags[300] == 0, "worn bag remembered")
+check(count("enchant") == 0 and count("bag") == 0 and count("equip") == 0, "nothing logged at first login")
+
+-- Enchanting the sword: only UNIT_INVENTORY_CHANGED says so.
+M.advance(10)
+M.cast(ENCHANT_SPELL)
+M.equipped[16] = SWORD_CRUSADER
+M.fire("UNIT_INVENTORY_CHANGED", "player")
+e = last("enchant")
+check(count("enchant") == 1 and e.slot == 16 and e.item == SWORD_CRUSADER and e.enchant == 1900 and e.name == "Crusader"
+	and e.old == 1897 and e.oldName == "+5 Weapon Damage", "new enchant logged")
+check(ns.Describe(e) == "Enchanted " .. SWORD_CRUSADER .. " (main hand): Crusader, replacing +5 Weapon Damage",
+	"described: " .. ns.Describe(e))
+check(ns.LogGroup(e) == "Progress" and ns.LogTypeLabel(e) == "Enchant" and ns.LogMatches(e, "crusader", "Progress"),
+	"group, label and search")
+check(count("equip") == 0 and ns.stats.enchants == 1, "counted, not new gear")
+M.fire("UNIT_INVENTORY_CHANGED", "player")
+M.fire("PLAYER_EQUIPMENT_CHANGED", 16, true)
+check(count("enchant") == 1, "logged once")
+
+-- A first enchant on the chest, reported as an equipment change.
+M.advance(10)
+M.cast(ENCHANT_SPELL)
+local VEST_HEALTH = Enchanted(101, 41, "Vest")
+M.equip(5, VEST_HEALTH)
+e = last("enchant")
+check(count("enchant") == 2 and e.slot == 5 and e.enchant == 41 and e.name == "+5 Health" and not e.old and not e.oldName,
+	"first enchant logged")
+check(ns.Describe(e) == "Enchanted " .. VEST_HEALTH .. " (chest): +5 Health", "described: " .. ns.Describe(e))
+
+-- Swapping in another copy of the sword without a cast isn't an enchant.
+M.advance(10)
+M.equip(16, SWORD_DMG)
+check(count("enchant") == 2 and count("equip") == 0, "swapped copy not logged")
+
+-- A poison on the sword, then wearing off: temporary.
+M.cast(ENCHANT_SPELL)
+M.tempEnchants[0] = 7
+M.equipped[16] = Enchanted(103, 7, "Sword")
+M.fire("UNIT_INVENTORY_CHANGED", "player")
+M.tempEnchants[0] = nil
+M.equipped[16] = SWORD_DMG
+M.fire("UNIT_INVENTORY_CHANGED", "player")
+check(count("enchant") == 2, "temporary enchant not logged")
+
+-- Another item in the slot right after a cast is new gear, not an enchant.
+M.advance(10)
+M.cast(ENCHANT_SPELL)
+M.equip(16, Enchanted(202, 1900, "Big Axe"))
+check(count("enchant") == 2 and count("equip") == 1 and last("equip").replaced == SWORD_DMG, "other item not an enchant")
+
+-- Bags: a new one in an empty slot, a bigger one replacing the first, and
+-- the first one back.
+M.equipBag(2, POUCH, 8)
+e = last("bag")
+check(count("bag") == 1 and e.bag == 2 and e.item == POUCH and e.slots == 8 and e.quality == 1 and not e.replaced,
+	"new bag logged")
+check(ns.Describe(e) == "Equipped bag " .. POUCH .. " (8 slots)", "described: " .. ns.Describe(e))
+check(ns.LogGroup(e) == "Progress" and ns.LogTypeLabel(e) == "Bag", "bag group and label")
+M.equipBag(1, BIG_BAG, 14)
+e = last("bag")
+check(count("bag") == 2 and e.bag == 1 and e.slots == 14 and e.quality == 2 and e.replaced == LINEN, "bigger bag logged")
+check(ns.Describe(e) == "Equipped bag " .. BIG_BAG .. " (14 slots), replacing " .. LINEN, "described: " .. ns.Describe(e))
+M.equipBag(1, LINEN, 6)
+M.equipBag(2, nil)
+check(count("bag") == 2 and ns.stats.bags == 2, "known bag and taking off not logged")
+
+-- After a reload, bags are still known.
+ns = M.Reload()
+check(TravelLogCharDB.bags[301] and TravelLogCharDB.bags[302] and TravelLogCharDB.bags[300] == 0, "bags saved")
+M.equipBag(2, BIG_BAG, 14)
+check(count("bag") == 2, "known bag not logged after reload")
+M.out = {}
+SlashCmdList.TRAVELLOG("stats")
+line = nil
+for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
+check(line and line:find("new gear 1, bags 2, enchants 2$"), "stats line: " .. tostring(line))
+M.out = {}
+SlashCmdList.TRAVELLOG("log 5 enchanted")
+check(#M.out == 3 and M.out[2]:find("Crusader, replacing", 1, true) and M.out[3]:find("+5 Health", 1, true),
+	"/tl log: " .. table.concat(M.out, " / "))
+
+-- A character with no bags remembers its first one.
+M.Logout()
+M.player = { name = "Bagless", realm = "Forever" }
+M.equipped = {}
+ns = M.Login()
+check(TravelLogCharDB.bags == nil, "no bags to remember")
+M.equipBag(1, POUCH, 8)
+check(TravelLogCharDB.bags[301] == 0 and count("bag") == 0, "first bag remembered, not logged")
+M.equipBag(2, LINEN, 6)
+check(count("bag") == 1 and last("bag").item == LINEN, "then new bags are logged")

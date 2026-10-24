@@ -308,9 +308,9 @@ local function ShowStats(arg)
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0),
 		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots))
 	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s, bags %s, enchants %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
-		Count(st.tames), Count(st.gear))
+		Count(st.tames), Count(st.gear), Count(st.bags), Count(st.enchants))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
 	ns.Print("Reputation: %s", ns.ReputationText(st))
 
@@ -605,6 +605,15 @@ local DESCRIBE = {
 		local text = ("Equipped %s (%s%s)"):format(e.item or "?", slot, e.ilvl and ", item level " .. e.ilvl or "")
 		return e.replaced and ("%s, replacing %s"):format(text, e.replaced) or text
 	end,
+	enchant = function(e)
+		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
+		local text = ("Enchanted %s (%s): %s"):format(e.item or "?", slot, e.name or "enchant " .. tostring(e.enchant))
+		return e.old and ("%s, replacing %s"):format(text, e.oldName or "enchant " .. e.old) or text
+	end,
+	bag = function(e)
+		local text = ("Equipped bag %s%s"):format(e.item or "?", e.slots and (" (%d slots)"):format(e.slots) or "")
+		return e.replaced and ("%s, replacing %s"):format(text, e.replaced) or text
+	end,
 }
 
 -- A log entry as text, and where it happened. TravelLog_Share sends these.
@@ -634,6 +643,7 @@ local LOG_GROUP = {
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
+	enchant = "Progress", bag = "Progress",
 	achievement = "Progress",
 }
 local LOG_LABEL = {
@@ -652,7 +662,8 @@ local LOG_LABEL = {
 	spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
-	mount = "Mount", tame = "Pet tamed", equip = "Gear", achievement = "Legacy Challenge",
+	mount = "Mount", tame = "Pet tamed", equip = "Gear", enchant = "Enchant", bag = "Bag",
+	achievement = "Legacy Challenge",
 }
 
 function ns.LogGroup(e)
