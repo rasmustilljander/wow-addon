@@ -2,7 +2,8 @@
 -- skills and skill milestones, talent points spent, flight paths found,
 -- reputation standings reached and gained per faction, the first ride on each
 -- mount, beasts tamed and your pet's level-ups, abandoning and stabling, the
--- first time you put on each piece of gear and Legacy Challenges earned.
+-- first time you put on each piece of gear or bag, enchants on worn gear and
+-- Legacy Challenges earned.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -590,16 +591,74 @@ if C_StableInfo and C_StableInfo.GetStablePetInfo then
 end
 
 --------------------------------------------------------------------------------
--- Gear: the first time you put on each item
+-- Gear: the first time you put on each item, enchants on worn items, and the
+-- first time you equip each bag
 --------------------------------------------------------------------------------
 
 local FIRST_SLOT, LAST_SLOT = INVSLOT_FIRST_EQUIPPED or 1, INVSLOT_LAST_EQUIPPED or 19
 -- Shirts and tabards are only for looks, so they're left out.
 local SKIP_SLOT = { [INVSLOT_BODY or 4] = true, [INVSLOT_TABARD or 19] = true }
-local worn = {} -- slot -> item link, to say what a new item replaced
+-- An enchant goes on with a cast of yours (the enchanting spell, an armor kit,
+-- a libram), so an enchant change this many seconds after one is an enchant.
+-- Without one it's another copy of the item swapped in.
+local ENCHANT_CAST = 5
+-- Weapons' temporary enchants (poisons, stones, oils) by inventory slot.
+local WEAPON_SLOT = { [INVSLOT_MAINHAND or 16] = 0, [INVSLOT_OFFHAND or 17] = 1, [INVSLOT_RANGED or 18] = 2 }
+local ENCHANT_LINE = Enum and Enum.TooltipDataLineType and Enum.TooltipDataLineType.ItemEnchantmentPermanent
+local enchantedPattern = type(ENCHANTED_TOOLTIP_LINE) == "string" and ns.ToPattern(ENCHANTED_TOOLTIP_LINE)
+local worn = {}     -- slot -> item link, to say what a new item replaced
+local enchants = {} -- slot -> { item, id, name }: the item ID and its permanent enchant
+local bags = {}     -- bag -> item link, to say what a new bag replaced
 
 local function WornLink(slot)
 	return ns.Clean(GetInventoryItemLink("player", slot))
+end
+
+-- The enchant ID in an item link ("item:2361:1897:..."), nil for none.
+local function LinkEnchant(link)
+	local id = tonumber(link:match("item:%d+:(%d+)"))
+	return id ~= 0 and id or nil
+end
+
+-- True for a poison, stone or oil on a weapon, in case its link shows them.
+local function IsTemporary(slot, enchant)
+	local weapon = WEAPON_SLOT[slot]
+	if not (weapon and C_Item.GetWeaponEnchantInfo) then
+		return false
+	end
+	for _, info in ipairs(C_Item.GetWeaponEnchantInfo(weapon) or {}) do
+		if ns.Clean(info.enchantID) == enchant then
+			return true
+		end
+	end
+	return false
+end
+
+-- The enchant's line on the worn item's tooltip ("Crusader"), if loaded.
+local function EnchantName(slot)
+	local data = ENCHANT_LINE and C_TooltipInfo and C_TooltipInfo.GetInventoryItem
+		and C_TooltipInfo.GetInventoryItem("player", slot)
+	for _, line in ipairs(data and data.lines or {}) do
+		local text = ns.Clean(line.type) == ENCHANT_LINE and ns.Clean(line.leftText)
+		if type(text) == "string" and text ~= "" then
+			return enchantedPattern and text:match(enchantedPattern) or text
+		end
+	end
+end
+
+-- Remembers the permanent enchant on a slot, and returns what it was before.
+local function ReadEnchant(slot, link, id)
+	local old = enchants[slot]
+	local enchant = link and LinkEnchant(link)
+	if enchant and IsTemporary(slot, enchant) then
+		-- The same item keeps the permanent one underneath.
+		if not (old and old.item == id) then
+			enchants[slot] = { item = id }
+		end
+		return old
+	end
+	enchants[slot] = id and { item = id, id = enchant, name = enchant and EnchantName(slot) } or nil
+	return old
 end
 
 -- Remembers what each slot holds. Item IDs are kept in the character file,
@@ -609,12 +668,34 @@ local function ReadWorn()
 	local seed = not ns.char.gear and {}
 	for slot = FIRST_SLOT, LAST_SLOT do
 		worn[slot] = WornLink(slot)
-		local id = seed and worn[slot] and not SKIP_SLOT[slot] and ns.Clean(GetInventoryItemID("player", slot))
-		if id then
+		local id = worn[slot] and ns.Clean(GetInventoryItemID("player", slot))
+		ReadEnchant(slot, worn[slot], id)
+		if seed and id and not SKIP_SLOT[slot] then
 			seed[id] = 0
 			ns.char.gear = seed
 		end
 	end
+end
+
+-- A new permanent enchant on the item you kept on.
+local function CheckEnchant(slot, link, id)
+	local old = ReadEnchant(slot, link, id)
+	local new = enchants[slot]
+	if not (new and new.id and old and old.item == id and old.id ~= new.id) then
+		return
+	end
+	if not lastCastAt or GetTime() - lastCastAt > ENCHANT_CAST then
+		return
+	end
+	ns.Log("enchant", {
+		slot = slot,
+		item = link,
+		enchant = new.id,
+		name = new.name,
+		old = old.id,
+		oldName = old.id and old.name or nil,
+	})
+	ns.Add(1, "enchants")
 end
 
 local function CheckGear(slot)
@@ -627,8 +708,11 @@ local function CheckGear(slot)
 	end
 	local link, replaced = WornLink(slot), worn[slot]
 	worn[slot] = link
-	local id = link and not SKIP_SLOT[slot] and ns.Clean(GetInventoryItemID("player", slot))
-	if not id or ns.char.gear[id] then
+	local id = link and ns.Clean(GetInventoryItemID("player", slot))
+	if link ~= replaced then
+		CheckEnchant(slot, link, id)
+	end
+	if not id or SKIP_SLOT[slot] or ns.char.gear[id] then
 		return
 	end
 	ns.char.gear[id] = time()
@@ -647,8 +731,56 @@ local function CheckGear(slot)
 	ns.Add(1, "gear")
 end
 
+-- Enchanting a worn item may only send UNIT_INVENTORY_CHANGED.
+local function CheckAllGear()
+	if not ns.char.gear then
+		return ReadWorn()
+	end
+	for slot = FIRST_SLOT, LAST_SLOT do
+		CheckGear(slot)
+	end
+end
+
+-- Bags: item IDs are kept in the character file like gear's. Forever's bank
+-- has tabs you buy rather than bag slots, so only your own bags count.
+local function CheckBags()
+	if not C_Container.ContainerIDToInventoryID then
+		return
+	end
+	local known = ns.char.bags
+	local seed = not known and {}
+	for bag = 1, NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4 do
+		local slot = ns.Clean(C_Container.ContainerIDToInventoryID(bag))
+		local link, replaced = slot and WornLink(slot), bags[bag]
+		bags[bag] = link
+		local id = link and ns.Clean(GetInventoryItemID("player", slot))
+		if id and seed then
+			seed[id] = 0
+			ns.char.bags = seed
+		elseif id and known and not known[id] then
+			known[id] = time()
+			local size = ns.Clean(C_Container.GetContainerNumSlots(bag))
+			ns.Log("bag", {
+				bag = bag,
+				item = link,
+				slots = size and size > 0 and size or nil,
+				quality = ns.Clean((select(3, C_Item.GetItemInfo(link)))),
+				replaced = replaced,
+			})
+			ns.Add(1, "bags")
+		end
+	end
+end
+
 ns.On("PLAYER_LOGIN", ReadWorn)
+ns.On("PLAYER_LOGIN", CheckBags)
 ns.On("PLAYER_EQUIPMENT_CHANGED", CheckGear)
+ns.On("UNIT_INVENTORY_CHANGED", function(unit)
+	if ns.Clean(unit) == "player" then
+		CheckAllGear()
+	end
+end)
+ns.On("BAG_CONTAINER_UPDATE", CheckBags)
 
 --------------------------------------------------------------------------------
 -- Legacy Challenges: Forever's achievements

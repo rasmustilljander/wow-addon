@@ -161,6 +161,7 @@ Enum = {
 		SpiritHealer = 18, Binder = 20, Auctioneer = 21, StableMaster = 22 },
 	LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
 	TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Corpse = 3, Object = 4 },
+	TooltipDataLineType = { ItemEnchantmentPermanent = 15 },
 	ConsoleCommandType = { Cvar = 0, Command = 1, Macro = 2, Script = 3 },
 	ConsoleCategory = { Debug = 0, Graphics = 1, Console = 2, Combat = 3, Game = 4, Default = 5, Net = 6, Sound = 7, Gm = 8, Reveal = 9, None = 10 },
 	ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
@@ -206,7 +207,8 @@ PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
 ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
 PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA
 UPDATE_INSTANCE_INFO BOSS_KILL
-UNIT_LEVEL UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED]]):gmatch("%S+") do
+UNIT_LEVEL UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED
+UNIT_INVENTORY_CHANGED BAG_CONTAINER_UPDATE]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -988,6 +990,8 @@ C_Container = {}
 function C_Container.UseContainerItem() end
 function C_Container.GetContainerItemLink(bag, slot) local e = BagItem(bag .. ":" .. slot); return e and e.link end
 function C_Container.GetContainerNumSlots(bag) return M.bagSlots[bag] or 0 end
+-- Equipped bags are worn items: bag n is inventory slot 30 + n.
+function C_Container.ContainerIDToInventoryID(bag) return 30 + bag end
 function C_Container.GetContainerItemInfo(bag, slot)
 	local key = bag .. ":" .. slot
 	local e = BagItem(key)
@@ -1062,6 +1066,27 @@ function M.equip(slot, link)
 	M.fire("PLAYER_EQUIPMENT_CHANGED", slot, link == nil)
 end
 
+-- Puts a bag (nil takes it off) of size slots in bag slot n (1 to 5).
+function M.equipBag(bag, link, slots)
+	M.equipped[30 + bag] = link
+	M.bagSlots[bag] = link and slots or nil
+	M.fire("BAG_CONTAINER_UPDATE")
+end
+
+-- Enchants: the enchant ID is the field after the item ID in a link
+-- ("item:103:1900:..."); M.enchantNames[id] is its tooltip text. Weapons'
+-- temporary enchants: M.tempEnchants[Enum.WeaponSlot] = enchant ID.
+ENCHANTED_TOOLTIP_LINE = "Enchanted: %s"
+M.enchantNames, M.tempEnchants = {}, {}
+function C_TooltipInfo.GetInventoryItem(unit, slot)
+	local link = unit == "player" and M.equipped[slot]
+	if not link then return nil end
+	local lines = { { type = 0, leftText = link:match("%[(.-)%]") } }
+	local name = M.enchantNames[tonumber(link:match("item:%d+:(%d+)"))]
+	if name then lines[2] = { type = Enum.TooltipDataLineType.ItemEnchantmentPermanent, leftText = ENCHANTED_TOOLTIP_LINE:format(name) } end
+	return { lines = lines }
+end
+
 -- Worn items' durability: M.durability[inventorySlot] = { current, max }.
 M.durability = {}
 function GetInventoryItemDurability(slot)
@@ -1111,6 +1136,11 @@ function C_PetInfo.PetAbandon(petNumber)
 	M.abandoned = M.abandoned + 1
 end
 C_Item = {}
+function C_Item.GetWeaponEnchantInfo(weaponSlot)
+	local id = M.tempEnchants[weaponSlot]
+	if not id then return {} end
+	return { { hasEnchant = true, enchantType = 0, timeLeft = 600000, charges = 0, enchantID = id, enchantIconID = 0 } }
+end
 function C_Item.GetItemInfo(item)
 	local id = tonumber(item) or LinkID(item)
 	local it = M.items[id]
