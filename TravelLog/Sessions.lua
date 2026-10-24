@@ -18,19 +18,53 @@ ns.Defaults({ ratesSkipAFK = true })
 --------------------------------------------------------------------------------
 
 local lastXP, lastMax
+local lastPool -- the rested XP pool when last read, or nil when unknown
 
 local function ReadXP()
 	return ns.Clean(UnitXP("player")), ns.Clean(UnitXPMax("player"))
 end
 
+-- The rested XP pool: nil from the game means none, an unreadable value
+-- means unknown.
+local function ReadPool()
+	local pool = GetXPExhaustion()
+	if pool == nil then
+		return 0
+	end
+	pool = ns.Clean(pool)
+	return type(pool) == "number" and pool or nil
+end
+
+-- Rested bonus XP, from the pool going down: each bonus XP uses two pool
+-- points, a partly rested last kill too. The pool going up (resting), or
+-- reaching max level, only sets a new baseline.
+local function CheckRested()
+	local pool = ReadPool()
+	local was = lastPool
+	lastPool = pool
+	if not (pool and was and pool < was) or UnitLevel("player") >= GetMaxPlayerLevel() then
+		return
+	end
+	local bonus = math.floor((was - pool) / 2 + 0.5)
+	if bonus > 0 then
+		ns.session.rested = (ns.session.rested or 0) + bonus
+		ns.Add(bonus, "experience", "rested")
+		ns.version = ns.version + 1
+	end
+end
+
 ns.On("PLAYER_LOGIN", function()
 	lastXP, lastMax = ReadXP()
+	lastPool = ReadPool()
 end)
+
+ns.On("UPDATE_EXHAUSTION", CheckRested)
 
 ns.On("PLAYER_XP_UPDATE", function(unit)
 	if unit and unit ~= "player" then
 		return
 	end
+	CheckRested()
 	local xp, max = ReadXP()
 	if not (xp and lastXP and lastMax) then
 		lastXP, lastMax = xp, max
@@ -112,7 +146,7 @@ function ns.SessionSummaries()
 			levelEnd = current and UnitLevel("player") or s.levelEnd,
 			money = moneyEnd and s.money and moneyEnd - s.money,
 			xp = s.xp,
-			experience = { total = s.xp or 0, quests = 0, kills = 0, discoveries = 0 },
+			experience = { total = s.xp or 0, quests = 0, kills = 0, discoveries = 0, rested = s.rested or 0 },
 			afk = (s.afk or 0) + (current and afkSince and now - afkSince or 0),
 			from = s.subzone or s.zone,
 			to = current and (here.subzone or here.zone) or s.subzoneEnd or s.zoneEnd,
@@ -159,7 +193,7 @@ ns.On("PLAYER_LOGIN", function()
 	if ns.stats.experience then
 		return
 	end
-	local xp = { total = 0, quests = 0, kills = 0, discoveries = 0 }
+	local xp = { total = 0, quests = 0, kills = 0, discoveries = 0, rested = 0 }
 	for _, sum in ipairs(ns.SessionSummaries()) do
 		if sum.xp then
 			for key, n in pairs(sum.experience) do
@@ -206,7 +240,7 @@ local function Headline(sum)
 end
 
 -- "+1g 20s 0c (54s 0c/h), 12,345 xp (5,600/h)", and with sources, ": quests
--- 6,000, kills 4,000, other 2,345" after it.
+-- 6,000, kills 2,000, rested 2,000, other 2,345" after it.
 local function Gains(sum, sources)
 	local seconds = Seconds(sum)
 	if seconds and ns.settings.ratesSkipAFK then
