@@ -1,8 +1,8 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, talent points spent, flight paths found,
 -- reputation standings reached and gained per faction, the first ride on each
--- mount, beasts tamed, the first time you put on each piece of gear and
--- Legacy Challenges earned.
+-- mount, beasts tamed and your pet's level-ups, abandoning and stabling, the
+-- first time you put on each piece of gear and Legacy Challenges earned.
 local _, ns = ...
 
 --------------------------------------------------------------------------------
@@ -375,7 +375,7 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 --------------------------------------------------------------------------------
--- Pets: each beast you tame
+-- Pets: each beast you tame, your pet's levels, abandoning and the stable
 --------------------------------------------------------------------------------
 
 -- Tame Beast is a channel at your target. It worked if a pet appears once
@@ -451,6 +451,143 @@ ns.On("UNIT_PET", function(unit)
 	})
 	ns.Add(1, "tames")
 end)
+
+-- The pet out now, as its name, level and family.
+local function PetInfo()
+	return {
+		name = ns.Clean((UnitName("pet"))),
+		level = ns.Clean(UnitLevel("pet")),
+		family = UnitCreatureFamily and ns.Clean((UnitCreatureFamily("pet"))),
+	}
+end
+
+-- Level-ups: the pet out gaining levels. Only hunter pets: a warlock's demon
+-- levels with its master.
+local petSeen -- { key (its GUID), level } of the pet out now
+
+local function CheckPetLevel()
+	if select(2, UnitClass("player")) ~= "HUNTER" or not UnitExists("pet") then
+		petSeen = nil
+		return
+	end
+	local pet = PetInfo()
+	local key = ns.Clean(UnitGUID("pet"))
+	if not key or not pet.level or pet.level <= 0 then
+		return
+	end
+	if petSeen and petSeen.key == key then
+		for level = petSeen.level + 1, pet.level do
+			ns.Log("petlevel", { name = pet.name, family = pet.family, level = level })
+			ns.Add(1, "petLevels")
+		end
+	end
+	petSeen = { key = key, level = pet.level }
+end
+
+ns.On("UNIT_PET", function(unit)
+	if unit == "player" then
+		CheckPetLevel()
+	end
+end)
+ns.On("UNIT_LEVEL", function(unit)
+	if unit == "pet" then
+		CheckPetLevel()
+	end
+end)
+ns.On("UNIT_PET_EXPERIENCE", function(unit)
+	if unit == "player" then
+		CheckPetLevel()
+	end
+end)
+
+-- Abandoning: the pet's portrait menu asks to confirm, then calls
+-- C_PetInfo.PetAbandon for the pet out. It worked if the pet is gone soon
+-- after.
+local ABANDON_WAIT = 5 -- seconds for the pet to go
+local abandoning       -- { pet, at }
+
+if C_PetInfo and C_PetInfo.PetAbandon then
+	hooksecurefunc(C_PetInfo, "PetAbandon", function(petNumber)
+		if ns.char and petNumber == nil and UnitExists("pet") then
+			abandoning = { pet = PetInfo(), at = GetTime() }
+		end
+	end)
+end
+
+ns.On("UNIT_PET", function(unit)
+	if unit ~= "player" or not abandoning or UnitExists("pet") then
+		return
+	end
+	local pet = abandoning.pet
+	local late = GetTime() - abandoning.at > ABANDON_WAIT
+	abandoning = nil
+	if not late then
+		ns.Log("petabandon", pet)
+		ns.Add(1, "petAbandons")
+	end
+end)
+
+-- The stable: slot 1 holds the pet you can call, the others are stabled.
+-- Moving a pet between them is seen by comparing the slots before and after
+-- each update while the stable is open.
+local PET_CONSTS = Constants and Constants.PetConsts or {}
+local ACTIVE_SLOTS = PET_CONSTS.MAX_SUMMONABLE_HUNTER_PETS or 1
+local STABLE_SLOTS = PET_CONSTS.NUM_PET_SLOTS_HUNTER or 3
+local stableSlots -- pet number -> slot, while the stable is open
+
+local function StablePets()
+	local slots, pets = {}, {}
+	for slot = 1, STABLE_SLOTS do
+		local info = C_StableInfo.GetStablePetInfo(slot)
+		local id = info and ns.Clean(info.petNumber)
+		if id then
+			slots[id] = slot
+			pets[slot] = {
+				id = id,
+				name = ns.Clean(info.name),
+				level = ns.Clean(info.level),
+				family = ns.Clean(info.familyName),
+			}
+		end
+	end
+	return slots, pets
+end
+
+if C_StableInfo and C_StableInfo.GetStablePetInfo then
+	ns.On("PET_STABLE_SHOW", function()
+		stableSlots = StablePets()
+	end)
+	ns.On("PET_STABLE_UPDATE", function()
+		if not stableSlots then
+			return
+		end
+		local slots, pets = StablePets()
+		local stabled, taken = {}, {}
+		for slot = 1, STABLE_SLOTS do
+			local pet = pets[slot]
+			local was = pet and stableSlots[pet.id]
+			if was and was <= ACTIVE_SLOTS and slot > ACTIVE_SLOTS then
+				stabled[#stabled + 1] = pet
+			elseif was and was > ACTIVE_SLOTS and slot <= ACTIVE_SLOTS then
+				taken[#taken + 1] = pet
+			end
+		end
+		-- In a swap, the pet put away comes first.
+		for _, pet in ipairs(stabled) do
+			ns.Log("petstable", { name = pet.name, level = pet.level, family = pet.family })
+		end
+		for _, pet in ipairs(taken) do
+			ns.Log("petunstable", { name = pet.name, level = pet.level, family = pet.family })
+		end
+		-- Pets missing from this update (still loading) keep their last slot.
+		for id, slot in pairs(slots) do
+			stableSlots[id] = slot
+		end
+	end)
+	ns.On("PET_STABLE_CLOSED", function()
+		stableSlots = nil
+	end)
+end
 
 --------------------------------------------------------------------------------
 -- Gear: the first time you put on each item

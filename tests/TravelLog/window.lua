@@ -62,7 +62,7 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
 check(Texts(totals, 18) == "Character, Places visited, Time by zone, Flights, Flight paths, Teleports, Boat rides, Instances, Resting, Screenshots, Notes, Jumps, Distance, Looted, Vendors, Rolls, Items out, Guild bank items, Money in, Money out, Nodes, "
-	.. "Played, Quests, Discoveries, Learned, Mounts, Pets tamed, New gear, Legacy Challenges, World buffs, Reputation, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+	.. "Played, Quests, Discoveries, Learned, Mounts, Pets, New gear, Legacy Challenges, World buffs, Reputation, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Trail curves (%), Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
@@ -72,7 +72,7 @@ check(Stat(w, "Guild bank items") == "0 deposited, 0 withdrawn", "guild bank ite
 check(Stat(w, "Money in") == "0c" and Stat(w, "Money out") == "0c", "no money in or out yet")
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Quests") == "0 accepted, 0 done, 0 abandoned, 0 failed", "quests: " .. Stat(w, "Quests"))
-check(Stat(w, "Discoveries") == "0" and Stat(w, "Mounts") == "0" and Stat(w, "Pets tamed") == "0",
+check(Stat(w, "Discoveries") == "0" and Stat(w, "Mounts") == "0" and Stat(w, "Pets") == "0 tamed, 0 levels gained, 0 abandoned",
 	"empty progress totals")
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
 check(Stat(w, "Played") == "not known yet", "played before /played answers")
