@@ -10,7 +10,7 @@ Kills to level   ~6
 ```
 
 - **Kill XP**: what one kill gives you. It includes active Well Fed and sleeping-bag XP buffs. With rested XP it shows the doubled amount and the rested part. In a group it shows your share with the party bonus, the group size and your buffed solo XP, e.g. `~34 (3 in group, ~95 solo)`.
-- **Kills to level**: kills of this mob needed to level up, counting your group and the rested XP you have left, even if it runs out partway.
+- **Kills to level**: kills of this mob needed to level up, counting your group and the rested XP you have left, even if it runs out partway. Rested kills give double XP until the XP bar reaches the rested marker, so the pool is worth half its size in bonus XP.
 
 Gray mobs show `none (too low)`, mobs tagged by others `none (tapped by others)`, and `??` mobs `unknown`. Players, pets, friendly NPCs and corpses get no lines, and neither do characters at max level or with XP turned off.
 

@@ -147,8 +147,8 @@ function ns.GroupShare(xp, level, mobLevel, levels, raid)
 end
 
 -- Kills needed to gain `need` XP at `xp` per kill. Rested doubles a kill's XP
--- while the rested pool lasts, and each kill uses up as much rest as it
--- added.
+-- while `rested`, the bonus XP the pool has left (half the pool), lasts, and
+-- each kill uses up as much of it as it added.
 function ns.KillsToLevel(need, xp, rested)
 	if not xp or xp <= 0 or need <= 0 then
 		return nil
