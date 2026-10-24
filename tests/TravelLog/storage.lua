@@ -1,6 +1,6 @@
 -- Where TravelLog keeps its data: per-character files, the account-wide
--- file, old history kept in place, TravelLog with and without its
--- companion addons, and the character file's data version.
+-- file, data versions, old history kept in place, and TravelLog with and
+-- without its companion addons.
 local DAY = 86400
 
 -- This character's TravelLog_Path data, or nil when it isn't loaded.
@@ -66,33 +66,36 @@ check(#TravelLogCharDB.sessions == 2 and #PathDB().sessions == 2 and ns.stats.ju
 M.Logout()
 
 --------------------------------------------------------------------------------
--- Version 1 files (everything in the account-wide file) are migrated
+-- The account file's data version: a new file gets the current one, a newer
+-- one isn't read
 --------------------------------------------------------------------------------
 
 M.saved, M.savedChar = {}, {}
-M.saved.TravelLog = [[
+ns = M.Login()
+check(TravelLogDB.version == 1, "a new account file gets data version 1")
+M.Logout()
+check(M.saved.TravelLog:find('%["version"%] = 1'), "and saves it")
+
+local NEWER_ACCOUNT = [[
 TravelLogDB = {
-	["version"] = 1,
-	["settings"] = { ["interval"] = 3, ["trail"] = "week" },
-	["chars"] = {
-		["Rasmus-Forever"] = {
-			["level"] = 9,
-			["stats"] = { ["jumps"] = 42 },
-			["log"] = { { ["type"] = "level", ["time"] = 1750000000, ["level"] = 9 } },
-			["sessions"] = { { ["start"] = 1750000000, ["stop"] = 1750003600, ["track"] = { "1,1429,40.00,60.00,0,-9000.0,-100.0,0" }, ["jumps"] = {} } },
-			["quests"] = { [54] = { ["title"] = "Report to Goldshire" } },
-		},
-	},
+	["version"] = 2,
+	["players"] = { "a layout this TravelLog doesn't know" },
 }
 ]]
+M.saved, M.savedChar = { TravelLog = NEWER_ACCOUNT }, {}
+M.out, M.errors = {}, {}
 ns = M.Login()
-check(TravelLogCharDB.log[1].level == 9 and #TravelLogCharDB.sessions == 2, "v1 log and sessions moved to the character file")
-check(#PathDB().sessions == 2 and PathDB().sessions[1].track[1]:find("^1,1429,40.00")
-	and PathDB().sessions[1].start == 1750000000 and not TravelLogCharDB.sessions[1].track, "and the v1 path on to TravelLog_Path")
-check(TravelLogCharDB.quests[54].title == "Report to Goldshire", "v1 quests moved")
-check(TravelLogDB.chars["Rasmus-Forever"].log == nil and TravelLogDB.version == 2, "account file cleaned up")
-check(ns.stats.jumps == 42 and ns.settings.interval == 3, "stats and settings kept")
+check(said("account file is data version 2") and ns.db == nil and ns.char == nil, "a newer account file isn't read, and chat says so")
+M.tick(1)
+for _ = 1, 5 do M.x = M.x + 0.001; M.wb = M.wb - 4; M.tick(1) end
+JumpOrAscendStart()
+M.out = {}
+SlashCmdList.TRAVELLOG("")
+check(said("account file is data version 2") and ns.window == nil, "/tl says why")
+check(#M.errors == 0 and TravelLogDB.chars == nil and TravelLogDB.settings == nil, "nothing recorded, no errors")
+check(TravelLogCharDB == nil and PathDB() == nil, "the character file and companions aren't started")
 M.Logout()
+check(M.saved.TravelLog:find('%["version"%] = 2') and M.saved.TravelLog:find("doesn't know"), "the account file is saved back as it was")
 
 --------------------------------------------------------------------------------
 -- Old history stays in the main files
@@ -192,11 +195,12 @@ M.viewMap = 1436
 M.frame()
 local overlay = M.mapOverlay(2010)
 check(#M.shown(overlay.lines) == 1 and #M.shown(overlay.textures) == 1, "the moved path and its jump are drawn")
-check(TravelLogCharDB.version == 1, "a file from before data versions is read as version 1")
+check(TravelLogCharDB.version == 1, "a character file without a version gets data version 1")
 M.Logout()
 
 --------------------------------------------------------------------------------
--- Data versions: a new file gets the current one, a newer one isn't read
+-- The character file's data version: a new file gets the current one, a
+-- newer one isn't read
 --------------------------------------------------------------------------------
 
 M.saved, M.savedChar = {}, {}

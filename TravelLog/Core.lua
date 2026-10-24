@@ -351,7 +351,7 @@ end
 -- Data versions
 --------------------------------------------------------------------------------
 
--- The layout of the character file, saved in it as `version`: a new file
+-- The layout of TravelLog's files, saved in each as `version`: a new file
 -- gets this one. Bump it when older TravelLogs would misread what the new one
 -- writes (new fields they ignore don't need it), then list the old version
 -- in COMPATIBLE or add a CONVERT step for it.
@@ -360,13 +360,15 @@ ns.DATA_VERSION = 1
 -- Versions this TravelLog reads and writes as they are.
 local COMPATIBLE = { [1] = true }
 
--- CONVERT[n](char) rewrites a version n file as version n + 1. None yet.
+-- CONVERT[n].account(db) and CONVERT[n].char(char) rewrite a version n file
+-- as version n + 1; a step leaves out a file it doesn't change. None yet.
 local CONVERT = {}
 
--- Brings a character file to DATA_VERSION. Returns false, leaving the file
--- as it is, when this TravelLog can't read its version (a newer one's).
-local function Upgrade(char)
-	local version = char.version or 1 -- files from before versions were saved
+-- Brings the account ("account") or a character ("char") file to
+-- DATA_VERSION. Returns false, leaving the file as it is, when this
+-- TravelLog can't read its version (a newer one's).
+local function Upgrade(t, file)
+	local version = t.version or ns.DATA_VERSION -- a new file
 	local step = version
 	while not COMPATIBLE[step] do
 		if type(step) ~= "number" or not CONVERT[step] then
@@ -375,11 +377,21 @@ local function Upgrade(char)
 		step = step + 1
 	end
 	while not COMPATIBLE[version] do
-		CONVERT[version](char)
+		if CONVERT[version][file] then
+			CONVERT[version][file](t)
+		end
 		version = version + 1
 	end
-	char.version = ns.DATA_VERSION
+	t.version = ns.DATA_VERSION
 	return true
+end
+
+-- Says that a file can't be read, and keeps saying it on /tl and the addons
+-- dropdown. Nothing is recorded, so the file is saved back untouched.
+local function Unreadable(what, t)
+	ns.unreadable = ("%s is data version %s, which this TravelLog (data version %d) can't read. Update TravelLog: until then nothing is recorded and the file is kept as it is.")
+		:format(what, tostring(t.version), ns.DATA_VERSION)
+	ns.Print(ns.unreadable)
 end
 
 --------------------------------------------------------------------------------
@@ -397,6 +409,9 @@ end
 local function Init()
 	TravelLogDB = TravelLogDB or {}
 	local db = TravelLogDB
+	if not Upgrade(db, "account") then
+		return Unreadable("TravelLog's account file", db)
+	end
 	db.settings = db.settings or {}
 	for key, value in pairs(DEFAULTS) do
 		if db.settings[key] == nil then
@@ -420,25 +435,12 @@ local function Init()
 	profile.stats = profile.stats or {}
 
 	-- Everything the character recorded lives in its own per-character file,
-	-- so playing one character never loads another's history. Account files
-	-- of version 1 kept it there.
+	-- so playing one character never loads another's history.
 	TravelLogCharDB = TravelLogCharDB or {}
 	local char = TravelLogCharDB
-	if not Upgrade(char) then
-		-- Nothing is recorded, so the file is saved back untouched. /tl and
-		-- the addons dropdown repeat why.
-		ns.unreadable = ("This character's log is data version %s, which this TravelLog (data version %d) can't read. Update TravelLog: until then nothing is recorded and the log is kept as it is.")
-			:format(tostring(char.version), ns.DATA_VERSION)
-		ns.Print(ns.unreadable)
-		return
+	if not Upgrade(char, "char") then
+		return Unreadable("This character's log", char)
 	end
-	for _, field in ipairs({ "log", "sessions", "quests" }) do
-		if profile[field] then
-			char[field] = char[field] or profile[field]
-			profile[field] = nil
-		end
-	end
-	db.version = 2
 	char.log = char.log or {}
 	char.sessions = char.sessions or {}
 	char.quests = char.quests or {}
