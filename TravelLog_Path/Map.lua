@@ -10,6 +10,8 @@ local LINE_WIDTH = 2.5   -- screen pixels
 local ALT_LINE_WIDTH = 1.5
 local ALT_ALPHA = 0.7
 local MIN_SEGMENT = 4    -- screen pixels between drawn trail points
+local CURVE_ERROR = 0.5  -- screen pixels a curve's straight pieces may stray from it
+local MAX_PIECES = 8     -- straight pieces per curved segment
 local MAX_STEP = 300     -- yards between consecutive points; more is a teleport
 local REFRESH = 3        -- seconds between adding new points while the map is open
 local RANGE_REFRESH = 60 -- seconds before a rolling trail cutoff is recomputed
@@ -286,12 +288,79 @@ local function Dot(x, y, kind, event)
 	end
 end
 
+-- Direction of a centripetal Catmull-Rom curve at (mx, my), coming from
+-- (ax, ay) and going on to (cx, cy). Without one neighbour, the direction to
+-- or from the other.
+local function Tangent(ax, ay, mx, my, cx, cy)
+	local da = ax and ((mx - ax) ^ 2 + (my - ay) ^ 2) ^ 0.25
+	local dc = cx and ((cx - mx) ^ 2 + (cy - my) ^ 2) ^ 0.25
+	if not da or da == 0 then
+		return (cx - mx) / dc, (cy - my) / dc
+	elseif not dc or dc == 0 then
+		return (mx - ax) / da, (my - ay) / da
+	end
+	return (mx - ax) / da - (cx - ax) / (da + dc) + (cx - mx) / dc,
+		(my - ay) / da - (cy - ay) / (da + dc) + (cy - my) / dc
+end
+
+-- Draws the trail from b to c as a curve through a before it and d after it
+-- (either may be nil), in as few straight pieces as look smooth. view.smooth
+-- (0-1) is how round it is; 0 draws a straight line. Lines are taken from
+-- slots first, if given, then from the pool; keep adds the pool's to slots
+-- so the segment can be redrawn in place once the point after it is known.
+local function DrawCurve(slots, keep, ax, ay, bx, by, cx, cy, dx, dy, color, thickness, sublevel)
+	local ex, ey = cx - bx, cy - by
+	local s = view.smooth * (ex * ex + ey * ey) ^ 0.25
+	local t1x, t1y = Tangent(ax, ay, bx, by, cx, cy)
+	local t2x, t2y = Tangent(bx, by, cx, cy, dx, dy)
+	-- How far the curve leaves the straight line at each end. Only the part
+	-- across the line bends it.
+	local u1x, u1y, u2x, u2y = t1x * s - ex, t1y * s - ey, t2x * s - ex, t2y * s - ey
+	local bend = (math.abs(u1x * ey - u1y * ex) + math.abs(u2x * ey - u2y * ex)) / (ex * ex + ey * ey) ^ 0.5 * view.scale
+	local n = math.max(1, math.min(MAX_PIECES, math.ceil(math.sqrt(bend / (2 * CURVE_ERROR)))))
+	local x0, y0 = bx, by
+	for k = 1, n do
+		local i = slots and slots[k]
+		if not i then
+			if view.lines >= MAX_LINES then
+				break
+			end
+			view.lines = view.lines + 1
+			i = view.lines
+			if keep then
+				slots[k] = i
+			end
+		end
+		-- Hermite form: the straight line plus the bend at each end.
+		local t = k / n
+		local h1, h2 = t * (1 - t) ^ 2, t * t * (t - 1)
+		local x, y = bx + t * ex + h1 * u1x + h2 * u2x, by + t * ey + h1 * u1y + h2 * u2y
+		SetLine(i, x0, y0, x, y, color, thickness, sublevel)
+		x0, y0 = x, y
+	end
+	for k = n + 1, slots and #slots or 0 do
+		lines[slots[k]]:Hide()
+	end
+end
+
+-- Finishes the trail drawn so far in progress, so the next point starts a
+-- new one.
+local function EndTrail(c, thickness, sublevel)
+	if c.color and not c.tail then
+		DrawCurve(nil, false, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel)
+	end
+	c.ax, c.ay, c.bx, c.by, c.x, c.y, c.color, c.tail = nil, nil, nil, nil, nil, nil, nil, nil
+end
+
 -- Draws a session's points not drawn yet. source is the history it's from
 -- (see Sources).
 local function DrawSession(s, data, progress, source)
 	local since, before, map, w, h = source.since, source.before or math.huge, view.map, view.w, view.h
 	local color, thickness, sublevel = source.color, source.width / view.scale, source.color and -1 or 0
-	local p, lastX, lastY = data.path, progress.x, progress.y
+	-- Each segment waits for the point after it, which shapes its curve.
+	-- progress holds the last three points kept (a, b and x), the color of
+	-- the waiting segment b-x, and its lines if already drawn as an end.
+	local p, c = data.path, progress
 	for i = progress.path, #p, PATH_STRIDE do
 		local x, y
 		local t = s.start + p[i]
@@ -299,21 +368,29 @@ local function DrawSession(s, data, progress, source)
 			x, y = Project(p[i + 1], p[i + 2], p[i + 3], map)
 		end
 		if not x then
-			lastX = nil
+			EndTrail(c, thickness, sublevel)
 		else
 			x, y = x * w, y * h
-			if lastX and p[i + 5] then
-				if (x - lastX) ^ 2 + (y - lastY) ^ 2 >= view.minSegment and view.lines < MAX_LINES then
-					view.lines = view.lines + 1
-					SetLine(view.lines, lastX, lastY, x, y, color or TrailColor(p[i + 4]), thickness, sublevel)
-					lastX, lastY = x, y
+			if c.x and p[i + 5] then
+				if (x - c.x) ^ 2 + (y - c.y) ^ 2 >= view.minSegment and view.lines < MAX_LINES then
+					if c.color then
+						DrawCurve(c.tail, false, c.ax, c.ay, c.bx, c.by, c.x, c.y, x, y, c.color, thickness, sublevel)
+					end
+					c.ax, c.ay, c.bx, c.by, c.x, c.y = c.bx, c.by, c.x, c.y, x, y
+					c.color, c.tail = color or TrailColor(p[i + 4]), nil
 				end
 			else
-				lastX, lastY = x, y
+				EndTrail(c, thickness, sublevel)
+				c.x, c.y = x, y
 			end
 		end
 	end
-	progress.path, progress.x, progress.y = #p + 1, lastX, lastY
+	progress.path = #p + 1
+	-- The newest segment is drawn as an end until a point follows it.
+	if c.color and not c.tail then
+		c.tail = {}
+		DrawCurve(c.tail, true, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel)
+	end
 	if not source.jumps then
 		return
 	end
@@ -423,6 +500,7 @@ local function Redraw()
 	view.map, view.scale = drawnMap, drawnScale
 	view.w, view.h = overlay:GetSize()
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
+	view.smooth = tl.settings.smooth / 100
 	view.lines, view.dots, view.deaths = 0, 0, 0
 	view.sources = Sources()
 	view.logNext = {}
