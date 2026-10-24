@@ -36,7 +36,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, time played, reputation and XP) and Log. Reputation and time by zone show the top three (most changed factions, longest zones) here and all in `/tl stats`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
-- **Settings**: the companions' map options, Path's interval, and whether gold and XP per hour leave out AFK time (on by default).
+- **Settings**: the companions' map options, Path's trail curves and interval, and whether gold and XP per hour leave out AFK time (on by default).
 - **History**: what's in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
   - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths. Hover a session for its XP by source.
@@ -58,7 +58,7 @@ Companions add their rows to the matching section.
 | `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view, with XP by source |
 | `/tl wipe confirm` | Delete everything for this character, including its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
-`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
+`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail`, `/tl smooth` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
 
 ## Where the data is
 
