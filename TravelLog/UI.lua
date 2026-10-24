@@ -109,6 +109,7 @@ ns.AddStat("Travel", "Resting", function(st)
 	return ("%s stays, %s"):format(Count(st.rests), ns.Duration(st.restTime or 0))
 end)
 ns.AddStat("Travel", "Screenshots", function(st) return Count(st.screenshots) end)
+ns.AddStat("Travel", "Notes", function(st) return Count(st.notes) end)
 ns.AddStat("Loot", "Looted", function(st)
 	local loot = st.loot or {}
 	return ("%s items from %s sources, %s in coins"):format(Count(loot.items), Count(loot.opened), ns.MoneyText(loot.money))

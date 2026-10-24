@@ -8,6 +8,7 @@ tl.Defaults({
 	interval = 2,       -- seconds between recorded path points while moving (1-5)
 	trail = "today",    -- how far back the world map trail goes (see Range.lua)
 	altTrail = "off",   -- the same for alts' trails
+	smooth = 50,        -- how round the map trail's turns are, 0 (straight lines) to 100
 	hiddenAlts = {},    -- alts whose trail isn't shown, by "Name-Realm"
 	trailColors = {},   -- trail colors changed in the Colors tab, by how you moved: { r, g, b, a }
 	markerColors = {},  -- the same for map markers, by kind

@@ -1061,6 +1061,12 @@ function C_Item.GetItemInfo(item)
 	return link:match("%[(.-)%]"), link, it.quality or 1, it.level or 1, 1, "Junk", "Junk", 20, "", it.icon or 134400,
 		it.price or 0, 15, 0, 0, 0, nil, false, ""
 end
+-- Nil while the item isn't cached.
+function C_Item.GetItemQualityByID(item)
+	local it = M.items[tonumber(item) or LinkID(item)]
+	if not it or it.uncached then return nil end
+	return it.quality or 1
+end
 -- Actual item level, preview flag and base item level.
 function C_Item.GetDetailedItemLevelInfo(item)
 	local it = M.items[tonumber(item) or LinkID(item)]
