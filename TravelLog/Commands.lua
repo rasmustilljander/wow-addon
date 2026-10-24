@@ -303,9 +303,10 @@ local function ShowStats(arg)
 		Count(bgs.won), Count(bgs.lost), Count(bgs.draw), Count(bgs.left), Count(st.honorKills), Count(st.honor))
 	ns.Print("Guild: %s", ns.GuildText(st, key))
 	local instances = st.instances or {}
-	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, rested stays %s, %s resting, screenshots %s",
+	ns.Print("Hearths %s, teleports %s, summons %s, boat rides %s, dungeons %s, raids %s, %s inside, instance resets %s, lockouts %s, rested stays %s, %s resting, screenshots %s",
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0),
+		Count(st.instanceResets), Count(st.lockouts),
 		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots))
 	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
@@ -356,6 +357,10 @@ local function Clock(s)
 	end
 	return ("%d:%02d"):format(math.floor(s / 60), s % 60)
 end
+
+local RESET_FAILED = {
+	inside = "players still inside", offline = "players offline in your party", zoning = "players entering an instance",
+}
 
 local DEATH_CAUSE = { falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue" }
 
@@ -446,6 +451,18 @@ local DESCRIBE = {
 			text = ("%s: %d bosses killed, %d wipes"):format(text, e.kills or 0, e.wipes or 0)
 		end
 		return text
+	end,
+	instancereset = function(e)
+		if e.failed then
+			return ("Couldn't reset %s: %s"):format(e.name or "?", RESET_FAILED[e.failed] or e.failed)
+		end
+		return ("Reset %s"):format(e.name or "?")
+	end,
+	lockout = function(e)
+		local about = e.difficulty and e.kind .. ", " .. e.difficulty or e.kind or "instance"
+		local text = ("Saved to %s (%s)"):format(e.name or "?", about)
+		if e.lockout then text = ("%s, ID %s"):format(text, e.lockout) end
+		return e.resets and ("%s, resets %s"):format(text, date("%Y-%m-%d %H:%M", e.resets)) or text
 	end,
 	boss = function(e)
 		local name = e.name or (e.id and "boss " .. e.id) or "a boss"
@@ -623,7 +640,7 @@ end
 local LOG_GROUP = {
 	area = "Travel", flight = "Travel", landed = "Travel", hearth = "Travel", bind = "Travel",
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
-	instance = "Travel", instanceleave = "Travel", rest = "Travel", restleave = "Travel", screenshot = "Travel",
+	instance = "Travel", instanceleave = "Travel", instancereset = "Travel", lockout = "Travel", rest = "Travel", restleave = "Travel", screenshot = "Travel",
 	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade", guildbank = "Trade",
@@ -643,7 +660,7 @@ local LOG_LABEL = {
 	flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
-	instanceleave = "Instance left", rest = "Resting", restleave = "Resting ended", screenshot = "Screenshot", death = "Death",
+	instanceleave = "Instance left", instancereset = "Instance reset", lockout = "Lockout", rest = "Resting", restleave = "Resting ended", screenshot = "Screenshot", death = "Death",
 	release = "Spirit release", revive = "Revival", level = "Level", quest = "Quest accepted",
 	questdone = "Quest completed", questabandon = "Quest abandoned", questfail = "Quest failed", kill = "XP kill",
 	discover = "Discovery", boss = "Boss", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",

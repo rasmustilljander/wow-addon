@@ -8,6 +8,7 @@ FACTION_STANDING_INCREASED = "For %2$d reputation, %1$s likes you more."
 FACTION_STANDING_DECREASED = "For %2$d reputation, %1$s likes you less."
 ERR_GUILD_PROMOTE_SSS = "%2$s is now %3$s, promoted by %1$s."
 COMBATLOG_HONORGAIN = "For %3$d Honor, %1$s (%2$s) dies."
+INSTANCE_RESET_FAILED = "'%1$s' kann nicht zurückgesetzt werden. Es halten sich noch Spieler in der Instanz auf."
 
 M.guild = { name = "Wanderers", rank = "Member", rankIndex = 3 }
 local ns = M.Login()
@@ -74,3 +75,7 @@ M.chat("CHAT_MSG_SYSTEM", "Rasmus has fled from Bob in a duel")
 M.tick(3)
 local duel = last("duel")
 check(duel.opponent == "Bob" and duel.result == "lost" and duel.fled, "duel arguments reordered")
+
+M.chat("CHAT_MSG_SYSTEM", "'Die Todesminen' kann nicht zurückgesetzt werden. Es halten sich noch Spieler in der Instanz auf.")
+local reset = last("instancereset")
+check(reset and reset.name == "Die Todesminen" and reset.failed == "inside", "numbered reset placeholder")
