@@ -207,5 +207,5 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 - Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Vendor buys, buybacks and repairs are logged only after the bag count, buyback list or repair cost confirms them within 5 seconds. Failed clicks aren't logged; a confirmation delayed longer than that is missed.
-- Notes can't be edited or deleted. TravelLog_Share sends them with the rest of your log to the players you allow when they ask for it.
+- A note can't be edited or deleted on its own. TravelLog_Share sends them with the rest of your log to the players you allow when they ask for it.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.
