@@ -529,7 +529,9 @@ local DESCRIBE = {
 	end,
 	level = function(e)
 		local text = ("Reached level %d"):format(e.level)
-		return e.took and ("%s after %s at level %d"):format(text, ns.Duration(e.took), e.level - 1) or text
+		if e.took then text = ("%s after %s at level %d"):format(text, ns.Duration(e.took), e.level - 1) end
+		local gains = ns.LevelGains(e)
+		return gains and ("%s: %s"):format(text, gains) or text
 	end,
 	quest = function(e) return ("Accepted quest: %s"):format(e.title or e.id) end,
 	questdone = function(e) return ("Completed quest: %s"):format(e.title or e.id) end,
