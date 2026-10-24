@@ -14,6 +14,7 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | [KillXP](KillXP/) | Shows a mob's kill XP (Forever XP buffs, rested and party bonus included) and kills to level on its tooltip. |
 | [CVarBrowser](CVarBrowser/) | A window to search, bookmark and change CVars, with descriptions of well-known ones. |
 | [JunkToss](JunkToss/) | Right-click its minimap button to throw away the cheapest grey, or anything on its allowlist. |
+| [Reach](Reach/) | Warns on screen while you auto-attack or shoot and no weapon can hit your close target, like a hunter's dead zone. |
 | [ItemCount](ItemCount/) | Shows on item tooltips how many each character has in bags, bank, mail and on the AH. |
 
 ## Installing
@@ -21,7 +22,7 @@ My addons for **World of Warcraft: Forever**, one per folder.
 Copy or link the addon folders into `World of Warcraft/<forever folder>/Interface/AddOns/`. The Forever folder sits next to `_retail_` (during the beta it was `_forever_beta_`). Linking lets `git pull` update the addons; on Windows, in a command prompt:
 
 ```
-for /d %d in ("C:\path\to\wow-addon\TravelLog*" "C:\path\to\wow-addon\KillXP" "C:\path\to\wow-addon\CVarBrowser" "C:\path\to\wow-addon\JunkToss" "C:\path\to\wow-addon\ItemCount") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
+for /d %d in ("C:\path\to\wow-addon\TravelLog*" "C:\path\to\wow-addon\KillXP" "C:\path\to\wow-addon\CVarBrowser" "C:\path\to\wow-addon\JunkToss" "C:\path\to\wow-addon\ItemCount" "C:\path\to\wow-addon\Reach") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
 ```
 
 Or copy them with `./deploy.sh` (needs bash and rsync). Copy `.env.example` to `.env` and set `WOW_ADDONS_DIR` to the AddOns folder, or to `user@host:path` for another machine. `./deploy.sh` replaces every addon folder there with the repo's copy, `./deploy.sh TravelLog KillXP` only those, and `-n` first shows what would change. Other addons and SavedVariables aren't touched; linked folders are skipped.

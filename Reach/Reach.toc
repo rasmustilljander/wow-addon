@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Reach
+## Notes: Warns on screen while you auto-attack or shoot and nothing you carry can reach your target, like a hunter's dead zone.
+## Author: rasmustilljander
+## Version: 0.1.0
+## SavedVariables: ReachDB
+
+Reach.lua

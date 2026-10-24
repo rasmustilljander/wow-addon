@@ -167,6 +167,7 @@ Enum = {
 		NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10,
 		AddOnMessageLockdown = 11, TargetOffline = 12 },
 	PvPRanks = { RankNone = 0, Rank_1 = 5, Rank_14 = 18 },
+	PlayerSwingType = { MainHand = 0, OffHand = 1, Ranged = 2 },
 }
 
 --------------------------------------------------------------------------------
@@ -197,7 +198,8 @@ PLAYER_PVP_KILLS_CHANGED SCREENSHOT_STARTED SCREENSHOT_SUCCEEDED SCREENSHOT_FAIL
 UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUPTED UNIT_PET
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
-ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED]]):gmatch("%S+") do
+ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
+PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -831,6 +833,26 @@ M.spellNames = { [2366] = "Herb Gathering", [2575] = "Mining", [3365] = "Opening
 function C_Spell.GetSpellName(id) return M.spellNames[id] end
 M.spellRanks = {}
 function C_Spell.GetSpellSubtext(id) return M.spellRanks[id] end
+-- Spells being cast or queued, like auto attack (6603) while it's on.
+M.currentSpells = {}
+function C_Spell.IsCurrentSpell(id) return M.currentSpells[id] == true end
+
+-- Range to the target: M.units.target.distance in yards. CheckInteractDistance
+-- uses the client's distances (1 inspect, 2 trade, 3 duel, 4 follow, 5 pet
+-- duel). M.swingReach[Enum.PlayerSwingType] = { min, max } yards of the weapon
+-- for that swing type, nil when none is equipped.
+local interactDistances = { 28, 8, 7, 28, 7 }
+function CheckInteractDistance(unit, index)
+	local u = M.units[unit]
+	return u ~= nil and u.distance ~= nil and u.distance <= interactDistances[index]
+end
+M.swingReach = { [0] = { 0, 5 } }
+C_SwingTimer = {}
+function C_SwingTimer.IsTargetWithinSwingRange(swingType)
+	local u, reach = M.units.target, M.swingReach[swingType]
+	if not u or not u.hostile or u.dead or not u.distance or not reach then return nil end
+	return u.distance >= reach[1] and u.distance <= reach[2]
+end
 -- Skill lines as the skills frame lists them: { skillID, name, rank, isHeader,
 -- isCollapsed }. A collapsed header's skills are left out of the list.
 M.skills = {}
