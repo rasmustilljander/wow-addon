@@ -769,6 +769,20 @@ function RepopMe() end
 C_DeathInfo = {}
 function C_DeathInfo.GetSelfResurrectOptions() return M.selfRes end
 function C_DeathInfo.UseSelfResurrectOption() end
+-- The death recap: M.recap is the latest recap's hits, newest first, like
+-- { event = "SWING_DAMAGE", sourceName, sourceGUID, amount, overkill,
+-- timestamp, ... }. The game hands out a copy each call.
+C_DeathRecap = {}
+function C_DeathRecap.GetRecapEvents(recapID)
+	local out = {}
+	for i, hit in ipairs(M.recap or {}) do
+		out[i] = {}
+		for k, v in pairs(hit) do out[i][k] = v end
+	end
+	return out
+end
+function C_DeathRecap.HasRecapEvents(recapID) return M.recap ~= nil and #M.recap > 0 end
+function C_DeathRecap.GetRecapMaxHealth(recapID) return M.maxHealth or 100 end
 C_PlayerInteractionManager = {}
 function C_PlayerInteractionManager.ConfirmationInteraction() end
 function C_PlayerInteractionManager.ClearInteraction() end

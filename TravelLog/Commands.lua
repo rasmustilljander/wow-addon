@@ -98,12 +98,14 @@ function ns.RollsText(st)
 	return ("%s won, %s lost, %s passed"):format(Count((st.received or {}).roll), Count(rolls.lost), Count(rolls.passed))
 end
 
--- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning)".
+-- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning, 2 by players)".
 function ns.DeathsText(st)
 	local causes = {}
-	for _, cause in ipairs({ "falling", "drowning", "fatigue" }) do
+	for _, cause in ipairs({ "falling", "drowning", "fatigue", "fire", "lava", "slime", "player" }) do
 		local n = (st.deathCauses or {})[cause]
-		if n then causes[#causes + 1] = Count(n) .. " " .. cause end
+		if n then
+			causes[#causes + 1] = Count(n) .. " " .. (cause == "player" and (n == 1 and "by a player" or "by players") or cause)
+		end
 	end
 	local text = Count(st.deaths)
 	return #causes > 0 and ("%s (%s)"):format(text, table.concat(causes, ", ")) or text
@@ -364,7 +366,10 @@ local RESET_FAILED = {
 	inside = "players still inside", offline = "players offline in your party", zoning = "players entering an instance",
 }
 
-local DEATH_CAUSE = { falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue" }
+local DEATH_CAUSE = {
+	falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue",
+	fire = "Burned to death", lava = "Died in lava", slime = "Died in slime",
+}
 
 -- Adds what got you there, e.g. " (Teleport: Stormwind)".
 local function Via(text, e)
@@ -509,7 +514,17 @@ local DESCRIBE = {
 	note = function(e) return "Note: " .. (e.text or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"
-		if e.target then text = ("%s fighting %s"):format(text, e.target) end
+		if e.killer then
+			-- "Killed by Bob (player, Fireball, 120 damage)"
+			local about = {}
+			if e.killerType == "Player" or e.killerType == "Pet" then about[1] = e.killerType:lower() end
+			if e.spell then about[#about + 1] = e.spell end
+			if e.amount then about[#about + 1] = Count(e.amount) .. " damage" end
+			text = "Killed by " .. e.killer
+			if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
+		elseif e.target then
+			text = ("%s fighting %s"):format(text, e.target)
+		end
 		return e.level and ("%s at level %d"):format(text, e.level) or text
 	end,
 	release = function() return "Released spirit" end,
