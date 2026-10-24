@@ -107,35 +107,49 @@ TravelLogCharDB = {
 }
 ```
 
-Log entry types: `area`, `loot`, `receive`, `roll`, `buy`, `sell`, `buyback`, `repair`, `give` (trade), `send` (mail), `post` (auction), `destroy`, `guildbank`, `money`, `bankslot`, `flight`, `landed`, `hearth`, `teleport`, `summon`, `board`, `disembark`, `instance`, `instanceleave`, `rest`, `restleave`, `bind`, `screenshot`, `death`, `release`, `revive`, `level`, `quest`, `questdone`, `questabandon`, `questfail`, `kill`, `boss`, `discover`, `duel`, `battleground`, `honorkill`, `honor`, `pvprank`, `guildjoin`, `guildleave`, `guildrank`, `spell`, `skill`, `skillup`, `talent`, `talentreset`, `taxipath`, `standing`, `mount`, `tame`, `equip`, `achievement`. Fields the game doesn't reveal (coordinates in dungeons) are left empty.
-
-A `money` entry has `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`) and `balance`, plus `partner`, `sender` or `recipient` for trades and mail and `item` for an auction sale. A `bankslot` entry has `bank` (`character` or `account`), `slot` (its number in that bank) and `price`.
-
-Some types have more:
+Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`, `y`); fields the game doesn't reveal (coordinates in dungeons) are left empty. Item lists are `item` (link) and `count` pairs; prices and money are in copper. The other fields, by type:
 
 | Type | Fields |
 | --- | --- |
-| `guildbank` | `deposited` and `withdrawn`: lists of `item` (link) and `count`; `guild` |
+| `area` | `first`: `true` on your first visit to the subzone (or zone) |
+| `loot` | `source` (name), `sourceType` (`Creature`, `GameObject`, `Item`, `Fishing`, ...), `sourceID`, `via` (the spell, such as Herb Gathering or Pick Pocket), `items`, `money`; with TravelLog_Nodes, `lastHere` (when the spot was last looted) and `lastBy` (the alt who did) |
+| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll` or `received`: other); `roll` for a won roll, `sender` from mail, `partner` from a trade |
+| `buy`, `sell`, `buyback` | `item`, `count`, `price`, `vendor`; a `buy` priced in items or currency has `otherCurrency` (`true`) |
+| `repair` | `price`, `vendor`, `guildBank` (`true` when the guild paid) |
+| `give` | A trade: `items`, `partner` |
+| `send` | Mail: `items`, `recipient` |
+| `post` | An auction: `item`, `count`, `bid`, `buyout` (a commodity has only `buyout`, for the whole stack) |
+| `destroy` | `item`, `count` |
+| `guildbank` | `deposited` and `withdrawn` (item lists), `guild` |
+| `money` | `amount` (negative when spent), `reason` (`loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction`, `deposit`, `bankslot`, `bank`, `guildbank`, `barber`, `respec`, `stable` or `other`), `balance`; `partner`, `sender` or `recipient` for trades and mail, `item` for an auction sale |
+| `bankslot` | `bank` (`character` or `account`), `slot` (its number in that bank), `price` |
+| `flight` | `from`, `to` (flight points), `price`; `seconds` flown, added on landing |
+| `landed` | `from`, `to`, `seconds` of the flight; none after a reload in the air |
 | `hearth`, `teleport` | `from`, `to` (place names); `spell` and `via` (its name) when your cast did it |
 | `summon` | `from`, `to`, `by` (the summoner) |
-| `board` | none: it's stamped where the ride started |
+| `board`, `rest`, `release` | none: the stamp says where it happened |
 | `disembark` | `from`, `to`, `seconds` on board |
 | `instance` | `name`, `kind` (`dungeon`, `raid`, `battleground`, `arena` or `scenario`), `difficulty`, `size`, `id` |
 | `instanceleave` | `name`, `kind`, `seconds` inside; `kills` and `wipes` when there were any |
 | `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` the fight lasted (from the pull, when seen), `instance` |
+| `bind` | `place`: where your hearthstone is now set |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken) |
 | `quest`, `questabandon` | `id`, `title` |
-| `questdone` | `id`, `title`, `xp` and `money` (copper) it gave |
+| `questdone` | `id`, `title`, `xp` and `money` it gave |
 | `questfail` | `id`, `title`, `reason` (`time` when its timer ran out) |
 | `kill` | `name`, `xp` |
 | `discover` | `place`, `xp` |
 | `standing` | `faction`, `standing` reached |
-| `level` | `played`: seconds played in all. `took`: seconds played at the level before. |
+| `level` | `level` reached, `played` (seconds played in all), `took` (seconds played at the level before) |
 | `death` | `target`: the hostile unit you had targeted. `level`. `cause`: `drowning`, `fatigue` or `falling`, when known. |
 | `revive` | `how`: `corpse`, `spirithealer`, `player` or `selfres`, when known. `by`: who resurrected you. `spell`: the self-resurrection used (Soulstone, Reincarnation, ...). `sickness`: `true` with resurrection sickness. `took` and `ghost`: seconds since the death and since the release. `durability`: average percentage points lost on worn items since before the death. |
 | `roll` | `item`, `choice` (`need`, `offspec`, `transmog`, `greed` or `pass`), `roll` (yours; none for a pass), `winner` and `winnerRoll` (none when everyone passed). A win is a `receive` entry with `how = "roll"`. |
 | `equip` | `slot` (inventory slot, 1 head to 18 ranged), `item` (link), `ilvl`, `quality` (0 poor, 1 common, 2 uncommon, ...), `replaced` (the link it replaced). `ilvl` and `quality` are missing if the item wasn't loaded yet. |
+| `spell` | `id`, `name`, `rank`; `trainer` and `cost` when bought from a trainer |
+| `skill`, `skillup` | `id`, `name`, `rank` (skill points) |
+| `taxipath` | `npc`: the flight master |
+| `mount` | `id` (its spell), `name`, `first` (`true`: your first mount) |
 | `talent` | `name`, `id` (its spell), `tree`, `rank`, `max`, `level`; `points` when several ranks were applied at once. |
 | `talentreset` | `points` taken back, `spent` (points still spent), `level`. |
 | `tame` | `name`, `id` (creature ID), `level` and `family` of the beast; `pet`: the pet's name when it's neither; `first`: your first pet. |
