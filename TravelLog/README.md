@@ -75,10 +75,13 @@ TravelLog keeps its log and sessions until `/tl wipe confirm`. TravelLog_Path ke
 
 Before 0.3, the path and nodes lived in TravelLog's character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file.
 
+The character file's `version` is its data version (now 1; files from before it count as 1). TravelLog reads only versions it knows: a file from a newer TravelLog is left as it is, and that character records nothing (Path, Nodes and Share included) until you update. Chat, `/tl` and the addons dropdown say why.
+
 The character file:
 
 ```lua
 TravelLogCharDB = {
+  version = 1,   -- data version
   log = {   -- oldest first
     { type = "loot", time = 1760000000, zone = "Elwynn Forest", subzone = "Goldshire",
       map = 1429, x = 42.1, y = 65.3, source = "Peacebloom", sourceType = "GameObject",

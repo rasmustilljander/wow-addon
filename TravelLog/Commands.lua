@@ -731,6 +731,9 @@ SLASH_TRAVELLOG1 = "/travellog"
 SLASH_TRAVELLOG2 = "/tl"
 SlashCmdList.TRAVELLOG = function(msg)
 	if not ns.char then
+		if ns.unreadable then
+			ns.Print(ns.unreadable)
+		end
 		return
 	end
 	local command, arg = msg:lower():match("^%s*(%S*)%s*(.-)%s*$")
