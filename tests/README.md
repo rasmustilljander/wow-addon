@@ -47,7 +47,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, old stored paths, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their minimap and world map pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
-| `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
+| `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP, a newer data version left unread and untouched. |
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, its addon compartment entry, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
 | `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, the Sharing tab, a reload. |
