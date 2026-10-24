@@ -34,7 +34,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 
 ## World map
 
-Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry: what you were fighting, or your note. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry: who or what killed you, or your note. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
 
 Trails curve through the recorded points (a centripetal Catmull-Rom spline) instead of turning sharply at each one. `/tl smooth` (saved as `smooth` in TravelLog's settings) sets how round: 100 is the full spline, lower values flatten it toward straight lines. Each turn is drawn as up to 8 short lines, as few as look smooth at the current zoom; straight stretches stay single lines.
 
