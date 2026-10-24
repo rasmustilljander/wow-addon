@@ -17,6 +17,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `/tl jumps` | Jumps per zone |
 | `/tl trail <range>` | How far back your map trail goes (default `today`) |
 | `/tl trail alts <range>` | The same for alts' trails (default `off`) |
+| `/tl smooth 0-100` | How round the trail's turns are; 0 draws straight lines (default 50) |
 | `/tl interval 1-5` | Seconds between path points (default 2) |
 
 | Range | Shows |
@@ -29,11 +30,13 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `all` | Everything stored |
 | `off` | Nothing |
 
-`/tl stats` adds jumps, distance and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the interval.
+`/tl stats` adds jumps, distance and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
 
 ## World map
 
-Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups and other milestones. Hover a death marker to see its date and what you were fighting. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry: what you were fighting, or your note. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
+
+Trails curve through the recorded points (a centripetal Catmull-Rom spline) instead of turning sharply at each one. `/tl smooth` (saved as `smooth` in TravelLog's settings) sets how round: 100 is the full spline, lower values flatten it toward straight lines. Each turn is drawn as up to 8 short lines, as few as look smooth at the current zoom; straight stretches stay single lines.
 
 The colors below are the defaults. To change one, click its swatch in the TravelLog window's **Colors** tab and pick a color and opacity; the map follows as you drag. **Default** puts one back, **All defaults** all of them. They're saved in TravelLog's settings as `trailColors` and `markerColors`, `{ r, g, b, a }` by kind.
 
@@ -47,6 +50,7 @@ The colors below are the defaults. To change one, click its swatch in the Travel
 | | | teal dot | flight path found |
 | | | brown dot | reputation standing |
 | | | large white dot | first ride on a mount |
+| | | pale yellow dot | note (`/tl note`) |
 
 ## Where the data is
 
@@ -82,4 +86,5 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 
 - No path in dungeons and raids, since addons get no position there. Jumps are still recorded, without coordinates.
 - Every login loads all characters' stored paths.
+- Markers of one kind that would overlap are drawn once, so of several notes or deaths in one spot only the first can be hovered.
 - Untested in the live game; tested against a fake client ([tests](../tests/README.md)).

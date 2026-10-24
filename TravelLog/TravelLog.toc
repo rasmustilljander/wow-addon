@@ -23,3 +23,4 @@ Commands.lua
 UI.lua
 LogUI.lua
 Sessions.lua
+Tooltip.lua

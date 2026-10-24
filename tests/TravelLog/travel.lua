@@ -203,7 +203,7 @@ M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Hearths .*") end
-check(line == "Hearths 3, teleports 2, summons 3, boat rides 1, dungeons 1, raids 1, 15m inside, rested stays 0, under a minute resting, screenshots 0", "stats line: " .. tostring(line))
+check(line == "Hearths 3, teleports 2, summons 3, boat rides 1, dungeons 1, raids 1, 15m inside, rested stays 0, under a minute resting, screenshots 0, notes 0", "stats line: " .. tostring(line))
 M.out = {}
 SlashCmdList.TRAVELLOG("log 3 summon")
 check(#M.out == 4 and M.out[2]:find("Summoned from Rut'theran Village to Northshire Valley by Grimlock", 1, true), "/tl log")

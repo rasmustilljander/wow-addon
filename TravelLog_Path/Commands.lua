@@ -1,5 +1,6 @@
--- Path's part of /tl: jumps, the map trail (yours and alts'), the recording
--- interval and its lines in /tl stats, and the same in the TravelLog window.
+-- Path's part of /tl: jumps, the map trail (yours and alts') and its curves,
+-- the recording interval and its lines in /tl stats, and the same in the
+-- TravelLog window.
 local _, ns = ...
 local tl = TravelLog
 
@@ -92,6 +93,22 @@ end, function(arg)
 	end
 end)
 
+local function SetSmooth(percent)
+	tl.settings.smooth = percent
+	ns.RefreshTrail()
+end
+
+tl.Command("smooth", function()
+	return "smooth 0-100 - how round the map trail's turns are, 0 for straight lines (now: " .. tl.settings.smooth .. ")"
+end, function(arg)
+	local percent = tonumber(arg)
+	if not percent or percent < 0 or percent > 100 then
+		return false
+	end
+	SetSmooth(math.floor(percent))
+	tl.Print("map trail curves: %s%%", tl.settings.smooth)
+end)
+
 tl.Command("interval", function()
 	return "interval 1-5 - seconds between path points (now: " .. tl.settings.interval .. ")"
 end, function(arg)
@@ -115,6 +132,7 @@ tl.AddSetting("World map", "Your trail", function() return tl.settings.trail end
 tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.trail) end, function(step)
 	SetTrail(ns.StepDay(tl.settings.trail, step))
 end)
+tl.AddSetting("World map", "Trail curves (%)", function() return tl.settings.smooth end, SetSmooth, { 0, 25, 50, 75, 100 })
 tl.AddSetting("General", "Path interval (s)", function() return tl.settings.interval end, function(seconds)
 	tl.settings.interval = seconds
 end, { 1, 2, 3, 4, 5 })
