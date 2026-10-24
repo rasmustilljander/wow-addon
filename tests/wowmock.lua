@@ -199,7 +199,7 @@ UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUP
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
 ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
-PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL]]):gmatch("%S+") do
+PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -673,6 +673,34 @@ function C_SummonInfo.ConfirmSummon() M.summon = nil end
 function C_SummonInfo.CancelSummon() M.summon = nil end
 C_UnitAuras = {}
 function C_UnitAuras.GetPlayerAuraBySpellID(spellID) return M.auras[spellID] end
+-- Gaining, refreshing and losing a player aura, with UNIT_AURA's incremental
+-- updateInfo as the client sends it. fields are AuraData fields (name,
+-- duration, sourceUnit, ...); an aura already on you is replaced.
+M.lastAuraInstance = 0
+function M.gainAura(spellID, fields)
+	local aura = fields or {}
+	M.lastAuraInstance = M.lastAuraInstance + 1
+	aura.spellId, aura.auraInstanceID, aura.isHelpful = spellID, M.lastAuraInstance, true
+	aura.name = aura.name or M.spellNames[spellID]
+	aura.duration = aura.duration or 0
+	aura.expirationTime = aura.duration > 0 and GetTime() + aura.duration or 0
+	aura.applications = aura.applications or 0
+	local old = M.auras[spellID]
+	M.auras[spellID] = aura
+	M.fire("UNIT_AURA", "player", { isFullUpdate = false, addedAuras = { aura },
+		removedAuraInstanceIDs = old and old.auraInstanceID and { old.auraInstanceID } or nil })
+	return aura
+end
+function M.refreshAura(spellID)
+	local aura = M.auras[spellID]
+	aura.expirationTime = aura.duration > 0 and GetTime() + aura.duration or 0
+	M.fire("UNIT_AURA", "player", { isFullUpdate = false, updatedAuraInstanceIDs = { aura.auraInstanceID } })
+end
+function M.loseAura(spellID)
+	local aura = M.auras[spellID]
+	M.auras[spellID] = nil
+	M.fire("UNIT_AURA", "player", { isFullUpdate = false, removedAuraInstanceIDs = { aura.auraInstanceID } })
+end
 -- M.group lists the other members' units ("party1", ...), set in M.units.
 function GetNumGroupMembers() return #M.group > 0 and #M.group + 1 or 0 end
 function IsInRaid() return M.raid end
@@ -1569,6 +1597,7 @@ function M.Login()
 	end
 	M.fire("PLAYER_LOGIN")
 	M.fire("PLAYER_ENTERING_WORLD", true, false)
+	M.fire("UNIT_AURA", "player", { isFullUpdate = true })
 	-- The addon compartment (the minimap's addons dropdown) lists the addons
 	-- whose .toc names an AddonCompartmentFunc. Clicking an entry calls that
 	-- global with the addon's name and the mouse button.

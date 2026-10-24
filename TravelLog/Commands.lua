@@ -312,6 +312,7 @@ local function ShowStats(arg)
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
+	ns.Print("World buffs: %s", Count(st.worldBuffs))
 	ns.Print("Reputation: %s", ns.ReputationText(st))
 
 	-- Companion addons add their own lines here, for these totals and this
@@ -600,6 +601,13 @@ local DESCRIBE = {
 		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
 		return e.reward and ("%s; %s"):format(text, e.reward) or text
 	end,
+	worldbuff = function(e)
+		local text = "Gained " .. (e.name or e.id or "a world buff")
+		local about = {}
+		if e.duration then about[#about + 1] = ns.Duration(e.duration) end
+		if e.by then about[#about + 1] = "from " .. e.by end
+		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
+	end,
 	equip = function(e)
 		local slot = SLOT_NAMES[e.slot] or "slot " .. tostring(e.slot)
 		local text = ("Equipped %s (%s%s)"):format(e.item or "?", slot, e.ilvl and ", item level " .. e.ilvl or "")
@@ -630,7 +638,7 @@ local LOG_GROUP = {
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
-	guildjoin = "Life", guildleave = "Life", guildrank = "Life",
+	guildjoin = "Life", guildleave = "Life", guildrank = "Life", worldbuff = "Life",
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
@@ -649,7 +657,7 @@ local LOG_LABEL = {
 	discover = "Discovery", boss = "Boss", duel = "Duel", honorkill = "Honorable kill", honor = "Honor", pvprank = "PvP rank",
 	battleground = "Battleground",
 	guildjoin = "Guild joined", guildleave = "Guild left", guildrank = "Guild rank",
-	spell = "Spell",
+	worldbuff = "World buff", spell = "Spell",
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", tame = "Pet tamed", equip = "Gear", achievement = "Legacy Challenge",
