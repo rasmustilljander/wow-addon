@@ -1134,7 +1134,12 @@ function GetNumLootItems() return #M.loot end
 function GetLootSlotInfo(i) local s = M.loot[i]; return 133784, s.name, s.qty end
 function GetLootSlotLink(i) return M.loot[i].link end
 function GetLootSlotType(i) return M.loot[i].type or 1 end
-function GetLootSourceInfo(i) return M.loot[i].guid, M.loot[i].qty end
+-- A slot can come from several corpses: sources = { guid, qty, guid, qty, ... }.
+function GetLootSourceInfo(i)
+	local s = M.loot[i]
+	if s.sources then return unpack(s.sources) end
+	return s.guid, s.qty
+end
 function IsFishingLoot() return M.fishing or false end
 
 -- Group loot rolls. M.lootDrops[encounterID][lootListKey] is the drop's

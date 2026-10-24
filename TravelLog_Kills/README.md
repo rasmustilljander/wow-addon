@@ -1,6 +1,6 @@
 # TravelLog Kills
 
-Records every mob you kill in WoW: Forever: how often, when and where. A companion to [TravelLog](../TravelLog/) that also works on its own.
+Records every mob you kill in WoW: Forever: how often, when, where and what it dropped. A companion to [TravelLog](../TravelLog/) that also works on its own.
 
 ## What it records
 
@@ -14,7 +14,19 @@ A kill counts when you, your pet or a party member lands the killing blow, XP or
 | **XP** | The experience gained, if any. |
 | **Who** | The party member who landed the blow, if not you. Your pet's kills are yours. |
 
-Tooltips of mobs you've killed show `Killed 54 times, last 2h ago`.
+## Drops
+
+Every corpse you loot is counted for its mob, with the items in it, taken or not. A mob's tooltip shows the kill count and its 5 most frequent drops, with how many of its looted corpses held each and the average stack when it's over one:
+
+```
+Kobold Worker
+Killed 54 times, last 2h ago
+Looted 40 times, drops:
+  Linen Cloth       30% x1.5
+  Large Candle      25%
+```
+
+Coins count a corpse as looted but aren't listed. Pickpocketing, chests, fishing and skinning aren't drops.
 
 ## World map
 
@@ -31,7 +43,7 @@ The window's Totals tab also shows your total and most-killed mob, and Settings 
 | Command | |
 | --- | --- |
 | `/kills [n]` | Total kills and your n most-killed mobs (default 10) |
-| `/kills <name>` | One mob: count, first and last kill, top places, total XP and the last 10 kills. Partial names work; several matches are listed. |
+| `/kills <name>` | One mob: count, first and last kill, top places, total XP, its 10 most frequent drops and the last 10 kills. Partial names work; several matches are listed. |
 | `/kills target` | The same for your target |
 | `/kills recent [n]` | Your last n kills (default 15) |
 | `/kills window` | Open the [Kills view](#window) (needs TravelLog) |
@@ -45,6 +57,7 @@ TravelLog Kills Kobold Worker: killed 54 times.
   First 2026-10-12 14:03, last 2026-10-19 09:12 (2h 5m ago)
   Where: Elwynn Forest / Fargodeep Mine (41), Elwynn Forest / Jasperlode Mine (13)
   2,310 xp in total, 3 finished by party members
+  Drops (looted 40 times): [Linen Cloth] 30% x1.5, [Large Candle] 25%, ...
   Last 10:
     10-19 09:12  Elwynn Forest / Fargodeep Mine (39.8, 81.2) +42 xp
     ...
@@ -73,6 +86,10 @@ TravelLogKillsDB = {
       first = 1760000000, last = 1760600000,
       kills = { "1760000000,1429,39.80,81.20,2,42", ... } },   -- oldest first
   },
+  drops = {
+    ["Kobold Worker"] = { looted = 40, items = { [2589] = { 12, 18 } } },   -- item ID = { corpses, count }
+  },
+  items = { [2589] = "|cffffffff|Hitem:2589::...|h[Linen Cloth]|h|r" },   -- the first link seen
 }
 ```
 
@@ -83,4 +100,5 @@ Each kill is one string, `time, uiMapID, x, y, place, xp, killed by`, with trail
 - Kills by anyone outside your party (another player, a guard) aren't counted.
 - In dungeons and raids the client can hide mob identities and coordinates. A kill there is recorded without coordinates if its XP line names it, and not at all if nothing names it. TravelLog logs boss kills and wipes there as `boss` entries.
 - When several unnamed mobs die at once, their XP lines are matched to them in order.
+- Drops are grouped by the corpse's name like kills, and need its GUID: where the client hides it, only a dead target or mouseover gives one. A corpse is counted once per session, so one reopened after a `/reload` counts again, and skinning a corpse someone else looted counts its leather as a drop.
 - Untested in the live game; written against the Forever 1.60.1 API documentation and tested against a fake client ([tests](../tests/README.md)).
