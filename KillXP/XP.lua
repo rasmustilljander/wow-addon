@@ -185,8 +185,10 @@ ns.InDungeon = InDungeon
 
 -- Solo XP (before rested) for a kill: what we've seen it give, or the
 -- Classic formula's guess. The second return is true for a guess.
+local db -- KillXPDB once loaded, if its version can be read
+
 function ns.SoloXP(level, mobLevel, elite, dungeon)
-	local seen = KillXPDB and KillXPDB.seen[Key(level, mobLevel, elite, dungeon)]
+	local seen = db and db.seen[Key(level, mobLevel, elite, dungeon)]
 	if seen then
 		return seen, false
 	end
@@ -254,7 +256,7 @@ local function OnKill(text)
 	text = ns.Clean(text)
 	-- In a group the kill is split and boosted, so it says nothing certain
 	-- about the solo value.
-	if not text or GetNumGroupMembers() > 0 then
+	if not db or not text or GetNumGroupMembers() > 0 then
 		return
 	end
 	local name, xp = ns.ParseKill(text)
@@ -273,19 +275,62 @@ local function OnKill(text)
 	end
 	-- Save an unbuffed value so food or sleeping-bag buffs can come and go
 	-- without making the learned number stale.
-	KillXPDB.seen[Key(UnitLevel("player"), mob.level, mob.elite, InDungeon())] = RemoveXPBonus(xp, ns.XPBonus())
+	db.seen[Key(UnitLevel("player"), mob.level, mob.elite, InDungeon())] = RemoveXPBonus(xp, ns.XPBonus())
+end
+
+--------------------------------------------------------------------------------
+-- Saved data
+--------------------------------------------------------------------------------
+
+-- The layout of KillXPDB, saved in it as `version`: a new file gets this one.
+-- Bump it when older KillXPs would misread what the new one writes, then
+-- list the old version in COMPATIBLE or add a CONVERT step for it.
+ns.DATA_VERSION = 1
+
+-- Versions this KillXP reads and writes as they are.
+local COMPATIBLE = { [1] = true }
+
+-- CONVERT[n](db) rewrites a version n file as version n + 1. None yet.
+local CONVERT = {}
+
+-- Set when KillXPDB can't be read, saying why.
+local unreadable
+
+-- Brings the saved data to DATA_VERSION. Returns false, leaving it as it is,
+-- when this KillXP can't read its version (a newer one's).
+local function Upgrade(t)
+	local version = t.version or ns.DATA_VERSION -- a new file
+	local step = version
+	while not COMPATIBLE[step] do
+		if type(step) ~= "number" or not CONVERT[step] then
+			return false
+		end
+		step = step + 1
+	end
+	while not COMPATIBLE[version] do
+		CONVERT[version](t)
+		version = version + 1
+	end
+	t.version = ns.DATA_VERSION
+	return true
+end
+
+local function Load()
+	KillXPDB = KillXPDB or {}
+	if not Upgrade(KillXPDB) then
+		-- Nothing is learned, so the file is saved back untouched.
+		unreadable = ("Saved data is data version %s, which this KillXP (data version %d) can't read. Update KillXP: until then it only estimates and keeps the file as it is.")
+			:format(tostring(KillXPDB.version), ns.DATA_VERSION)
+		ns.Print(unreadable)
+		return
+	end
+	KillXPDB.seen = KillXPDB.seen or {}
+	db = KillXPDB
 end
 
 frame:SetScript("OnEvent", function(_, event, arg)
 	if event == "ADDON_LOADED" and arg == "KillXP" then
-		KillXPDB = KillXPDB or {}
-		-- Version 1 learned the buffed result, without remembering which buffs
-		-- were active. Those values cannot be normalized safely.
-		if KillXPDB.version ~= 2 then
-			KillXPDB.seen = {}
-		end
-		KillXPDB.version = 2
-		KillXPDB.seen = KillXPDB.seen or {}
+		Load()
 	elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
 		OnKill(arg)
 	elseif event == "PLAYER_TARGET_CHANGED" then
@@ -298,12 +343,14 @@ frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 
 SLASH_KILLXP1 = "/killxp"
 SlashCmdList.KILLXP = function(msg)
-	if msg:match("^%s*reset%s*$") then
-		wipe(KillXPDB.seen)
+	if not db then
+		ns.Print(unreadable)
+	elseif msg:match("^%s*reset%s*$") then
+		wipe(db.seen)
 		ns.Print("Forgot the XP seen from kills; back to estimates.")
 	else
 		local n = 0
-		for _ in pairs(KillXPDB.seen) do
+		for _ in pairs(db.seen) do
 			n = n + 1
 		end
 		ns.Print("Knows the real XP for %d mob level%s. |cffffffff/killxp reset|r forgets them.", n, n == 1 and "" or "s")

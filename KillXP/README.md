@@ -25,7 +25,7 @@ Gray mobs show `none (too low)`, mobs tagged by others `none (tapped by others)`
 
 Each **solo** kill of a mob KillXP saw in the last minute replaces the estimate with the XP you actually got minus rested and active percentage bonuses, remembered per your level, mob level, elite and dungeon, and shown without `~` after that. The current buffs are added when the tooltip is shown. Learned values are shared by all your characters. Group kills aren't learned, so group numbers stay estimates that assume everyone is alive and nearby.
 
-`WTF/Account/<ACCOUNT>/SavedVariables/KillXP.lua` stores `KillXPDB = { version = 2, seen = { ... } }`. Version 1 learned values are cleared once because their active XP buffs were not recorded.
+`WTF/Account/<ACCOUNT>/SavedVariables/KillXP.lua` stores `KillXPDB = { version = 1, seen = { ... } }`, `version` being its data version. KillXP reads only versions it knows: with a newer one (from a newer KillXP) it says so in chat and on `/killxp`, only estimates, and leaves the file as it is.
 
 ## Commands
 

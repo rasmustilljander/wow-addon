@@ -75,7 +75,7 @@ TravelLog keeps its log and sessions until `/tl wipe confirm`. TravelLog_Path ke
 
 Before 0.3, the path and nodes lived in TravelLog's character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file.
 
-The character file's `version` is its data version (now 1; files from before it count as 1). TravelLog reads only versions it knows: a file from a newer TravelLog is left as it is, and that character records nothing (Path, Nodes and Share included) until you update. Chat, `/tl` and the addons dropdown say why.
+Both files save `version`, TravelLog's data version (now 1). TravelLog reads only versions it knows. A file from a newer TravelLog is left as it is and nothing is recorded (Path, Nodes and Share included): for that character, or with the account file, for all of them. Chat, `/tl` and the addons dropdown say why.
 
 The character file:
 

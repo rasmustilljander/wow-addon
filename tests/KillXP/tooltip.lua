@@ -1,12 +1,9 @@
 -- KillXP: the tooltip's XP and kills-to-level lines, rested and party
--- bonuses, and learning the real XP from kills.
+-- bonuses, learning the real XP from kills, and its data version.
 M.installed = { "KillXP" }
 M.level, M.xp, M.xpMax = 10, 7000, 7600   -- 600 XP to level 11
--- Old learned values included whatever XP buffs happened to be active and
--- cannot be migrated safely.
-M.saved.KillXP = 'KillXPDB = { seen = { ["10:8"] = 999 } }\n'
 local ns = M.Login()
-check(KillXPDB.version == 2 and next(KillXPDB.seen) == nil, "old learned values migrated")
+check(KillXPDB.version == 1 and ns.DATA_VERSION == 1 and next(KillXPDB.seen) == nil, "a new file gets data version 1")
 
 local function Line(lines, label)
 	for _, line in ipairs(lines) do
@@ -172,3 +169,18 @@ check(Line(Mob(55, { classification = "elite" }), "Kill XP") == "~640", "level 5
 check(Line(Mob(55, { classification = "elite" }), "Kills to level") == "~469", "kills at 55")
 M.xpMax = 3000000
 check(Line(Mob(55, { classification = "elite" }), "Kills to level") == "~4,688", "thousands separator")
+
+-- Saved data of a data version this KillXP doesn't know (a newer one's)
+-- isn't read: tooltips show estimates, nothing is learned, the file is kept.
+M.Logout()
+M.saved.KillXP = 'KillXPDB = { ["version"] = 2, ["seen"] = { ["55:55e"] = 999 } }\n'
+M.out = {}
+ns = M.Login()
+check(M.out[#M.out] and M.out[#M.out]:find("data version 2"), "a newer data version isn't read, and chat says so")
+check(Line(Mob(55, { classification = "elite" }), "Kill XP") == "~640", "estimates only")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 700 experience.")
+check(KillXPDB.seen["55:55e"] == 999 and Line(Mob(55, { classification = "elite" }), "Kill XP") == "~640", "nothing learned")
+SlashCmdList.KILLXP("reset")
+check(M.out[#M.out]:find("data version 2") and KillXPDB.seen["55:55e"] == 999, "/killxp says why and resets nothing")
+M.Logout()
+check(M.saved.KillXP:find('%["version"%] = 2') and M.saved.KillXP:find("999"), "the file is saved back as it was")

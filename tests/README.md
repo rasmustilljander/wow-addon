@@ -38,7 +38,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog/progress.lua` | Spells from a trainer (with cost) and chat, new skills and milestones, a flight path, a reputation standing, mounts, their map markers and Totals row, a reload. |
 | `TravelLog/pets.lua` | Taming: a beast tamed (the first marked), channels cut short or interrupted, pets called or dismissed or turning up late, other channels, a secret name, History, `/tl log`, `/tl stats`, the Totals row, a reload. |
 | `TravelLog/talents.lua` | Talent points: existing ones remembered, each applied point (staged ones wait), several ranks at once, a respec and a full reset, the second spec, a secret name, History, `/tl log`, `/tl stats`, the Totals row, a reload. |
-| `TravelLog/storage.lua` | Per-character files, migrations, old history kept in place, TravelLog alone (History with only Events and Sessions), moving old path and nodes into the companions, data versions (a newer one left unread and untouched). |
+| `TravelLog/storage.lua` | Per-character files, data versions of both files (a newer one left unread and untouched), old history kept in place, TravelLog alone (History with only Events and Sessions), moving old path and nodes into the companions. |
 | `TravelLog/money.lua` | Money reasons: bank slots (with their entry), the account and guild banks, the barber, talent resets, stable slots, auction deposits and sales, COD; `/tl log`, `/tl stats`, a reload. |
 | `TravelLog/sessions.lua` | Where each session starts and ends (a zone unknown at login too), experience gained per session (across a level-up), money, time AFK and per-hour rates with and without it (the setting), what happened in each, `/tl sessions`, the Sessions view, a reload while AFK. |
 | `TravelLog/experience.lua` | XP by source: counted once from a character's saved sessions (its old kill counter dropped), then as it happens; other, `/tl stats`, `/tl sessions`, the Totals row, the Sessions view's tooltip, a reload, an alt and all added up. |
@@ -47,7 +47,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, old stored paths, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their minimap and world map pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
-| `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP. |
+| `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP, a newer data version left unread and untouched. |
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, its addon compartment entry, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
 | `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, the Sharing tab, a reload. |
