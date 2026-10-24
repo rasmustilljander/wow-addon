@@ -15,6 +15,7 @@ Vendor.lua
 Outgoing.lua
 Money.lua
 Life.lua
+WorldBuffs.lua
 PvP.lua
 Guild.lua
 Progress.lua
