@@ -648,6 +648,15 @@ function RequestTimePlayed()
 	M.playedAsks = M.playedAsks + 1
 	C_Timer.After(1, function() M.fire("TIME_PLAYED_MSG", M.played, M.playedLevel) end)
 end
+-- Screenshot: SCREENSHOT_STARTED as the picture is taken, then
+-- SCREENSHOT_SUCCEEDED once it's saved a second later (FAILED when
+-- M.screenshotFails). M.screenshots counts the calls.
+M.screenshots = 0
+function Screenshot()
+	M.screenshots = M.screenshots + 1
+	M.fire("SCREENSHOT_STARTED")
+	C_Timer.After(1, function() M.fire(M.screenshotFails and "SCREENSHOT_FAILED" or "SCREENSHOT_SUCCEEDED") end)
+end
 function UnitXPMax() return M.xpMax end
 function GetXPExhaustion() return M.rested end
 function IsResting() return M.resting == true end
