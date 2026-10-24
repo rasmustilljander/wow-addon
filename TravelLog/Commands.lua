@@ -134,6 +134,33 @@ function ns.ChallengesText(st)
 	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
 end
 
+-- Time logged in per zone, longest first: "Elwynn Forest 3h 12m, Westfall
+-- 45m". With most, only that many zones and how many more.
+function ns.ZoneTimeText(st, most)
+	local list = {}
+	for zone, seconds in pairs(st.zoneTime or {}) do
+		list[#list + 1] = { zone = zone, seconds = seconds }
+	end
+	if #list == 0 then
+		return "none"
+	end
+	table.sort(list, function(a, b)
+		if a.seconds ~= b.seconds then
+			return a.seconds > b.seconds
+		end
+		return a.zone < b.zone
+	end)
+	local parts = {}
+	for i, z in ipairs(list) do
+		if most and i > most then
+			parts[#parts + 1] = ("%d more"):format(#list - most)
+			break
+		end
+		parts[i] = ("%s %s"):format(z.zone, ns.Duration(z.seconds))
+	end
+	return table.concat(parts, ", ")
+end
+
 -- Reputation gained and lost per faction, most changed first: "Stormwind
 -- +800, Booty Bay +200 -600". With most, only that many factions and how
 -- many more.
@@ -280,6 +307,7 @@ local function ShowStats(arg)
 		Count(st.hearths), Count(st.teleports), Count(st.summons), Count(st.boats),
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0),
 		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots))
+	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
 	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
 		Count(st.tames), Count(st.gear))

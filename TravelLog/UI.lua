@@ -93,6 +93,7 @@ end
 local Count = ns.Count
 
 ns.AddStat("Travel", "Places visited", function(st) return Count(ns.PlacesVisited(st)) end)
+ns.AddStat("Travel", "Time by zone", function(st) return ns.ZoneTimeText(st, 3) end)
 ns.AddStat("Travel", "Flights", function(st) return Count(st.flights) end)
 ns.AddStat("Travel", "Flight paths", function(st) return Count(st.flightPaths) end)
 ns.AddStat("Travel", "Teleports", function(st)
