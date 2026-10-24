@@ -48,6 +48,17 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 
 Companions add their rows to the matching section.
 
+## Item tooltips
+
+A rare, epic or better item's tooltip says when, where and how you first got it, and how often when it's more than once:
+
+```
+First looted 2026-10-02 from Defias Thug, Westfall
+Got 3 times
+```
+
+It counts items looted, received (roll wins, quest rewards, crafts, mail, trades) and bought.
+
 ## Commands
 
 | Command | |
@@ -200,6 +211,7 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 - How you came back is known when you chose it in the game's dialogs (resurrection, spirit healer, soulstone and the like, corpse) in the 30 s before. Battleground spirit healers aren't. A resurrection names the player but not the spell.
 - Durability lost needs a reading from before the death, so a revival after a reload while dead has none.
 - Lost and passed rolls come from the group loot history. A roll is logged only if TravelLog saw it undecided, so one decided while you were reloading is missed.
+- Item tooltips read only the log of the character you're on, so they don't show what your alts got. They match by item ID, so an item with another random enchantment counts as the same one. Buybacks and guild bank withdrawals don't count.
 - Items used up (potions, food, reagents) aren't recorded: no event says an item was consumed.
 - Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
 - Destroyed items are recorded only when picked up from your bags or gear first, so a gamepad delete isn't.
