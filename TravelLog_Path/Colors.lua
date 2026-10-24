@@ -4,7 +4,7 @@
 local _, ns = ...
 local tl = TravelLog
 
-local HEIGHT = 230
+local HEIGHT = 254
 local ROW_HEIGHT = 24
 local LABEL_WIDTH = 112
 local COLUMN_WIDTH = 210
@@ -17,7 +17,7 @@ local COLUMNS = {
 	{ title = "Markers", saved = "markerColors", defaults = ns.MARKER_COLORS, x = 240, rows = {
 		{ "jump", "Jump" }, { "loot", "Loot" }, { "death", "Death" }, { "level", "Level-up" },
 		{ "learned", "Learned" }, { "taxipath", "New flight path" }, { "standing", "Reputation" },
-		{ "mount", "First ride" },
+		{ "mount", "First ride" }, { "note", "Note" },
 	} },
 }
 
