@@ -1,6 +1,7 @@
 -- Draws your recorded path on the world map, with markers for jumps, and for
--- loot, deaths, level-ups and other milestones from TravelLog's log, and your
--- alts' paths in their class color. "/tl trail" picks how far back each shows.
+-- loot, deaths, level-ups, notes and other milestones from TravelLog's log,
+-- and your alts' paths in their class color. "/tl trail" picks how far back
+-- each shows.
 local _, ns = ...
 local tl = TravelLog
 
@@ -32,16 +33,20 @@ ns.MARKER_COLORS = {
 	taxipath = { 0, 0.75, 0.65, 1 },
 	standing = { 0.65, 0.45, 0.25, 1 },
 	mount = { 1, 1, 1, 1 },
+	note = { 1, 1, 0.6, 1 },
 }
 
 -- Marker sizes (screen pixels).
-local MARKER_SIZES = { jump = 3, loot = 5, death = 9, level = 9, learned = 7, taxipath = 7, standing = 7, mount = 9 }
+local MARKER_SIZES = { jump = 3, loot = 5, death = 9, level = 9, learned = 7, taxipath = 7, standing = 7, mount = 9, note = 9 }
 
 -- Log entry types drawn with another type's marker.
 local MARKER_OF = { spell = "learned", skill = "learned", skillup = "learned" }
 
+-- Markers that show their entry when hovered.
+local HOVERED = { death = true, note = true }
+
 local overlay
-local lines, dots, deathPins = {}, {}, {}
+local lines, dots, pins = {}, {}, {}
 local drawnMap, drawnScale, drawnVersion, drawnRange, drawnAt = nil, nil, nil, nil, 0
 
 -- A stable key until a rolling range needs its cutoff recomputed. Calendar
@@ -225,10 +230,10 @@ local function SetDot(i, x, y, color, size)
 	dot:Show()
 end
 
-local function DeathTooltip(pin)
+local function PinTooltip(pin)
 	local e = pin.event
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-	GameTooltip:AddLine("Death")
+	GameTooltip:AddLine(tl.LogTypeLabel(e))
 	GameTooltip:AddLine(date("%Y-%m-%d %H:%M", e.time), 1, 1, 1)
 	GameTooltip:AddLine(tl.Describe(e), 1, 1, 1)
 	GameTooltip:Show()
@@ -238,17 +243,17 @@ local function HideTooltip()
 	GameTooltip:Hide()
 end
 
--- An invisible, click-through frame over a death dot makes just that marker
--- hoverable without changing how the trail and its textures are drawn.
-local function SetDeathPin(i, e, x, y, size)
-	local pin = deathPins[i]
+-- An invisible, click-through frame over a death or note dot makes just that
+-- marker hoverable without changing how the trail and its textures are drawn.
+local function SetPin(i, e, x, y, size)
+	local pin = pins[i]
 	if not pin then
 		pin = CreateFrame("Frame", nil, overlay)
 		pin:EnableMouse(true)
 		pin:SetMouseClickEnabled(false)
-		pin:SetScript("OnEnter", DeathTooltip)
+		pin:SetScript("OnEnter", PinTooltip)
 		pin:SetScript("OnLeave", HideTooltip)
-		deathPins[i] = pin
+		pins[i] = pin
 	end
 	pin.event = e
 	pin:SetSize(size, size)
@@ -280,9 +285,9 @@ local function Dot(x, y, kind, event)
 	view.cells[cell] = true
 	view.dots = view.dots + 1
 	SetDot(view.dots, x, y, tl.settings.markerColors[kind] or ns.MARKER_COLORS[kind], size)
-	if kind == "death" then
-		view.deaths = view.deaths + 1
-		SetDeathPin(view.deaths, event, x, y, size)
+	if HOVERED[kind] then
+		view.pins = view.pins + 1
+		SetPin(view.pins, event, x, y, size)
 	end
 end
 
@@ -423,7 +428,7 @@ local function Redraw()
 	view.map, view.scale = drawnMap, drawnScale
 	view.w, view.h = overlay:GetSize()
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
-	view.lines, view.dots, view.deaths = 0, 0, 0
+	view.lines, view.dots, view.pins = 0, 0, 0
 	view.sources = Sources()
 	view.logNext = {}
 	wipe(view.progress)
@@ -444,7 +449,7 @@ local function Redraw()
 	DrawNew()
 	HideFrom(lines, view.lines + 1)
 	HideFrom(dots, view.dots + 1)
-	HideFrom(deathPins, view.deaths + 1)
+	HideFrom(pins, view.pins + 1)
 end
 
 local function OnUpdate()

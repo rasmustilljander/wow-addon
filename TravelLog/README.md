@@ -25,7 +25,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
-| **Travel** | Zone and subzone changes (first visits marked), time logged in per zone (totals only), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log). |
+| **Travel** | Zone and subzone changes (first visits marked), time logged in per zone (totals only), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log), and notes you add with `/tl note`. |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, the experience gained and time AFK. |
@@ -38,7 +38,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, time played, reputation and XP) and Log. Reputation and time by zone show the top three (most changed factions, longest zones) here and all in `/tl stats`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options, Path's interval, and whether gold and XP per hour leave out AFK time (on by default).
 - **History**: what's in the character file, newest first, in views:
-  - **Events**: every event. Filter by Travel, Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, or `level` for each level-up and how long it took.
+  - **Events**: every event. Filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, `level` for each level-up and how long it took, or `note` for your notes.
   - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths. Hover a session for its XP by source.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window): every mob you've killed and where.
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
@@ -55,6 +55,7 @@ Companions add their rows to the matching section.
 | `/tl` | Open or close the window |
 | `/tl stats [all\|name]` | Totals (and time played) for this character, all of them added up, or another by `Name` or `Name-Realm` |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
+| `/tl note <text>` | Add a note to the log, stamped with the time and place |
 | `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view, with XP by source |
 | `/tl wipe confirm` | Delete everything for this character, including its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
@@ -134,6 +135,7 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 | `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` the fight lasted (from the pull, when seen), `instance` |
 | `bind` | `place`: where your hearthstone is now set |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
+| `note` | `text`: what you typed |
 | `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken) |
 | `quest`, `questabandon` | `id`, `title` |
 | `questdone` | `id`, `title`, `xp` and `money` it gave |
@@ -205,4 +207,5 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 - Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Vendor buys, buybacks and repairs are logged only after the bag count, buyback list or repair cost confirms them within 5 seconds. Failed clicks aren't logged; a confirmation delayed longer than that is missed.
+- Notes can't be edited or deleted. TravelLog_Share sends them with the rest of your log to the players you allow when they ask for it.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.
