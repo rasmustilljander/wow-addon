@@ -12,9 +12,9 @@ ns.On("PLAYER_LOGIN", function()
 	state = UnitIsGhost("player") and "ghost" or UnitIsDead("player") and "dead" or "alive"
 end)
 
--- What killed you, when it wasn't (only) a mob: drowning and fatigue from
--- the breath and fatigue bars, falling from a long fall just before. There's
--- no combat log for addons, so lava, fire and slime can't be told.
+-- What killed you, when the death recap doesn't say (see Recap below):
+-- drowning and fatigue from the breath and fatigue bars, falling from a long
+-- fall just before.
 
 -- The breath and fatigue bars by the client's timer name: { scale, ends =
 -- GetTime() it runs out while draining, stopped = GetTime() it went away }.
@@ -125,6 +125,107 @@ local function DurabilityLost(before)
 	return lost > 0 and lost or nil
 end
 
+-- The death recap (what the game's own Death Recap window shows): its hits
+-- are newest first, and the first one killed you. Blizzard's window reads
+-- event, spellName, spellId, sourceName, hideCaster, amount, overkill,
+-- environmentalType and timestamp; it doesn't read sourceGUID, so that one
+-- is optional.
+local ENVIRONMENT = { DROWNING = "drowning", FALLING = "falling", FATIGUE = "fatigue", FIRE = "fire", LAVA = "lava", SLIME = "slime" }
+local GUID_KINDS = { Creature = "Creature", Vehicle = "Creature", Player = "Player", Pet = "Pet" }
+local usedRecap -- the killing blow's timestamp in the last recap seen, so it isn't used again
+
+local function Field(hit, key, kind)
+	local value = ns.Clean(hit[key])
+	return type(value) == kind and value or nil
+end
+
+-- The latest recap's killing blow and its timestamp.
+local function KillingBlow()
+	if not (C_DeathRecap and C_DeathRecap.GetRecapEvents) then
+		return
+	end
+	local ok, hits = pcall(C_DeathRecap.GetRecapEvents)
+	hits = ok and ns.Clean(hits)
+	local hit = type(hits) == "table" and ns.Clean(hits[1])
+	if type(hit) == "table" then
+		return hit, Field(hit, "timestamp", "number")
+	end
+end
+
+-- A recap there at login is from an earlier death.
+ns.On("PLAYER_LOGIN", function()
+	local ok, _, stamp = pcall(KillingBlow)
+	usedRecap = ok and stamp or nil
+end)
+
+-- What killed you, from a recap not used before: { killer, killerType,
+-- killerID, spell, spellID, amount, overkill, cause }.
+local function ReadRecap()
+	local hit, stamp = KillingBlow()
+	if not hit or stamp and stamp == usedRecap then
+		return
+	end
+	usedRecap = stamp
+	local event = Field(hit, "event", "string") or ""
+	local found = {}
+	if event == "ENVIRONMENTAL_DAMAGE" then
+		local env = Field(hit, "environmentalType", "string")
+		found.cause = env and (ENVIRONMENT[env:upper()] or env:lower())
+	else
+		if not ns.Clean(hit.hideCaster) then
+			local name = Field(hit, "sourceName", "string")
+			found.killer = name ~= "" and name or nil
+			local kind, id = ns.ParseGUID(Field(hit, "sourceGUID", "string"))
+			found.killerType = GUID_KINDS[kind]
+			found.killerID = found.killerType == "Creature" and id or nil
+		end
+		if event:sub(1, 5) == "SPELL" or event == "RANGE_DAMAGE" then
+			found.spell = Field(hit, "spellName", "string")
+			found.spellID = Field(hit, "spellId", "number")
+		end
+	end
+	found.amount = Field(hit, "amount", "number")
+	local overkill = Field(hit, "overkill", "number")
+	found.overkill = overkill and overkill > 0 and overkill or nil
+	return found
+end
+
+-- Moves this death's count in the totals from one cause to another.
+local function CountCause(from, to)
+	local causes = ns.stats.deathCauses
+	if from and causes and causes[from] then
+		causes[from] = causes[from] > 1 and causes[from] - 1 or nil
+	end
+	if to then
+		ns.Add(1, "deathCauses", to)
+	end
+end
+
+-- Adds the recap to a death entry. The recap may not be ready during
+-- PLAYER_DEAD, so this runs a frame later, and again a second after that if
+-- there's nothing new yet. The recap's cause replaces the one guessed from
+-- the bars and falls.
+local function AddRecap(e, retry)
+	local ok, found = pcall(ReadRecap)
+	if not (ok and found) then
+		if retry then
+			C_Timer.After(1, function() AddRecap(e) end)
+		end
+		return
+	end
+	if found.cause ~= e.cause then
+		CountCause(e.cause, found.cause)
+	end
+	for _, key in ipairs({ "killer", "killerType", "killerID", "spell", "spellID", "amount", "overkill" }) do
+		e[key] = found[key]
+	end
+	e.cause = found.cause
+	if found.killerType == "Player" or found.killerType == "Pet" then
+		ns.Add(1, "deathCauses", "player")
+	end
+	ns.version = ns.version + 1
+end
+
 ns.On("PLAYER_DEAD", function()
 	state = "dead"
 	local target
@@ -132,11 +233,10 @@ ns.On("PLAYER_DEAD", function()
 		target = ns.Clean(UnitName("target"))
 	end
 	local cause = Cause()
-	ns.Log("death", { target = target, level = UnitLevel("player"), cause = cause })
+	local e = ns.Log("death", { target = target, level = UnitLevel("player"), cause = cause })
 	ns.Add(1, "deaths")
-	if cause then
-		ns.Add(1, "deathCauses", cause)
-	end
+	CountCause(nil, cause)
+	C_Timer.After(0, function() AddRecap(e, true) end)
 	fall.start = nil
 end)
 

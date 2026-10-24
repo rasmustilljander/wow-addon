@@ -103,7 +103,7 @@ local line
 for _, text in ipairs(M.out) do line = line or text:match("Deaths .*") end
 check(line and line:find("kills 0, bosses killed 4, wipes 2, quests done 0", 1, true), "stats line: " .. tostring(line))
 M.out = {}
-SlashCmdList.TRAVELLOG("log 2 lucifron")
+SlashCmdList.TRAVELLOG("log 2 killed lucifron")
 check(#M.out == 2 and M.out[2]:find("Killed Lucifron in 2:00 (40 Player, 38 players)", 1, true), "/tl log: " .. tostring(M.out[2]))
 SlashCmdList.TRAVELLOG("")
 local values = {}
