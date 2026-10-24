@@ -233,21 +233,56 @@ local killPattern = type(COMBATLOG_XPGAIN_FIRSTPERSON) == "string" and ToPattern
 local restedPattern = type(COMBATLOG_XPGAIN_EXHAUSTION1) == "string" and ToPattern(COMBATLOG_XPGAIN_EXHAUSTION1)
 
 -- Returns the mob's name and the XP the kill gave without rested, or nil
--- for anything that isn't a plain or rested solo kill.
+-- for anything that isn't a plain or rested solo kill. The third return is
+-- true when the line says the rested bonus.
 function ns.ParseKill(text)
 	if restedPattern then
 		local name, xp, bonus = text:match(restedPattern)
 		bonus = bonus and tonumber((bonus:gsub("^%+", "")))
 		if name and bonus then
-			return name, tonumber(xp) - bonus
+			return name, tonumber(xp) - bonus, true
 		end
 	end
 	if killPattern then
 		local name, xp = text:match(killPattern)
 		if name then
-			return name, tonumber(xp)
+			return name, tonumber(xp), false
 		end
 	end
+end
+
+-- The rested pool, to tell rested kills whose line leaves the bonus out
+-- (said to happen on Forever). nil from the game means none, an unreadable
+-- value unknown. The game may update the pool just before or after the kill
+-- line, so a kill is rested when the pool is above 0 now, was when last
+-- read, or went down in the last RESTED_WINDOW seconds.
+local RESTED_WINDOW = 2
+local lastPool, poolDropped
+
+local function ReadPool()
+	local pool = GetXPExhaustion()
+	if pool == nil then
+		pool = 0
+	else
+		pool = ns.Clean(pool)
+		pool = type(pool) == "number" and pool or nil
+	end
+	if pool and lastPool and pool < lastPool then
+		poolDropped = GetTime()
+	end
+	return pool
+end
+
+local function CheckPool()
+	lastPool = ReadPool()
+end
+
+local function MaybeRested()
+	local was = lastPool
+	local pool = ReadPool()
+	lastPool = pool
+	return not pool or pool > 0 or (was or 0) > 0
+		or (poolDropped ~= nil and GetTime() - poolDropped <= RESTED_WINDOW)
 end
 
 local frame = CreateFrame("Frame")
@@ -259,8 +294,10 @@ local function OnKill(text)
 	if not db or not text or GetNumGroupMembers() > 0 then
 		return
 	end
-	local name, xp = ns.ParseKill(text)
-	if not name or not xp or xp <= 0 then
+	local name, xp, saysRested = ns.ParseKill(text)
+	-- Without the bonus in the line, a rested kill's XP can't be split.
+	local rested = not saysRested and MaybeRested()
+	if not name or not xp or xp <= 0 or rested then
 		return
 	end
 	-- Mobs often share a name across levels, so the corpse you have
@@ -335,11 +372,15 @@ frame:SetScript("OnEvent", function(_, event, arg)
 		OnKill(arg)
 	elseif event == "PLAYER_TARGET_CHANGED" then
 		ns.RememberUnit("target")
+	elseif event == "UPDATE_EXHAUSTION" or event == "PLAYER_LOGIN" then
+		CheckPool()
 	end
 end)
 frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("CHAT_MSG_COMBAT_XP_GAIN")
 frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+frame:RegisterEvent("UPDATE_EXHAUSTION")
 
 SLASH_KILLXP1 = "/killxp"
 SlashCmdList.KILLXP = function(msg)

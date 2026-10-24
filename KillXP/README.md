@@ -33,3 +33,7 @@ Each **solo** kill of a mob KillXP saw in the last minute replaces the estimate 
 | --- | --- |
 | `/killxp` | How many mob levels have a learned value |
 | `/killxp reset` | Forget learned values, e.g. after a patch changes kill XP |
+
+## Limits
+
+- The rested bonus is taken out of what's learned only when the kill's chat line says it (`(+40 exp Rested bonus)`). Forever is said to leave it out, so a kill without it isn't learned while you have rested XP, in the 2 s after the pool goes down, or when the pool can't be read.

@@ -151,7 +151,7 @@ for _, o in ipairs(first) do
 end
 check(first.ilvl == 12.3 and first.gain.stats[3] == 2, "first level-up saved")
 M.out = {}
-SlashCmdList.TRAVELLOG("log level")
+SlashCmdList.TRAVELLOG("log 50 level")
 check(Said("Reached level 6 after 1h 0m at level 5: +18 health, +15 mana, +1 Strength, +2 Stamina"),
 	"/tl log: " .. table.concat(M.out, "\n"))
 ns.settings.levelChat = true

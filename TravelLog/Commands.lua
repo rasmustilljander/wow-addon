@@ -98,12 +98,14 @@ function ns.RollsText(st)
 	return ("%s won, %s lost, %s passed"):format(Count((st.received or {}).roll), Count(rolls.lost), Count(rolls.passed))
 end
 
--- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning)".
+-- Deaths, and what killed you when it wasn't a mob: "4 (1 falling, 1 drowning, 2 by players)".
 function ns.DeathsText(st)
 	local causes = {}
-	for _, cause in ipairs({ "falling", "drowning", "fatigue" }) do
+	for _, cause in ipairs({ "falling", "drowning", "fatigue", "fire", "lava", "slime", "player" }) do
 		local n = (st.deathCauses or {})[cause]
-		if n then causes[#causes + 1] = Count(n) .. " " .. cause end
+		if n then
+			causes[#causes + 1] = Count(n) .. " " .. (cause == "player" and (n == 1 and "by a player" or "by players") or cause)
+		end
 	end
 	local text = Count(st.deaths)
 	return #causes > 0 and ("%s (%s)"):format(text, table.concat(causes, ", ")) or text
@@ -195,18 +197,25 @@ function ns.ReputationText(st, most)
 end
 
 -- Where experience came from, largest first: "quests 2,000, kills 1,000,
--- other 300", or "" with none. xp is { total, quests, kills, discoveries };
--- other is what the XP bar gained beyond those.
-local XP_SOURCES = { "quests", "kills", "discoveries" }
+-- rested 1,000, other 300", or "" with none. xp is { total, quests, kills,
+-- discoveries, rested }; other is what the XP bar gained beyond those. The
+-- rested bonus comes with kill XP, so it's taken out of kills, and out of
+-- other for kills the chat didn't show.
 function ns.XPSources(xp)
 	xp = xp or {}
-	local list, known = {}, 0
-	for _, source in ipairs(XP_SOURCES) do
-		local amount = xp[source] or 0
-		list[#list + 1] = { source = source, amount = amount }
-		known = known + amount
+	local total, quests, discoveries = xp.total or 0, xp.quests or 0, xp.discoveries or 0
+	local rested = math.min(xp.rested or 0, math.max(total - quests - discoveries, 0))
+	local list = {
+		{ source = "quests", amount = quests },
+		{ source = "kills", amount = math.max((xp.kills or 0) - rested, 0) },
+		{ source = "discoveries", amount = discoveries },
+		{ source = "rested", amount = rested },
+	}
+	local known = 0
+	for _, s in ipairs(list) do
+		known = known + s.amount
 	end
-	list[#list + 1] = { source = "other", amount = math.max((xp.total or 0) - known, 0) }
+	list[#list + 1] = { source = "other", amount = math.max(total - known, 0) }
 	table.sort(list, function(a, b) return a.amount > b.amount end)
 	local parts = {}
 	for _, s in ipairs(list) do
@@ -364,7 +373,10 @@ local RESET_FAILED = {
 	inside = "players still inside", offline = "players offline in your party", zoning = "players entering an instance",
 }
 
-local DEATH_CAUSE = { falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue" }
+local DEATH_CAUSE = {
+	falling = "Fell to death", drowning = "Drowned", fatigue = "Died of fatigue",
+	fire = "Burned to death", lava = "Died in lava", slime = "Died in slime",
+}
 
 -- Adds what got you there, e.g. " (Teleport: Stormwind)".
 local function Via(text, e)
@@ -500,11 +512,26 @@ local DESCRIBE = {
 		local text = ("Stopped resting after %s"):format(ns.Duration(e.seconds or 0))
 		return e.rested and ("%s, %s XP rested"):format(text, Count(e.rested)) or text
 	end,
-	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
+	screenshot = function(e)
+		local why = e.auto == "level" and "level " .. (e.what or "up")
+			or e.auto == "boss" and (e.what or "boss kill")
+			or e.auto == "achievement" and (e.what or "Legacy Challenge")
+		return why and ("Screenshot (%s) %s"):format(why, e.file or "") or "Screenshot " .. (e.file or "")
+	end,
 	note = function(e) return "Note: " .. (e.text or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"
-		if e.target then text = ("%s fighting %s"):format(text, e.target) end
+		if e.killer then
+			-- "Killed by Bob (player, Fireball, 120 damage)"
+			local about = {}
+			if e.killerType == "Player" or e.killerType == "Pet" then about[1] = e.killerType:lower() end
+			if e.spell then about[#about + 1] = e.spell end
+			if e.amount then about[#about + 1] = Count(e.amount) .. " damage" end
+			text = "Killed by " .. e.killer
+			if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
+		elseif e.target then
+			text = ("%s fighting %s"):format(text, e.target)
+		end
 		return e.level and ("%s at level %d"):format(text, e.level) or text
 	end,
 	release = function() return "Released spirit" end,

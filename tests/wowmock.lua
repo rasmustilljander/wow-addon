@@ -208,7 +208,7 @@ ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FL
 PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA
 UPDATE_INSTANCE_INFO BOSS_KILL
 UNIT_LEVEL UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED
-UNIT_INVENTORY_CHANGED BAG_CONTAINER_UPDATE]]):gmatch("%S+") do
+UNIT_INVENTORY_CHANGED BAG_CONTAINER_UPDATE UPDATE_EXHAUSTION]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -674,6 +674,15 @@ function RequestTimePlayed()
 	M.playedAsks = M.playedAsks + 1
 	C_Timer.After(1, function() M.fire("TIME_PLAYED_MSG", M.played, M.playedLevel) end)
 end
+-- Screenshot: SCREENSHOT_STARTED as the picture is taken, then
+-- SCREENSHOT_SUCCEEDED once it's saved a second later (FAILED when
+-- M.screenshotFails). M.screenshots counts the calls.
+M.screenshots = 0
+function Screenshot()
+	M.screenshots = M.screenshots + 1
+	M.fire("SCREENSHOT_STARTED")
+	C_Timer.After(1, function() M.fire(M.screenshotFails and "SCREENSHOT_FAILED" or "SCREENSHOT_SUCCEEDED") end)
+end
 function UnitXPMax() return M.xpMax end
 function GetXPExhaustion() return M.rested end
 function IsResting() return M.resting == true end
@@ -786,6 +795,20 @@ function RepopMe() end
 C_DeathInfo = {}
 function C_DeathInfo.GetSelfResurrectOptions() return M.selfRes end
 function C_DeathInfo.UseSelfResurrectOption() end
+-- The death recap: M.recap is the latest recap's hits, newest first, like
+-- { event = "SWING_DAMAGE", sourceName, sourceGUID, amount, overkill,
+-- timestamp, ... }. The game hands out a copy each call.
+C_DeathRecap = {}
+function C_DeathRecap.GetRecapEvents(recapID)
+	local out = {}
+	for i, hit in ipairs(M.recap or {}) do
+		out[i] = {}
+		for k, v in pairs(hit) do out[i][k] = v end
+	end
+	return out
+end
+function C_DeathRecap.HasRecapEvents(recapID) return M.recap ~= nil and #M.recap > 0 end
+function C_DeathRecap.GetRecapMaxHealth(recapID) return M.maxHealth or 100 end
 C_PlayerInteractionManager = {}
 function C_PlayerInteractionManager.ConfirmationInteraction() end
 function C_PlayerInteractionManager.ClearInteraction() end
