@@ -199,7 +199,8 @@ UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUP
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
 ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
-PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL]]):gmatch("%S+") do
+PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL
+UNIT_LEVEL UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -709,7 +710,10 @@ function C_DeathInfo.UseSelfResurrectOption() end
 C_PlayerInteractionManager = {}
 function C_PlayerInteractionManager.ConfirmationInteraction() end
 function C_PlayerInteractionManager.ClearInteraction() end
-Constants = { LevelConstsExposed = { MIN_RES_SICKNESS_LEVEL = 10 } }
+Constants = {
+	LevelConstsExposed = { MIN_RES_SICKNESS_LEVEL = 10 },
+	PetConsts = { MAX_SUMMONABLE_HUNTER_PETS = 1, NUM_PET_SLOTS_HUNTER = 3 },
+}
 -- Breath and fatigue bars: milliseconds left by timer name ("BREATH",
 -- "EXHAUSTION"). Tests fire MIRROR_TIMER_START/STOP/PAUSE themselves.
 M.mirrorTimers = {}
@@ -1029,6 +1033,32 @@ function C_Bank.WithdrawMoney(bankType, amount) assert(type(bankType) == "number
 function ConfirmTalentWipe() end
 C_StableInfo = {}
 function C_StableInfo.BuyStableSlot() end
+-- The stable: slot 1 is the pet you can call, 2 and 3 are stabled, as in
+-- Forever's stable window. M.stable[slot] = { name, level, familyName,
+-- petNumber }. Moving a pet swaps two slots and sends PET_STABLE_UPDATE; tests
+-- change M.units.pet and fire UNIT_PET themselves.
+M.stable = {}
+function C_StableInfo.GetStablePetInfo(index)
+	assert(type(index) == "number")
+	local p = M.stable[index]
+	if not p then return nil end
+	local info = { slotID = index, icon = 132242, specialization = "", type = "", petAbilities = {}, specAbilities = {} }
+	for k, v in pairs(p) do info[k] = v end
+	return info
+end
+function C_StableInfo.SetPetSlot(index, slot)
+	assert(type(index) == "number" and type(slot) == "number")
+	M.stable[index], M.stable[slot] = M.stable[slot], M.stable[index]
+	M.fire("PET_STABLE_UPDATE")
+end
+-- Abandoning your pet: the pet goes away later, so tests clear M.units.pet and
+-- fire UNIT_PET themselves. M.abandoned counts the calls.
+C_PetInfo = {}
+M.abandoned = 0
+function C_PetInfo.PetAbandon(petNumber)
+	assert(petNumber == nil or type(petNumber) == "number")
+	M.abandoned = M.abandoned + 1
+end
 C_Item = {}
 function C_Item.GetItemInfo(item)
 	local id = tonumber(item) or LinkID(item)

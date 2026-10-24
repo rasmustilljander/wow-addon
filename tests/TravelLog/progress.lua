@@ -168,7 +168,7 @@ M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 local line
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
-check(line == "Spells learned 3, new skills 2, skill points 57, talent points 0, flight paths found 1, mounts 2, pets tamed 0, new gear 0", "stats line: " .. tostring(line))
+check(line == "Spells learned 3, new skills 2, skill points 57, talent points 0, flight paths found 1, mounts 2, pets tamed 0, pet levels 0, pets abandoned 0, new gear 0", "stats line: " .. tostring(line))
 line = nil
 for _, text in ipairs(M.out) do line = line or text:match("Reputation: .*") end
 check(line == "Reputation: Booty Bay +100 -600, Stormwind +325, Ironforge +10, Darnassus +5", "reputation saved: " .. tostring(line))

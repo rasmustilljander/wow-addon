@@ -308,9 +308,9 @@ local function ShowStats(arg)
 		Count(instances.dungeon), Count(instances.raid), ns.Duration(st.instanceTime or 0),
 		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots))
 	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, new gear %s",
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, pet levels %s, pets abandoned %s, new gear %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
-		Count(st.tames), Count(st.gear))
+		Count(st.tames), Count(st.petLevels), Count(st.petAbandons), Count(st.gear))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
 	ns.Print("Reputation: %s", ns.ReputationText(st))
 
@@ -362,6 +362,25 @@ local DEATH_CAUSE = { falling = "Fell to death", drowning = "Drowned", fatigue =
 -- Adds what got you there, e.g. " (Teleport: Stormwind)".
 local function Via(text, e)
 	return e.via and ("%s (%s)"):format(text, e.via) or text
+end
+
+-- A pet by its name, or "your Wolf" when it's named after its family.
+local function PetName(e)
+	if e.name and e.name ~= e.family then
+		return e.name
+	end
+	return e.family and "your " .. e.family or "your pet"
+end
+
+-- "Fang (level 12 Wolf)", or "your level 12 Wolf".
+local function PetText(e)
+	if e.name and e.name ~= e.family then
+		local about = {}
+		if e.level then about[#about + 1] = "level " .. e.level end
+		if e.family then about[#about + 1] = e.family end
+		return #about > 0 and ("%s (%s)"):format(e.name, table.concat(about, " ")) or e.name
+	end
+	return ("your %s%s"):format(e.level and "level " .. e.level .. " " or "", e.family or "pet")
 end
 
 local DESCRIBE = {
@@ -590,6 +609,13 @@ local DESCRIBE = {
 		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, " ")) end
 		return e.pet and ("%s, named %s"):format(text, e.pet) or text
 	end,
+	petlevel = function(e)
+		local text = (("%s reached level %d"):format(PetName(e), e.level or 0):gsub("^%l", string.upper))
+		return e.family and e.name ~= e.family and ("%s (%s)"):format(text, e.family) or text
+	end,
+	petabandon = function(e) return "Abandoned " .. PetText(e) end,
+	petstable = function(e) return "Stabled " .. PetText(e) end,
+	petunstable = function(e) return ("Took %s out of the stable"):format(PetText(e)) end,
 	achievement = function(e)
 		local text = "Legacy Challenge: " .. (e.name or e.id or "?")
 		local about = {}
@@ -634,6 +660,7 @@ local LOG_GROUP = {
 	spell = "Progress", skill = "Progress", skillup = "Progress", talent = "Progress",
 	talentreset = "Progress", taxipath = "Progress",
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
+	petlevel = "Progress", petabandon = "Progress", petstable = "Progress", petunstable = "Progress",
 	achievement = "Progress",
 }
 local LOG_LABEL = {
@@ -653,6 +680,7 @@ local LOG_LABEL = {
 	skill = "Skill", skillup = "Skill-up", talent = "Talent", talentreset = "Talent reset",
 	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", tame = "Pet tamed", equip = "Gear", achievement = "Legacy Challenge",
+	petlevel = "Pet level", petabandon = "Pet abandoned", petstable = "Pet stabled", petunstable = "Pet unstabled",
 }
 
 function ns.LogGroup(e)
