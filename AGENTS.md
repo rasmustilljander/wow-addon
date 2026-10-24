@@ -4,7 +4,7 @@ WoW: Forever addons, one per folder. Testing and API checks: `.claude/skills/add
 
 ## Documentation
 
-Docs are the root `README.md`, one `README.md` per addon, and `tests/README.md`. Keep them short and correct.
+Docs are the root `README.md`, one `README.md` per addon, and `tests/README.md`. Planned work goes in `TODO.md`. Keep them short and correct.
 
 - **Update docs in the same change as the code.** New or changed commands, saved fields, defaults, limits and map colors go in the addon's README.
 - **Check every claim against the code.** Numbers (intervals, sizes, radii, defaults), command syntax, file paths and SavedVariables layouts must match the source. If you can't verify something, leave it out.

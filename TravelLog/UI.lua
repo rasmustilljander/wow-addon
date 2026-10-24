@@ -435,6 +435,12 @@ end
 
 -- The addon compartment's entry, named in the .toc.
 function TravelLog_OnAddonCompartmentClick()
+	if not ns.char then
+		if ns.unreadable then
+			ns.Print(ns.unreadable)
+		end
+		return
+	end
 	ns.Toggle()
 end
 

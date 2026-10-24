@@ -1,6 +1,6 @@
 -- Where TravelLog keeps its data: per-character files, the account-wide
--- file, old history kept in place, and TravelLog with and without its
--- companion addons.
+-- file, old history kept in place, TravelLog with and without its
+-- companion addons, and the character file's data version.
 local DAY = 86400
 
 -- This character's TravelLog_Path data, or nil when it isn't loaded.
@@ -192,4 +192,47 @@ M.viewMap = 1436
 M.frame()
 local overlay = M.mapOverlay(2010)
 check(#M.shown(overlay.lines) == 1 and #M.shown(overlay.textures) == 1, "the moved path and its jump are drawn")
+check(TravelLogCharDB.version == 1, "a file from before data versions is read as version 1")
 M.Logout()
+
+--------------------------------------------------------------------------------
+-- Data versions: a new file gets the current one, a newer one isn't read
+--------------------------------------------------------------------------------
+
+M.saved, M.savedChar = {}, {}
+ns = M.Login()
+check(TravelLogCharDB.version == ns.DATA_VERSION and ns.DATA_VERSION == 1, "a new file gets data version 1")
+M.Logout()
+check(M.savedChar["Rasmus-Forever"].TravelLog:find('%["version"%] = 1'), "and saves it")
+
+local NEWER_CHAR = [[
+TravelLogCharDB = {
+	["version"] = 99,
+	["entries"] = { "a layout this TravelLog doesn't know" },
+}
+]]
+M.saved, M.savedChar = {}, { ["Rasmus-Forever"] = { TravelLog = NEWER_CHAR } }
+M.out, M.errors = {}, {}
+ns = M.Login()
+check(said("data version 99") and ns.char == nil, "a newer data version isn't read, and chat says so")
+M.tick(1)
+for _ = 1, 5 do M.x = M.x + 0.001; M.wb = M.wb - 4; M.tick(1) end
+JumpOrAscendStart()
+M.cast(2366, "Peacebloom")
+M.loot = { { name = "Peacebloom", link = "[Peacebloom]", qty = 1, guid = "GameObject-0-1-0-1-1618-00F00D" } }
+M.lootAll()
+M.out = {}
+SlashCmdList.TRAVELLOG("")
+check(said("data version 99") and ns.window == nil, "/tl says why instead of opening the window")
+M.out = {}
+M.compartment.TravelLog:Click()
+check(said("data version 99") and ns.window == nil, "so does the addons dropdown")
+SlashCmdList.TRAVELLOG("wipe confirm")
+check(not M.reloadRequested, "wipe does nothing")
+check(#M.errors == 0, "no errors with an unreadable file")
+check(TravelLogCharDB.version == 99 and #TravelLogCharDB.entries == 1 and TravelLogCharDB.log == nil
+	and TravelLogCharDB.sessions == nil, "nothing recorded into it")
+check(PathDB() == nil and TravelLogNodesAccountDB == nil, "the companions don't start either")
+M.Logout()
+check(M.savedChar["Rasmus-Forever"].TravelLog:find('%["version"%] = 99')
+	and M.savedChar["Rasmus-Forever"].TravelLog:find("doesn't know"), "the file is saved back as it was")

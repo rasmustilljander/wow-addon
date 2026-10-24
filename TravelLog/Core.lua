@@ -348,6 +348,41 @@ function ns.WithCounterpart(data, how)
 end
 
 --------------------------------------------------------------------------------
+-- Data versions
+--------------------------------------------------------------------------------
+
+-- The layout of the character file, saved in it as `version`: a new file
+-- gets this one. Bump it when older TravelLogs would misread what the new one
+-- writes (new fields they ignore don't need it), then list the old version
+-- in COMPATIBLE or add a CONVERT step for it.
+ns.DATA_VERSION = 1
+
+-- Versions this TravelLog reads and writes as they are.
+local COMPATIBLE = { [1] = true }
+
+-- CONVERT[n](char) rewrites a version n file as version n + 1. None yet.
+local CONVERT = {}
+
+-- Brings a character file to DATA_VERSION. Returns false, leaving the file
+-- as it is, when this TravelLog can't read its version (a newer one's).
+local function Upgrade(char)
+	local version = char.version or 1 -- files from before versions were saved
+	local step = version
+	while not COMPATIBLE[step] do
+		if type(step) ~= "number" or not CONVERT[step] then
+			return false
+		end
+		step = step + 1
+	end
+	while not COMPATIBLE[version] do
+		CONVERT[version](char)
+		version = version + 1
+	end
+	char.version = ns.DATA_VERSION
+	return true
+end
+
+--------------------------------------------------------------------------------
 -- Startup and sessions
 --------------------------------------------------------------------------------
 
@@ -385,10 +420,18 @@ local function Init()
 	profile.stats = profile.stats or {}
 
 	-- Everything the character recorded lives in its own per-character file,
-	-- so playing one character never loads another's history. Version 1 kept
-	-- it in the account-wide file.
+	-- so playing one character never loads another's history. Account files
+	-- of version 1 kept it there.
 	TravelLogCharDB = TravelLogCharDB or {}
 	local char = TravelLogCharDB
+	if not Upgrade(char) then
+		-- Nothing is recorded, so the file is saved back untouched. /tl and
+		-- the addons dropdown repeat why.
+		ns.unreadable = ("This character's log is data version %s, which this TravelLog (data version %d) can't read. Update TravelLog: until then nothing is recorded and the log is kept as it is.")
+			:format(tostring(char.version), ns.DATA_VERSION)
+		ns.Print(ns.unreadable)
+		return
+	end
 	for _, field in ipairs({ "log", "sessions", "quests" }) do
 		if profile[field] then
 			char[field] = char[field] or profile[field]
