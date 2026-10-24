@@ -163,6 +163,44 @@ check(M.out[#M.out]:find("3 mob levels"), "status: " .. M.out[#M.out])
 SlashCmdList.KILLXP("reset")
 check(Line(Mob(8), "Kill XP") == "~61", "reset back to estimates")
 
+-- A rested kill whose line leaves the bonus out (said to happen on Forever)
+-- teaches nothing: not while the pool is above 0, nor when the pool ran out
+-- just before the line or just after the last time it was read.
+M.rested = 300
+M.fire("UPDATE_EXHAUSTION")
+Mob(8)
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 122 experience.")
+check(KillXPDB.seen["10:8"] == nil, "rested kill without the bonus in the line")
+M.rested = nil
+M.fire("UPDATE_EXHAUSTION")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 100 experience.")
+check(KillXPDB.seen["10:8"] == nil, "pool ran out just before the line")
+M.advance(3)
+M.rested = 40
+M.fire("UPDATE_EXHAUSTION")
+M.rested = nil
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 81 experience.")
+check(KillXPDB.seen["10:8"] == nil, "pool ran out with no event before the line")
+-- An unreadable pool might be rested too.
+M.advance(3)
+M.secrets[77] = true
+M.rested = 77
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 61 experience.")
+check(KillXPDB.seen["10:8"] == nil, "unreadable pool")
+M.secrets, M.rested = {}, nil
+-- With no rest left a plain kill teaches again, and a line with the bonus
+-- in it does while rested.
+M.advance(3)
+M.fire("UPDATE_EXHAUSTION")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 61 experience.")
+check(KillXPDB.seen["10:8"] == 61, "plain kill learned: " .. tostring(KillXPDB.seen["10:8"]))
+M.rested = 300
+M.fire("UPDATE_EXHAUSTION")
+M.fire("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 124 experience. (+62 exp Rested bonus)")
+check(KillXPDB.seen["10:8"] == 62, "rested line still learned: " .. tostring(KillXPDB.seen["10:8"]))
+M.rested = nil
+SlashCmdList.KILLXP("reset")
+
 -- Bigger numbers get thousands separators.
 M.level, M.xp, M.xpMax = 55, 0, 300000
 check(Line(Mob(55, { classification = "elite" }), "Kill XP") == "~640", "level 55 elite")

@@ -197,18 +197,25 @@ function ns.ReputationText(st, most)
 end
 
 -- Where experience came from, largest first: "quests 2,000, kills 1,000,
--- other 300", or "" with none. xp is { total, quests, kills, discoveries };
--- other is what the XP bar gained beyond those.
-local XP_SOURCES = { "quests", "kills", "discoveries" }
+-- rested 1,000, other 300", or "" with none. xp is { total, quests, kills,
+-- discoveries, rested }; other is what the XP bar gained beyond those. The
+-- rested bonus comes with kill XP, so it's taken out of kills, and out of
+-- other for kills the chat didn't show.
 function ns.XPSources(xp)
 	xp = xp or {}
-	local list, known = {}, 0
-	for _, source in ipairs(XP_SOURCES) do
-		local amount = xp[source] or 0
-		list[#list + 1] = { source = source, amount = amount }
-		known = known + amount
+	local total, quests, discoveries = xp.total or 0, xp.quests or 0, xp.discoveries or 0
+	local rested = math.min(xp.rested or 0, math.max(total - quests - discoveries, 0))
+	local list = {
+		{ source = "quests", amount = quests },
+		{ source = "kills", amount = math.max((xp.kills or 0) - rested, 0) },
+		{ source = "discoveries", amount = discoveries },
+		{ source = "rested", amount = rested },
+	}
+	local known = 0
+	for _, s in ipairs(list) do
+		known = known + s.amount
 	end
-	list[#list + 1] = { source = "other", amount = math.max((xp.total or 0) - known, 0) }
+	list[#list + 1] = { source = "other", amount = math.max(total - known, 0) }
 	table.sort(list, function(a, b) return a.amount > b.amount end)
 	local parts = {}
 	for _, s in ipairs(list) do
