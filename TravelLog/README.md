@@ -25,7 +25,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
-| **Travel** | Zone and subzone changes (first visits marked), time logged in per zone (totals only), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), instance resets (and failed ones, with why), new lockouts (instance, difficulty, lockout ID and when it resets), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log), and notes you add with `/tl note`. |
+| **Travel** | Zone and subzone changes (first visits marked), time logged in per zone (totals only), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), instance resets (and failed ones, with why), new lockouts (instance, difficulty, lockout ID and when it resets), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log; TravelLog can [take some itself](#automatic-screenshots)), and notes you add with `/tl note`. |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, world buffs gained (Rallying Cry, Warchief's Blessing, Spirit of Zandalar, Songflower, the Dire Maul tribute, Sayge's fortunes and Boon of Blackfathom, with duration and who gave it), and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, the experience gained and time AFK. |
@@ -36,7 +36,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, world buffs, time played, reputation and XP) and Log. Reputation and time by zone show the top three (most changed factions, longest zones) here and all in `/tl stats`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
-- **Settings**: the companions' map options, Path's trail curves and interval, and whether gold and XP per hour leave out AFK time (on by default).
+- **Settings**: the companions' map options, Path's trail curves and interval, whether gold and XP per hour leave out AFK time (on by default), and [automatic screenshots](#automatic-screenshots).
 - **History**: what's in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, cause, fight target and location, `revival` for how you came back, `level` for each level-up and how long it took, or `note` for your notes.
   - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths. Hover a session for its XP by source.
@@ -59,6 +59,19 @@ Got 3 times
 
 It counts items looted, received (roll wins, quest rewards, crafts, mail, trades) and bought.
 
+## Automatic screenshots
+
+TravelLog can take a screenshot for you, a moment after the event so its glow or banner shows. It's logged like one you take yourself.
+
+| When | Name | Default | After |
+| --- | --- | --- | --- |
+| A level-up (not to level 1) | `level` | on | 1 s |
+| A boss kill | `boss` | on | 0.5 s |
+| Only a boss's first kill in this character's log, when `boss` is on | `first` | on | |
+| A Legacy Challenge earned | `achievement` | off | 1 s |
+
+None is taken within 1 s of another screenshot, so a level-up and a challenge together give one. Change them on the Settings tab or with `/tl screenshots`.
+
 ## Commands
 
 | Command | |
@@ -68,6 +81,7 @@ It counts items looted, received (roll wins, quest rewards, crafts, mail, trades
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl note <text>` | Add a note to the log, stamped with the time and place |
 | `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view, with XP by source |
+| `/tl screenshots [level\|boss\|first\|achievement on\|off]` | Show or change [automatic screenshots](#automatic-screenshots); for example, `/tl screenshots achievement on` |
 | `/tl wipe confirm` | Delete everything for this character, including its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
 `/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail`, `/tl smooth` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
@@ -151,7 +165,7 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 | `bind` | `place`: where your hearthstone is now set |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `note` | `text`: what you typed |
-| `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken) |
+| `screenshot` | `file`: the name the game gives the picture, without its extension (`WoWScrnShot_102226_143005`: local date and time it was taken); for an automatic one, `auto` (`level`, `boss` or `achievement`) and `what` (the level, boss or challenge's name) |
 | `quest`, `questabandon` | `id`, `title` |
 | `questdone` | `id`, `title`, `xp` and `money` it gave |
 | `questfail` | `id`, `title`, `reason` (`time` when its timer ran out) |

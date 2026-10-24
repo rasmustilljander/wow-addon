@@ -500,7 +500,12 @@ local DESCRIBE = {
 		local text = ("Stopped resting after %s"):format(ns.Duration(e.seconds or 0))
 		return e.rested and ("%s, %s XP rested"):format(text, Count(e.rested)) or text
 	end,
-	screenshot = function(e) return "Screenshot " .. (e.file or "") end,
+	screenshot = function(e)
+		local why = e.auto == "level" and "level " .. (e.what or "up")
+			or e.auto == "boss" and (e.what or "boss kill")
+			or e.auto == "achievement" and (e.what or "Legacy Challenge")
+		return why and ("Screenshot (%s) %s"):format(why, e.file or "") or "Screenshot " .. (e.file or "")
+	end,
 	note = function(e) return "Note: " .. (e.text or "") end,
 	death = function(e)
 		local text = DEATH_CAUSE[e.cause] or "Died"

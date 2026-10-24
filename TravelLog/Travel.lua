@@ -1,7 +1,7 @@
 -- Travel: zone and subzone changes, flights (and landing), hearthstones and
 -- other teleports, summons, boats and zeppelins, dungeons and raids (with
 -- their resets and lockouts), where you set your hearthstone, resting in inns
--- and cities, and screenshots.
+-- and cities.
 -- Your path itself is TravelLog_Path's.
 local _, ns = ...
 
@@ -588,29 +588,4 @@ ns.On("PLAYER_LOGOUT", function()
 	if r and r.since then
 		r.inside, r.since = r.inside + time() - r.since, nil
 	end
-end)
-
---------------------------------------------------------------------------------
--- Screenshots
---------------------------------------------------------------------------------
-
--- The game names the file after the local time it was taken, as
--- WoWScrnShot_MMDDYY_HHMMSS plus the format's extension. SCREENSHOT_STARTED
--- fires just before the picture is taken, SCREENSHOT_SUCCEEDED once it's
--- saved.
-local shotAt
-
-ns.On("SCREENSHOT_STARTED", function()
-	shotAt = time()
-end)
-
-ns.On("SCREENSHOT_FAILED", function()
-	shotAt = nil
-end)
-
-ns.On("SCREENSHOT_SUCCEEDED", function()
-	local at = shotAt or time()
-	shotAt = nil
-	ns.Log("screenshot", { file = date("WoWScrnShot_%m%d%y_%H%M%S", at) })
-	ns.Add(1, "screenshots")
 end)

@@ -24,3 +24,4 @@ UI.lua
 LogUI.lua
 Sessions.lua
 Tooltip.lua
+Screenshots.lua
