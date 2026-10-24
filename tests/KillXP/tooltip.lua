@@ -44,11 +44,14 @@ local lines = Mob(10)
 check(Line(lines, "Kill XP") == "~95", "solo estimate: " .. tostring(Line(lines, "Kill XP")))
 check(Line(lines, "Kills to level") == "~7", "kills to level")
 
--- Rested.
+-- Rested: a pool of 200 holds 100 bonus XP, one doubled kill and 5 more.
 M.rested = 200
 lines = Mob(10)
 check(Line(lines, "Kill XP") == "~190 (+95 rested)", "rested: " .. tostring(Line(lines, "Kill XP")))
-check(Line(lines, "Kills to level") == "~5", "rested kills: " .. tostring(Line(lines, "Kills to level")))
+check(Line(lines, "Kills to level") == "~6", "rested kills: " .. tostring(Line(lines, "Kills to level")))
+-- A pool of 100 holds 50 bonus XP: less than a kill's worth.
+M.rested = 100
+check(Line(Mob(10), "Kill XP") == "~145 (+50 rested)", "partly rested: " .. tostring(Line(Mob(10), "Kill XP")))
 M.rested = nil
 
 -- Forever's percentage buffs are separate from the rested-XP pool and stack.

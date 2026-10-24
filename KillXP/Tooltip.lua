@@ -63,7 +63,9 @@ function ns.Look(unit)
 		info.estimate = true   -- assumes everyone is alive and close by
 	end
 
-	local rested = GetXPExhaustion() or 0
+	-- Rested kills give double XP until the bar reaches the rested marker, so
+	-- the pool holds half its size in bonus XP.
+	local rested = math.floor((GetXPExhaustion() or 0) / 2)
 	info.rested = math.min(info.xp, rested)
 	info.kills = ns.KillsToLevel(UnitXPMax("player") - UnitXP("player"), info.xp, rested)
 	return info
