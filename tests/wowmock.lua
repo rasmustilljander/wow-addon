@@ -150,6 +150,11 @@ ERR_GUILD_DISBAND_S = "%s has disbanded the guild."
 ERR_GUILD_PROMOTE_SSS = "%s has promoted %s to %s."
 ERR_GUILD_DEMOTE_SSS = "%s has demoted %s to %s."
 ERR_GUILD_LEADER_CHANGED_SS = "%s has made %s the new Guild Master."
+INSTANCE_RESET_SUCCESS = "%s has been reset."
+INSTANCE_RESET_FAILED = "Cannot reset %s.  There are players still inside the instance."
+INSTANCE_RESET_FAILED_OFFLINE = "Cannot reset %s.  There are players offline in your party."
+INSTANCE_RESET_FAILED_ZONING = "Cannot reset %s.  There are players in your party attempting to zone into an instance."
+INSTANCE_SAVED = "You are now saved to this instance"
 
 Enum = {
 	PlayerInteractionType = { None = 0, TradePartner = 1, Merchant = 5, TaxiNode = 6, Trainer = 7, Banker = 8, GuildBanker = 10, MailInfo = 17,
@@ -199,7 +204,8 @@ UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP UNIT_SPELLCAST_INTERRUP
 UPDATE_FACTION MAJOR_FACTION_RENOWN_LEVEL_CHANGED PLAYER_PVP_RANK_CHANGED PVP_MATCH_COMPLETE
 PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
 ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
-PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA]]):gmatch("%S+") do
+PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA
+UPDATE_INSTANCE_INFO BOSS_KILL]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
 
@@ -660,6 +666,23 @@ function GetDifficultyInfo(id)
 	local d = DIFFICULTIES[id]
 	if not d then return nil end
 	return d[1], d[2], id == 2, false, id == 2, false, nil, false, 1, d[3], true
+end
+-- Your lockouts: M.saves = { { name, id, reset (seconds left), difficulty,
+-- locked, extended, isRaid, maxPlayers, difficultyName }, ... }. Like the
+-- server, RequestRaidInfo answers a second later with UPDATE_INSTANCE_INFO;
+-- M.raidInfoRequests counts the requests.
+M.saves = {}
+M.raidInfoRequests = 0
+function GetNumSavedInstances() return #M.saves end
+function GetSavedInstanceInfo(index)
+	local s = M.saves[index]
+	if not s then return nil end
+	return s.name, s.id, s.reset, s.difficulty, s.locked, s.extended or false, 0, s.isRaid or false,
+		s.maxPlayers or 0, s.difficultyName or "", 0, 0, false, 0
+end
+function RequestRaidInfo()
+	M.raidInfoRequests = M.raidInfoRequests + 1
+	C_Timer.After(1, function() M.fire("UPDATE_INSTANCE_INFO") end)
 end
 -- Your own speed in yards a second: running (7) unless M.speed says
 -- otherwise, such as 0 standing on a boat.

@@ -25,7 +25,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason: loot, vendor, flight, quest, training, mail, COD, trade, auction (buys, and sales paid by mail with the item), auction deposit, bank slot, account bank, guild bank, barber, talent reset, stable slot or other. A bank slot also gets its own entry. |
 | **Trades and mail** | Money and items from a trade, both ways, are saved with the other player (`partner`, as `Name-Realm` for another realm); from mail, with the mail's sender (`sender`); mail you send and its postage, with the recipient (`recipient`). |
-| **Travel** | Zone and subzone changes (first visits marked), time logged in per zone (totals only), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log), and notes you add with `/tl note`. |
+| **Travel** | Zone and subzone changes (first visits marked), time logged in per zone (totals only), flights (from, to, cost, duration), hearthstones and other teleports (from, to and the spell or item), summons (from, to and who), boat and zeppelin rides (from, to, duration), dungeons and raids (name, type, difficulty, and when you leave, time inside and bosses killed and wiped on), instance resets (and failed ones, with why), new lockouts (instance, difficulty, lockout ID and when it resets), resting in inns and cities (where it started, and how long when it ends), hearthstone binds, screenshots (with the file's name, to match pictures to the log), and notes you add with `/tl note`. |
 | **Life** | Deaths (what you fought, and drowning, fatigue or a long fall), spirit releases, revivals (corpse run, spirit healer, another player or a soulstone and the like, with how long you were dead and the durability lost), level-ups (with how long the level took), quests accepted, completed, abandoned and failed (and whether time ran out), kills that gave XP, boss kills and wipes (boss, difficulty, group size, fight length), discoveries, world buffs gained (Rallying Cry, Warchief's Blessing, Spirit of Zandalar, Songflower, the Dire Maul tribute, Sayge's fortunes and Boon of Blackfathom, with duration and who gave it), and guilds joined, left (or kicked out of, or disbanded) and rank changes (with who invited, promoted, demoted or kicked you). |
 | **PvP** | Duels (opponent, won, lost or no winner, whether the loser fled, who challenged), battlegrounds (won, lost, drawn or left before the end, with length and your killing blows, honorable kills, deaths and honor), honorable kills (victim, rank, honor), honor awards, and your own PvP rank going up or down. |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, the experience gained and time AFK. |
@@ -79,7 +79,7 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 | File under `WTF/Account/<ACCOUNT>/` | Contents |
 | --- | --- |
 | `SavedVariables/TravelLog.lua` | Settings (the companions' too, and the window's `point`), each character's profile and totals (`stats`; seconds logged in per zone name in `stats.zoneTime`) |
-| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank, guild, and the instance or rested area you're in |
+| `<Realm>/<Character>/SavedVariables/TravelLog.lua` | That character's log, sessions, quests, skills, talents, mounts, gear, PvP rank, guild, lockouts, and the instance or rested area you're in |
 | `SavedVariables/TravelLog_Path.lua` | Every character's path, for TravelLog_Path |
 | `SavedVariables/TravelLog_Nodes.lua` | Every character's nodes, for TravelLog_Nodes |
 
@@ -112,6 +112,7 @@ TravelLogCharDB = {
   mounts = { [458] = 1760000000 },   -- mount spell ID -> first ride
   instance = { name = "The Deadmines", kind = "dungeon", id = 36, inside = 600, since = ..., kills = 2, wipes = 1 },  -- while you're in one
   fight = { id = 2972, since = 1760000000 },  -- the boss fight in progress
+  lockouts = { ["Molten Core:9:1001"] = 1760600000 },  -- "name:difficulty ID:lockout ID" -> when it resets, to tell new ones
   rest = { inside = 600, since = ... },  -- while you're resting
   gear = { [25] = 0, [2361] = 1760000000 },  -- item ID -> first put on (0: worn when gear recording began)
   pvpRank = { rank = 3, season = 1 },  -- last rank seen, to tell changes
@@ -143,6 +144,8 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 | `disembark` | `from`, `to`, `seconds` on board |
 | `instance` | `name`, `kind` (`dungeon`, `raid`, `battleground`, `arena` or `scenario`), `difficulty`, `size`, `id` |
 | `instanceleave` | `name`, `kind`, `seconds` inside; `kills` and `wipes` when there were any |
+| `instancereset` | `name`; `failed` when it didn't work: `inside` (players still inside), `offline` (party members offline) or `zoning` (players entering an instance) |
+| `lockout` | `name`, `kind` (`dungeon` or `raid`), `difficulty`, `size`, `lockout` (its ID), `resets` (when, as a `time` value) |
 | `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` the fight lasted (from the pull, when seen), `instance` |
 | `bind` | `place`: where your hearthstone is now set |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
@@ -190,6 +193,8 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 - A screenshot's `file` is worked out from your computer's clock, not read from the game, so it can be a second off from the real name.
 - Summons are logged once you accept and arrive. The summoner's name is missing if the client hides it.
 - Time in a dungeon or raid counts only while you're logged in, and a reload inside is the same visit.
+- Resets come from the "The Deadmines has been reset." system line (and its "Cannot reset" variants), so a reset is logged only if your chat gets that line.
+- Lockouts come from the game's list (the one in the Raid Info window), which TravelLog asks for after each loading screen, 3 s after a boss kill and after the "You are now saved to this instance" line. A lockout is logged when the list first shows it, stamped where you are then. Lockouts at the first login with lockout recording are remembered, not logged; an expired one the game still lists isn't logged. World bosses aren't included.
 - Time by zone counts from when TravelLog started recording it, so earlier time is missing. It counts every second you're logged in, AFK included (like `/played`), by zone, not subzone; a loading screen counts for the zone you left.
 - Resting comes from the game's rested state, so it can't tell an inn from a city. A change is logged where it happened once it has held for 5 s, so stepping through an inn's door isn't a stay. Logging in rested starts a stay without a `rest` entry (the session says where you were), a reload or a night logged out inside is the same stay, and its time counts only while you're logged in.
 - Talent points count when applied, not when placed in the talent frame. Points spent before TravelLog was installed, or on the other spec before you first switch to it with TravelLog, are remembered without being logged. Re-spent points count again in the total. A reset is logged without its cost.
