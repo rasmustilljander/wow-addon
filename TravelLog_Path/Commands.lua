@@ -1,6 +1,6 @@
--- Path's part of /tl: jumps, the map trail (yours and alts') and its curves,
--- the recording interval and its lines in /tl stats, and the same in the
--- TravelLog window.
+-- Path's part of /tl: jumps, the map trail (yours and alts'), its curves
+-- and fading, the recording interval and its lines in /tl stats, and the
+-- same in the TravelLog window.
 local _, ns = ...
 local tl = TravelLog
 
@@ -109,6 +109,94 @@ end, function(arg)
 	tl.Print("map trail curves: %s%%", tl.settings.smooth)
 end)
 
+-- /tl fade: presets stretch the default shape (3h) to a total length.
+local FADE_PRESETS = { "1h", "3h", "6h", "12h" }
+local IS_PRESET = { off = true, ["1h"] = true, ["3h"] = true, ["6h"] = true, ["12h"] = true }
+local FADE_TIMES = { "alphaFrom", "alphaTo", "widthFrom", "widthTo" }
+local MAX_FADE = 10080 -- minutes, a week
+local FADE_FLOORS = { opacity = { "alpha", 10 }, width = { "width", 30 } }
+
+-- Saves a fade field, or nil when it's the default.
+local function SetFade(key, value)
+	if value == ns.TRAIL_FADE[key] then
+		value = nil
+	end
+	tl.settings.trailFade[key] = value
+end
+
+local function ApplyPreset(preset)
+	if preset == "off" then
+		SetFade("on", false)
+	else
+		local hours = tonumber(preset:match("^(%d+)h$"))
+		SetFade("on", true)
+		for _, key in ipairs(FADE_TIMES) do
+			SetFade(key, ns.TRAIL_FADE[key] * hours / 3)
+		end
+	end
+	ns.RefreshTrail()
+end
+
+-- The preset the fade is at, or nil if changed otherwise.
+local function CurrentPreset()
+	local S = ns.FadeSetting
+	if not S("on") then
+		return "off"
+	end
+	for _, preset in ipairs(FADE_PRESETS) do
+		local hours = tonumber(preset:match("^(%d+)h$"))
+		local match = true
+		for _, key in ipairs(FADE_TIMES) do
+			if S(key) ~= ns.TRAIL_FADE[key] * hours / 3 then match = false end
+		end
+		if match then
+			return preset
+		end
+	end
+end
+
+local function DescribeFade()
+	local S = ns.FadeSetting
+	if not S("on") then
+		return "off"
+	end
+	return ("opacity to %d%% from %s to %s min, width to %d%% from %s to %s min"):format(S("alpha"),
+		S("alphaFrom"), S("alphaTo"), S("width"), S("widthFrom"), S("widthTo"))
+end
+
+tl.Command("fade", function()
+	return "fade on|off|default|1h|3h|6h|12h, fade opacity|width <from>-<to> <percent> - how the map trail fades"
+		.. " over played minutes (now: " .. DescribeFade() .. ")"
+end, function(arg)
+	if arg == "" then
+		tl.Print("map trail fade: %s", DescribeFade())
+		return
+	end
+	if arg == "on" then
+		SetFade("on", true)
+		ns.RefreshTrail()
+	elseif arg == "default" then
+		wipe(tl.settings.trailFade)
+		ns.RefreshTrail()
+	elseif IS_PRESET[arg] then
+		ApplyPreset(arg)
+	else
+		local what, from, to, percent = arg:match("^(%a+)%s+(%d+)%s*%-%s*(%d+)%s+(%d+)%%?$")
+		local floor = FADE_FLOORS[what]
+		from, to, percent = tonumber(from), tonumber(to), tonumber(percent)
+		if not (floor and from < to and to <= MAX_FADE and percent >= floor[2] and percent <= 100) then
+			return false
+		end
+		local key = floor[1]
+		SetFade("on", true)
+		SetFade(key .. "From", from)
+		SetFade(key .. "To", to)
+		SetFade(key, percent)
+		ns.RefreshTrail()
+	end
+	tl.Print("map trail fade: %s", DescribeFade())
+end)
+
 tl.Command("interval", function()
 	return "interval 1-5 - seconds between path points (now: " .. tl.settings.interval .. ")"
 end, function(arg)
@@ -132,6 +220,7 @@ tl.AddSetting("World map", "Your trail", function() return tl.settings.trail end
 tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.trail) end, function(step)
 	SetTrail(ns.StepDay(tl.settings.trail, step))
 end)
+tl.AddSetting("World map", "Trail fade", CurrentPreset, ApplyPreset, { "off", unpack(FADE_PRESETS) })
 tl.AddSetting("World map", "Trail curves (%)", function() return tl.settings.smooth end, SetSmooth, { 0, 25, 50, 75, 100 })
 tl.AddSetting("General", "Path interval (s)", function() return tl.settings.interval end, function(seconds)
 	tl.settings.interval = seconds

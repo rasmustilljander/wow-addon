@@ -17,6 +17,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `/tl jumps` | Jumps per zone |
 | `/tl trail <range>` | How far back your map trail goes (default `today`) |
 | `/tl trail alts <range>` | The same for alts' trails (default `off`) |
+| `/tl fade` | How the trail fades (see [Fading](#fading)) |
 | `/tl smooth 0-100` | How round the trail's turns are; 0 draws straight lines (default 50) |
 | `/tl interval 1-5` | Seconds between path points (default 2) |
 
@@ -30,7 +31,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `all` | Everything stored |
 | `off` | Nothing |
 
-`/tl stats` adds jumps, distance and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
+`/tl stats` adds jumps, distance and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the fade (`off`, `1h`, `3h`, `6h`, `12h`), the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
 
 ## World map
 
@@ -38,7 +39,33 @@ Zone and continent maps show your trail, broken at teleports (hearthstone, porta
 
 Trails curve through the recorded points (a centripetal Catmull-Rom spline) instead of turning sharply at each one. `/tl smooth` (saved as `smooth` in TravelLog's settings) sets how round: 100 is the full spline, lower values flatten it toward straight lines. Each turn is drawn as up to 8 short lines, as few as look smooth at the current zoom; straight stretches stay single lines.
 
-The colors below are the defaults. To change one, click its swatch in the TravelLog window's **Colors** tab and pick a color and opacity; the map follows as you drag. **Default** puts one back, **All defaults** all of them. They're saved in TravelLog's settings as `trailColors` and `markerColors`, `{ r, g, b, a }` by kind.
+### Fading
+
+Older parts of the trail get fainter and thinner, so your recent path and its direction stand out. Age is counted in played time on that character, back from the end of the shown range: now, or the end of a calendar day. Time logged out doesn't count, so each alt's trail fades back from where it last logged out.
+
+| Played time ago | Opacity | Width |
+| --- | --- | --- |
+| under 15 min | full | full |
+| 15 min to 2 h | eases down to 50% | full until 1 h |
+| 1 h to 3 h | 50% from 2 h | eases down to 60% |
+| over 3 h | 50% | 60% |
+
+Jump dots fade too; other markers don't. Lines never get thinner than 1 pixel. Your lines that haven't started fading are drawn on top where the trail crosses itself. With the map open, the fade updates once a minute.
+
+| Command | |
+| --- | --- |
+| `/tl fade` | Show the current fade |
+| `/tl fade on`, `off` | Turn it on or off |
+| `/tl fade 1h`, `3h`, `6h`, `12h` | Stretch or squeeze the default times to that length (`3h` is the default) |
+| `/tl fade opacity 15-120 50` | Fade opacity from 15 to 120 played minutes down to 50% (10–100%) |
+| `/tl fade width 60-180 60` | The same for width (30–100%) |
+| `/tl fade default` | Back to the default |
+
+Times go up to a week (10080 minutes). Only changed values are saved, in TravelLog's settings as `trailFade` (`on`, `alphaFrom`, `alphaTo`, `alpha`, `widthFrom`, `widthTo`, `width`; minutes and percent).
+
+### Colors
+
+The colors below are the defaults. To change one, click its swatch in the TravelLog window's **Colors** tab and pick a color and opacity (the full opacity, before fading); the map follows as you drag. **Default** puts one back, **All defaults** all of them. They're saved in TravelLog's settings as `trailColors` and `markerColors`, `{ r, g, b, a }` by kind.
 
 | Trail | | Marker | |
 | --- | --- | --- | --- |

@@ -25,23 +25,10 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
   - The aura lookup can be secret when auras are restricted (`SecretWhenUnitAuraRestricted`); pass it through `ns.Clean`.
 
 - **Map replay.** Play back your trail on the world map: a time slider with play, pause, step and speed draws the trail and markers up to that moment, with your level and gear then.
-  - TravelLog_Path: drawing already limits each source to `since`/`before` (`Map.lua`), so the slider moves `before`. Playing forward can draw incrementally; stepping back needs a full redraw.
+  - TravelLog_Path: drawing already limits each source to `since`/`before` (`Map.lua`), so the slider moves `before`. Playing forward can draw incrementally; stepping back needs a full redraw. The fade counts back from `before`, so the trail fades behind the moving point.
   - Level from the log's `level` entries; gear from `equip` entries, which TravelLog logs only the first time an item is worn, so re-equipped items are missed.
   - The controls are a frame of our own, not a child of the world map, so the map stays click-through and untainted.
   - Risk: redraw cost on long ranges; check with `tests/TravelLog/stress.lua`.
-
-- **Trail fade.** Older parts of the map trail get fainter and thinner, so the recent path and its direction stand out.
-  - Age is played time (logged in on that character), counted back from the end of the shown range: now, or the end of a calendar day. A night logged out doesn't fade the trail, and each alt's trail fades from where it left off.
-  - Default shape: full for 15 min; opacity eases to 50% by 2 h; width eases to 60% from 1 h to 3 h; the floor after that. Smoothstep curves overlapping, so there's no visible knee where one fade stops and the other starts.
-  - Width has a floor of 1 screen pixel; thinner lines flicker. Alts' trails (1.5 px, 0.7 alpha) fade by the same factors.
-  - Fades your trail and jump dots; milestone markers (deaths, loot, notes) don't.
-  - Settings: `trailFade = { on, alphaFrom, alphaTo, alpha, widthFrom, widthTo, width }` in minutes and percent. Opacity no lower than 10%, width 30%.
-  - Commands: `/tl fade on|off|default`, `/tl fade opacity 15-120 50`, `/tl fade width 60-180 60`. Window buttons `off`, `1h`, `3h`, `6h`, `12h` scale the default shape (`3h` is the default).
-  - TravelLog_Path `Map.lua`: each source gets a played clock (sessions oldest first, each session's length; the current one runs to now, an unclosed old one to its last record). Each line slot keeps its base color, base width and clock; curve pieces interpolate between their two points' clocks.
-  - While the map is open, only the current session's clock moves: every 60 s restyle those lines with `SetColorTexture`/`SetThickness`, no new geometry, skipping lines already at the floor. Fresh lines go on sublevel 1, so where the trail crosses itself the recent path is on top.
-  - The Colors tab's opacity is the full one; the fade multiplies it.
-  - Map replay gets a fading tail for free: moving `before` moves the end of the range.
-  - Check in game: 50% opacity on bright zones (Tanaris, Winterspring), the ghost color (0.6 alpha) at its floor, and restyle cost with `tests/TravelLog/stress.lua`.
 
 - **Distance by form.** Distance per shapeshift form and in stealth, next to the per-mode totals.
   - TravelLog `ns.FLAGS`: stealth as bit 64, the form as a number in the bits above (form × 128). `ns.HasFlag` ignores higher bits, so older readers still work.
