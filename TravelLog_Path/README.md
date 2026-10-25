@@ -20,6 +20,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `/tl trail friends <range>` | The same for friends' trails (default `today`) |
 | `/tl smooth 0-100` | How round the trail's turns are; 0 draws straight lines (default 50) |
 | `/tl fade ...` | How the trail fades (see [Fading](#fading)) |
+| `/tl replay [<range>]` | Open or close the [replay](#replay) controls; with a range, set your trail to it first |
 | `/tl interval 1-5` | Seconds between path points (default 2) |
 
 | Range | Shows |
@@ -73,6 +74,19 @@ By default, opacity eases from full at 15 played minutes to 50% at 2 hours, and 
 
 Times go up to a week (10080 minutes). Only changed values are saved, in TravelLog's settings as `trailFade` (`on`, `alphaFrom`, `alphaTo`, `alpha`, `widthFrom`, `widthTo`, `width`; minutes and percent).
 
+### Replay
+
+`/tl replay` opens controls that play your trail back on the world map, over the range your trail shows. Open the map to watch. The trail and its markers end at the slider's moment, with a white dot where you were, and the [fade](#fading) counts back from that moment.
+
+| Control | |
+| --- | --- |
+| Slider | Moves through the range in played time; time logged out is skipped |
+| `<`, `>` | Step back or forward by what one second plays at the current speed |
+| Play, Pause | Plays forward and stops at the end; Play at the end starts over |
+| Speed | `1 min/s`, `5 min/s` (default), `20 min/s`, `1 h/s`, saved as `replaySpeed` (seconds per second) in TravelLog's settings |
+
+Under the slider are the date and time, your level then and the average item level of your gear then; hover it for the gear by slot. Changing your trail's range starts the replay over; closing the controls shows the whole trail again. Alts' and friends' trails end at the same moment.
+
 ### Colors
 
 To change a color, click its swatch in the TravelLog window's **Colors** tab and pick a color and opacity; the map follows as you drag. **Default** resets one, **All defaults** all. They're saved in TravelLog's settings as `trailColors` and `markerColors`, `{ r, g, b, a }` by kind. Defaults:
@@ -122,4 +136,5 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 - Every login loads all characters' stored paths.
 - The form IDs are Blizzard's constants from other clients; Forever's UI code lists none, so they're unconfirmed in game.
 - Overlapping markers of one kind are drawn once, so of several notes or deaths in one spot only the first can be hovered.
+- A replay's gear comes from TravelLog's log, which logs an item only the first time it's worn: a slot shows the last new item put on, not one swapped back in. Before the log's first level-up the level is one below it; with none, your current level.
 - Untested in the live game; tested against a fake client ([tests](../tests/README.md)).

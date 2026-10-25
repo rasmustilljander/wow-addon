@@ -24,12 +24,6 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
   - Neither ID is in Blizzard's UI code; confirm both in game, and whether camping also makes you rest (`IsResting()`), which would log a `rest` as well.
   - The aura lookup can be secret when auras are restricted (`SecretWhenUnitAuraRestricted`); pass it through `ns.Clean`.
 
-- **Map replay.** Play back your trail on the world map: a time slider with play, pause, step and speed draws the trail and markers up to that moment, with your level and gear then.
-  - TravelLog_Path: drawing already limits each source to `since`/`before` (`Map.lua`), so the slider moves `before`. Playing forward can draw incrementally; stepping back needs a full redraw. The fade counts back from `before`, so the trail fades behind the moving point.
-  - Level from the log's `level` entries; gear from `equip` entries, which TravelLog logs only the first time an item is worn, so re-equipped items are missed.
-  - The controls are a frame of our own, not a child of the world map, so the map stays click-through and untainted.
-  - Risk: redraw cost on long ranges; check with `tests/TravelLog/stress.lua`.
-
 - **Player notes and ratings.** An account-wide note and a behavior and skill rating per player, shown in the Players tab and the player's tooltip.
   - TravelLog_Group: Group's file is per character, so this needs a new account-wide `SavedVariables` keyed by `Name-Realm`, like `players`.
   - Set from the Players tab (an edit box) and with `/grouped note` and `/grouped rate`.

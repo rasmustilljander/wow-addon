@@ -71,3 +71,22 @@ end
 local live = os.clock() - t4
 io.write(("  60 s walking with the map open: %.3f s\n"):format(live))
 check(live < 0.5, "live map updates are incremental")
+
+-- Replaying the six hours at 20 minutes a second: each move draws on and
+-- refades; a step back redraws up to then.
+SlashCmdList.TRAVELLOG("replay")
+local replay = TravelLogReplayFrame
+replay.speed:Click()
+replay.play:Click()
+local moves, t5 = 0, os.clock()
+while replay.play:GetText() == "Pause" do
+	M.gametime = M.gametime + 0.1
+	M.frame()
+	moves = moves + 1
+end
+local played = os.clock() - t5
+replay.slider:SetValue(3 * 3600)
+local t6 = os.clock(); M.frame(); local back = os.clock() - t6
+io.write(("  replay: %d moves in %.3f s (%.1f ms each), a step back to 3 h %.3f s\n"):format(
+	moves, played, played / moves * 1000, back))
+check(played / moves < 0.016, "a replay move fits in a frame")

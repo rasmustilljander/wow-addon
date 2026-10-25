@@ -327,6 +327,22 @@ function Region:Click(button)
 	if self.kind == "CheckButton" then self.checked = not self.checked end
 	M.script(self, "OnClick", button or "LeftButton", false)
 end
+-- Sliders: setting the value clamps it and, when it changes, runs
+-- OnValueChanged like the game, also when an addon sets it.
+function Region:SetMinMaxValues(lo, hi)
+	self.min, self.max = lo, hi
+	if self.value then self:SetValue(self.value) end
+end
+function Region:GetMinMaxValues() return self.min, self.max end
+function Region:SetValueStep(step) self.step = step end
+function Region:SetValue(v)
+	v = math.max(self.min or v, math.min(self.max or v, v))
+	if v ~= self.value then
+		self.value = v
+		M.script(self, "OnValueChanged", v, false)
+	end
+end
+function Region:GetValue() return self.value or 0 end
 function Region:SetAutoFocus(v) self.autoFocus = v end
 function Region:SetFocus() M.focus = self end
 function Region:ClearFocus() if M.focus == self then M.focus = nil end end
