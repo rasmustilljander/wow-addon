@@ -9,7 +9,7 @@ Rasmus    60 (bags 20, bank 40)
 Altie     15 (bags 10, AH 5)
 ```
 
-Names are in class colors, this character first, then whoever has the most. Characters on other realms show as `Name-Realm`. **Total** only shows when more than one character (or the account bank) has the item. A **Guild bank** line comes last and isn't part of the total.
+Names are in class colors, this character first, then whoever has the most; characters on other realms show as `Name-Realm`. An **Account bank** line follows. **Total** shows only when more than one character or the account bank has the item. A **Guild bank** line comes last and isn't part of the total.
 
 ## What's counted
 
@@ -23,7 +23,7 @@ Names are in class colors, this character first, then whoever has the most. Char
 | Account bank | Its own line, while the bank is open (if the account bank is available) |
 | Guild bank | Its own line, each tab as you view it. Shown only while you play a character in that guild |
 
-Bank, mail, AH and guild bank counts are from your last visit with that character, so log in each character and visit them once. Auctions stop counting when their time runs out. Sales made while you're away still count until your next AH visit. COD mail and currencies aren't counted, and neither is mail the client hasn't loaded yet in an overfull inbox.
+Bank, mail, AH and guild bank counts are from your last visit, so visit each once with every character. Auctions stop counting when their time runs out; sales made while you're away count until your next AH visit. COD mail and currencies aren't counted, and neither is mail the client hasn't loaded yet in an overfull inbox.
 
 ## Settings
 

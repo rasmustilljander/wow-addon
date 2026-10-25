@@ -19,19 +19,27 @@ My addons for **World of Warcraft: Forever**, one per folder.
 
 ## Installing
 
-Copy or link the addon folders into `World of Warcraft/<forever folder>/Interface/AddOns/`. The Forever folder sits next to `_retail_` (during the beta it was `_forever_beta_`). Linking lets `git pull` update the addons; on Windows, in a command prompt:
+Copy or link the addon folders (those with a `.toc`) into `World of Warcraft/<forever folder>/Interface/AddOns/`; the Forever folder sits next to `_retail_`. Linking lets `git pull` update them. On Windows, in a command prompt:
 
 ```
-for /d %d in ("C:\path\to\wow-addon\TravelLog*" "C:\path\to\wow-addon\KillXP" "C:\path\to\wow-addon\CVarBrowser" "C:\path\to\wow-addon\JunkToss" "C:\path\to\wow-addon\ItemCount" "C:\path\to\wow-addon\Reach") do mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
+for /d %d in ("C:\path\to\wow-addon\*") do if exist "%d\%~nxd.toc" mklink /J "C:\Program Files (x86)\World of Warcraft\<forever folder>\Interface\AddOns\%~nxd" "%d"
 ```
 
-Or copy them with `./deploy.sh` (needs bash and rsync). Copy `.env.example` to `.env` and set `WOW_ADDONS_DIR` to the AddOns folder, or to `user@host:path` for another machine. `./deploy.sh` replaces every addon folder there with the repo's copy, `./deploy.sh TravelLog KillXP` only those, and `-n` first shows what would change. Other addons and SavedVariables aren't touched; linked folders are skipped.
+Or copy them with `./deploy.sh` (needs bash and rsync): copy `.env.example` to `.env` and set `WOW_ADDONS_DIR` to the AddOns folder, or to `user@host:path` for another machine.
+
+| | |
+| --- | --- |
+| `./deploy.sh` | Replace every addon folder there with the repo's copy |
+| `./deploy.sh TravelLog KillXP` | Only these |
+| `./deploy.sh -n ...` | Show what would change |
+
+Other addons, SavedVariables and linked folders aren't touched.
 
 Then `/reload` and make sure the addons are enabled on the character select screen.
 
 ## Game version
 
-The `.toc` files target Forever 1.60.1 (`## Interface: 16001`). If a patch marks them out of date, get the new number with `/dump select(4, GetBuildInfo())` and update the `## Interface` lines.
+The `.toc` files target Forever 1.60.1 (`## Interface: 16001`). If a patch marks them out of date, get the new number with `/dump select(4, GetBuildInfo())` and update every `## Interface` line.
 
 ## Tests
 

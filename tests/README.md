@@ -138,7 +138,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.units.target.distance`, `M.swingReach[swingType]`, `M.currentSpells[id]` | Yards to the target (for `CheckInteractDistance`: 8 trade, 7 duel, 28 inspect and follow), each `Enum.PlayerSwingType`'s weapon reach `{ min, max }` (main hand 0–5 by default; nil means none), and spells on for `C_Spell.IsCurrentSpell` (auto attack is 6603). Fire `PLAYER_ENTER_COMBAT` or `START_AUTOREPEAT_SPELL` to start attacking. |
 | `M.secrets[value] = true` | Make a value secret, as the Midnight-era client does in dungeons. |
 | `M.installed`, `M.disabled` | Addon folders the client knows (default TravelLog, TravelLog_Path, TravelLog_Nodes) and which are off. |
-| `M.viewMap`, `M.mapOverlay(level)`, `M.shown(pool)` | The shown world map, an addon's overlay on it (newest, or by frame level: Path 2010, Kills 2011, Nodes 2012), and its visible lines, textures and frames. |
+| `M.viewMap`, `M.mapOverlay(level)`, `M.shown(pool)` | The shown world map, an addon's overlay on it (newest, or by frame level: Path 2010, Kills 2011, Nodes 2012, NPCs 2013), and its visible lines, textures and frames. |
 | `M.pickColor(r, g, b, a)`, `M.closeColorPicker(okay)` | Drag the open `ColorPickerFrame` to a color; close it with Okay or Cancel. |
 | `M.screenshots`, `M.screenshotFails` | How often `Screenshot` was called (it fires `SCREENSHOT_STARTED`, then `SCREENSHOT_SUCCEEDED` a second later), and whether it fails instead (`SCREENSHOT_FAILED`). |
 | `M.out`, `M.errors` | Everything printed to chat, and Lua errors sent to `geterrorhandler` (they count as failures). |

@@ -23,7 +23,7 @@ function ns.Print(text, ...)
 end
 
 local AUTO_ATTACK = 6603
-local TRADE_DISTANCE = 2   -- CheckInteractDistance index: about 10 yards
+local TRADE_DISTANCE = 2   -- CheckInteractDistance index: about 8 yards
 local INTERVAL = 0.2       -- seconds between checks while attacking
 
 ns.melee, ns.shooting = false, false
