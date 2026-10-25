@@ -26,9 +26,14 @@ end
 -- /tl stats
 --------------------------------------------------------------------------------
 
+-- Friends' characters by key, filled by TravelLog_Share and saved there:
+-- profiles like ns.db.chars' (name, realm, class, race, level, stats) plus
+-- when they arrived. They're never counted as yours.
+ns.friends = {}
+
 -- Every character's key ("Name-Realm"), the one you're on first, then the
--- others alphabetically.
-function ns.Characters()
+-- others alphabetically, then with friends set your friends' characters.
+function ns.Characters(friends)
 	local list = {}
 	for key in pairs(ns.db.chars) do
 		if key ~= ns.charKey then
@@ -37,7 +42,30 @@ function ns.Characters()
 	end
 	table.sort(list)
 	table.insert(list, 1, ns.charKey)
+	if friends then
+		local theirs = {}
+		for key in pairs(ns.friends) do
+			if not ns.db.chars[key] then
+				theirs[#theirs + 1] = key
+			end
+		end
+		table.sort(theirs)
+		for _, key in ipairs(theirs) do
+			list[#list + 1] = key
+		end
+	end
 	return list
+end
+
+-- A character's profile: yours, or a friend's.
+function ns.Profile(key)
+	return ns.db.chars[key] or ns.friends[key]
+end
+
+-- "Bob-Forever, level 12, a friend's from 5m ago"
+function ns.FriendText(key)
+	local friend = ns.friends[key]
+	return ("%s, level %d, a friend's from %s ago"):format(key, friend.level or 0, ns.Ago(friend.received or time()))
 end
 
 -- Adds from's counters into into: numbers summed, nested tables merged,
@@ -55,10 +83,10 @@ local function AddUp(into, from)
 	return into
 end
 
--- A character's totals, or with no key every character's added up.
+-- A character's totals, a friend's too, or with no key all of yours added up.
 function ns.StatsFor(key)
 	if key then
-		return key == ns.charKey and ns.stats or (ns.db.chars[key] or {}).stats or {}
+		return key == ns.charKey and ns.stats or (ns.Profile(key) or {}).stats or {}
 	end
 	local total = {}
 	for _, profile in pairs(ns.db.chars) do
@@ -270,10 +298,11 @@ function ns.MoneyByReason(st, way)
 	return #parts > 0 and ("%s: %s"):format(ns.MoneyText(total), table.concat(parts, ", ")) or ns.MoneyText(0)
 end
 
--- The character a /tl stats argument names: "Name" or "Name-Realm".
+-- The character a /tl stats argument names: "Name" or "Name-Realm", yours
+-- before a friend's.
 local function FindCharacter(arg)
-	for _, key in ipairs(ns.Characters()) do
-		if key:lower() == arg or (ns.db.chars[key].name or ""):lower() == arg then
+	for _, key in ipairs(ns.Characters(true)) do
+		if key:lower() == arg or (ns.Profile(key).name or ""):lower() == arg then
 			return key
 		end
 	end
@@ -286,7 +315,7 @@ local function ShowStats(arg)
 	elseif arg ~= "" then
 		key = FindCharacter(arg)
 		if not key then
-			ns.Print("no character \"%s\". Known: %s", arg, table.concat(ns.Characters(), ", "))
+			ns.Print("no character \"%s\". Known: %s", arg, table.concat(ns.Characters(true), ", "))
 			return
 		end
 	end
@@ -297,8 +326,10 @@ local function ShowStats(arg)
 		if total then
 			ns.Print("Played %s, %s at this level", ns.Duration(total), ns.Duration(level))
 		end
-	elseif key then
+	elseif ns.db.chars[key] then
 		ns.Print("%s, level %d", key, ns.db.chars[key].level or 0)
+	elseif key then
+		ns.Print("%s", ns.FriendText(key))
 	else
 		ns.Print("All %d characters", #ns.Characters())
 	end
@@ -716,7 +747,7 @@ local DESCRIBE = {
 	end,
 }
 
--- A log entry as text, and where it happened. TravelLog_Share sends these.
+-- A log entry as text, and where it happened.
 function ns.Describe(e)
 	local describe = DESCRIBE[e.type]
 	local where = e.subzone or e.zone or "?"
@@ -875,7 +906,7 @@ end)
 local function Help()
 	ns.Print("commands:")
 	print("  /tl - open or close the TravelLog window")
-	print("  /tl stats [all|name] - totals for this character, all of them or another")
+	print("  /tl stats [all|name] - totals for this character, all of yours, another or a friend's")
 	print("  /tl log [n] [search] - the last matching events (default 15)")
 	for _, name in ipairs(order) do
 		local help = commands[name].help

@@ -9,6 +9,11 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
 
 ## Planned
 
+- **Friends' trails.** Draw a [TravelLog_Share](TravelLog_Share/) friend's path on your world map while you're both online, like an alt's trail.
+  - Share: stream new path points to friends who ask (Path's packed records, a few per message), and keep them per friend for the session or saved.
+  - TravelLog_Path: alts' trails come from `TravelLogPathAccountDB.chars`; add a source for friends' points, drawn in their class color under yours.
+  - Catching up on old trail is too slow at three messages a second (about 100 KB per hour of movement), so only points since you both came online.
+
 - **TravelLog export.** The log and totals can't be copied out of the game; only the raw SavedVariables file has them. Add a command or button that opens a copyable text box (CSV or similar) with the log or the totals. A text box because addons can't write files of their own.
 
 - **Damage and healing totals.** Your damage, healing and DPS per boss fight and per session, from Forever's built-in meter.

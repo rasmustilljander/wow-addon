@@ -23,8 +23,8 @@ local settings = { order = { "World map", "General" }, rows = {} }
 local extraTabs = {} -- companions' tabs, after Totals and Settings
 local window
 
--- Whose totals show: an index into ns.Characters(), one past its end for all
--- of them added up. 1 is the character you're on.
+-- Whose totals show: an index into ns.Characters(true), one past its end for
+-- all of yours added up. 1 is the character you're on.
 local showing = 1
 local ONLY_YOU = "|cff999999only for the character you're on|r"
 
@@ -170,20 +170,21 @@ ns.AddStat("Log", "Entries", function()
 	return ("%s in %s sessions"):format(Count(#ns.char.log), Count(#ns.char.sessions))
 end, true)
 
--- The Totals tab's < and > buttons, stepping through the characters and all
--- of them together.
+-- The Totals tab's < and > buttons, stepping through your characters, your
+-- friends' and all of yours together.
 local picker = {
 	label = "Character",
 	get = function()
-		local list = ns.Characters()
-		local key = list[showing]
+		local key = ns.Characters(true)[showing]
 		if not key then
-			return ("All %d characters"):format(#list)
+			return ("All %d characters"):format(#ns.Characters())
+		elseif not ns.db.chars[key] then
+			return ns.FriendText(key)
 		end
 		return ("%s, level %d"):format(key, ns.db.chars[key].level or 0)
 	end,
 	step = function(step)
-		local n = #ns.Characters() + 1
+		local n = #ns.Characters(true) + 1
 		showing = (showing - 1 + step) % n + 1
 	end,
 }
@@ -197,7 +198,7 @@ local function Refresh()
 		return
 	end
 	window.who:SetText(("%s, level %d %s %s"):format(ns.charKey, UnitLevel("player"), UnitRace("player"), UnitClass("player")))
-	local list = ns.Characters()
+	local list = ns.Characters(true)
 	showing = math.min(showing, #list + 1)
 	local key = list[showing]
 	local st = ns.StatsFor(key)
@@ -450,6 +451,16 @@ function TravelLog_OnAddonCompartmentClick()
 		return
 	end
 	ns.Toggle()
+end
+
+-- Opens the Totals tab on a character's totals, yours or a friend's.
+function ns.ShowTotals(key)
+	for i, k in ipairs(ns.Characters(true)) do
+		if k == key then
+			showing = i
+		end
+	end
+	ns.ShowTab("Totals")
 end
 
 -- Opens the window on the tab with this name.

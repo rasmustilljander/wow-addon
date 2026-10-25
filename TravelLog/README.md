@@ -9,7 +9,7 @@ Optional companions, each its own folder:
 - [TravelLog_Kills](../TravelLog_Kills/): every kill per mob. Works on its own too.
 - [TravelLog_NPCs](../TravelLog_NPCs/): NPCs you've talked to and what they sell, on the maps and item tooltips. Works on its own too.
 - [TravelLog_Group](../TravelLog_Group/): every player you group with, and when. Works on its own too.
-- [TravelLog_Share](../TravelLog_Share/): your nodes, and on request your log, for players you allow. Needs TravelLog.
+- [TravelLog_Share](../TravelLog_Share/): you and a friend see each other's nodes on the map and totals in the window. Needs TravelLog.
 
 ## What it records
 
@@ -35,7 +35,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
-- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, world buffs, time played, reputation and XP) and Log. Reputation and time by zone show the top three (most changed factions, longest zones) here and all in `/tl stats`, which also gives each zone's time by state, like `Elwynn Forest 6m (combat 1m, AFK 2m, grouped 3m)`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
+- **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, world buffs, time played, reputation and XP) and Log. Reputation and time by zone show the top three (most changed factions, longest zones) here and all in `/tl stats`, which also gives each zone's time by state, like `Elwynn Forest 6m (combat 1m, AFK 2m, grouped 3m)`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters and [friends'](../TravelLog_Share/) to all of yours added up (a place several visited counts once; friends aren't counted). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
 - **Settings**: the companions' map options, Path's trail fade, curves and interval, whether gold and XP per hour leave out AFK time and whether each level-up says in chat what it gave (both on by default), and [automatic screenshots](#automatic-screenshots).
 - **History**: what's in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, killer or cause and location, `revival` for how you came back, `level` for each level-up, how long it took and what it gave, or `note` for your notes.
@@ -44,7 +44,7 @@ Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a win
 - **NPCs**, with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window): search NPCs by name, place or what they sell.
 - **Players**, with [TravelLog_Group](../TravelLog_Group/README.md#window): everyone you've grouped with and each time.
 - **Colors**, with [TravelLog_Path](../TravelLog_Path/README.md#world-map): the trail's and markers' colors on the world map.
-- **Sharing**, with [TravelLog_Share](../TravelLog_Share/README.md#the-sharing-tab): who you share with and follow, and their logs.
+- **Friends**, with [TravelLog_Share](../TravelLog_Share/README.md#the-friends-tab): who you share with.
 
 Companions add their rows to the matching section.
 
@@ -77,12 +77,12 @@ None is taken within 1 s of another screenshot, so a level-up and a challenge to
 | Command | |
 | --- | --- |
 | `/tl` | Open or close the window |
-| `/tl stats [all\|name]` | Totals (and time played) for this character, all of them added up, or another by `Name` or `Name-Realm` |
+| `/tl stats [all\|name]` | Totals (and time played) for this character, all of yours added up, or another or a friend's by `Name` or `Name-Realm` |
 | `/tl log [n] [search]` | The last matching events (default 15); for example, `/tl log 20 death` |
 | `/tl note <text>` | Add a note to the log, stamped with the time and place |
 | `/tl sessions [n]` | The last n sessions (default 10), as in the Sessions view, with XP by source |
 | `/tl screenshots [level\|boss\|first\|achievement on\|off]` | Show or change [automatic screenshots](#automatic-screenshots); for example, `/tl screenshots achievement on` |
-| `/tl wipe confirm` | Delete everything for this character, including its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
+| `/tl wipe confirm` | Delete everything for this character, including its Path and Nodes data. Kills and Group have their own `wipe confirm`. |
 
 `/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail`, `/tl fade`, `/tl smooth` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
 
@@ -252,6 +252,6 @@ Each entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x`
 - Money reasons are guesses from the window that's open and what you clicked in the few seconds before. A bank slot that costs nothing logs no entry.
 - Sales are read from the 12-slot buyback list, so selling more than 12 items in one click (Sell All Junk) may not list each one. The money total is always right.
 - Vendor buys, buybacks and repairs are logged only after the bag count, buyback list or repair cost confirms them within 5 seconds. Failed clicks aren't logged; a confirmation delayed longer than that is missed.
-- A note can't be edited or deleted on its own. TravelLog_Share sends them with the rest of your log to the players you allow when they ask for it.
+- A note can't be edited or deleted on its own.
 - World buffs are the spell IDs in `WORLD_BUFFS` (`TravelLog/WorldBuffs.lua`), from Classic; Boon of Blackfathom (430947) may not exist in Forever. Only a new aura counts: buffs you have at login, after a reload or through a loading screen aren't logged, nor is a buff the game refreshes in place while you have it. A buff gained while the game hides aura data (combat, boss fights) or during a loading screen is missed. `by` is filled only when the aura names its caster as a unit the client knows, so a giver far away (a city's Rallying Cry) usually has none.
 - Untested in the live game; written against the Forever 1.60.1 UI source and tested against a fake client ([tests](../tests/README.md)). If something breaks, turn on Lua errors with `/console scriptErrors 1`.

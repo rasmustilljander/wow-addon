@@ -1,13 +1,11 @@
--- TravelLog Share core: who may ask for your data, whose nodes you follow,
--- what other players sent you, a record of every request you got, and a
--- paced queue for the addon whispers. Needs TravelLog.
+-- TravelLog Share core: your friends, what they sent you and a paced queue
+-- for the addon whispers. Needs TravelLog.
 local _, ns = ...
 local tl = TravelLog
 
 ns.PREFIX = "TravelLogShare"
 ns.MAX_LENGTH = 255      -- bytes per addon message
 local PER_SECOND = 3     -- messages sent per second; the server throttles bursts
-local MAX_REQUESTS = 200 -- request records kept, oldest dropped first
 local NOT_FOUND_WINDOW = 10 -- seconds a "No player named" reply is matched to our whisper
 
 C_ChatInfo.RegisterAddonMessagePrefix(ns.PREFIX)
@@ -17,42 +15,46 @@ C_ChatInfo.RegisterAddonMessagePrefix(ns.PREFIX)
 --------------------------------------------------------------------------------
 
 -- TravelLogShareDB = {
---   allowed = { ["bob-forever"] = "Bob-Forever" },   -- may ask for your nodes and log
---   follow = { ["ann-forever"] = "Ann-Forever" },    -- whose nodes you get automatically
---   requests = {   -- oldest first
---     { time = 1760000000, from = "Bob-Forever", to = "Rasmus-Forever", what = "log", count = 20, allowed = true },
---   },
---   peers = {   -- what others sent you
---     ["ann-forever"] = { name = "Ann-Forever", nodesSince = 1760000000,
+--   friends = { ["bob-forever"] = "Bob-Forever" },   -- you share with each other
+--   peers = {   -- what friends sent you
+--     ["bob-forever"] = { name = "Bob-Forever", seen = 1760000000, nodesSince = 1760000000,
 --       nodes = { [1429] = { [3] = { kind = "herb", name = "Peacebloom", id = 1618, x = 42.1, y = 65.3,
 --                                   last = 1760000000, count = 8 } } },
---       log = { received = 1760000000, entries = { { time = ..., where = "Goldshire (42.1, 65.3)", text = "..." } } } },
+--       char = { name = "Bob", realm = "Forever", class = "WARRIOR", race = "Human", level = 12,
+--                received = 1760000000, stats = { ... } } },
 --   },
 -- }
 -- Keys are lowercase "name-realm"; the values keep the name as shown. A
--- peer's nodes are keyed by map and by their place in that player's list.
+-- peer's nodes are keyed by map and by their place in that player's list;
+-- char is their TravelLog profile, with stats as in TravelLogDB.chars.
 
 tl.On("PLAYER_LOGIN", function()
 	TravelLogShareDB = TravelLogShareDB or {}
 	local db = TravelLogShareDB
-	db.allowed = db.allowed or {}
-	db.follow = db.follow or {}
-	db.requests = db.requests or {}
+	db.friends = db.friends or {}
 	db.peers = db.peers or {}
-	ns.db = db
-	ns.me = select(2, ns.Name(UnitName("player")))
-end)
-
--- Wiping a character drops the requests it got.
-tl.On("TL_WIPE", function()
-	local keep = {}
-	for _, r in ipairs(ns.db.requests) do
-		if r.to ~= tl.charKey then
-			keep[#keep + 1] = r
+	-- Before 0.2 sharing and following were separate lists, and logs and
+	-- every request were kept. Either list makes a friend now.
+	for _, list in ipairs({ db.allowed or {}, db.follow or {} }) do
+		for key, name in pairs(list) do
+			db.friends[key] = name
 		end
 	end
-	ns.db.requests = keep
-	ns.Changed()
+	db.allowed, db.follow, db.requests = nil, nil, nil
+	for key, peer in pairs(db.peers) do
+		peer.log = nil
+		if not db.friends[key] then
+			db.peers[key] = nil
+		end
+	end
+	ns.db = db
+	ns.me = select(2, ns.Name(UnitName("player")))
+	-- Friends' characters show in TravelLog's totals beside yours.
+	for _, peer in pairs(db.peers) do
+		if peer.char then
+			tl.friends[peer.name] = peer.char
+		end
+	end
 end)
 
 -- "bob", "Bob-Forever" -> "Bob-Forever", "bob-forever": a character name as
@@ -69,47 +71,43 @@ function ns.Name(text)
 	return full, full:lower()
 end
 
--- What another player sent you, by key.
+-- What a friend sent you, by key.
 function ns.Peer(key, name)
 	local peer = ns.db.peers[key]
 	if not peer then
 		peer = { name = name, nodes = {} }
 		ns.db.peers[key] = peer
 	end
+	if name and name ~= peer.name and peer.char then
+		tl.friends[peer.name], tl.friends[name] = nil, peer.char
+	end
 	peer.name = name or peer.name
 	return peer
 end
 
--- Goes up whenever anything the Sharing tab shows changes.
+-- Goes up whenever anything the Friends tab shows changes.
 ns.version = 0
 function ns.Changed()
 	ns.version = ns.version + 1
-end
-
--- Notes a request someone sent you.
-function ns.Record(from, what, allowed, count)
-	local list = ns.db.requests
-	list[#list + 1] = { time = time(), from = from, to = tl.charKey, what = what, count = count, allowed = allowed }
-	if #list > MAX_REQUESTS then
-		table.remove(list, 1)
-	end
-	ns.Changed()
 end
 
 --------------------------------------------------------------------------------
 -- Sending
 --------------------------------------------------------------------------------
 
--- Players who asked for your nodes this session, by key, and get new ones
+-- Friends who asked for your nodes this session, by key, and get new ones
 -- as you loot them.
 ns.listeners = {}
+-- Friends who asked for your totals this session, by key: what they were
+-- last sent, so only changes go out after that.
+ns.statsSent = {}
 
 local queue, budget = {}, PER_SECOND
 local whispered = {} -- key -> GetTime() of our last whisper to them
 local R = Enum.SendAddonMessageResult or {}
 
 -- Everything still queued for someone who turned out to be offline is
--- dropped, and they stop getting new nodes.
+-- dropped, and they stop getting new nodes and totals.
 function ns.Offline(key)
 	local keep = {}
 	for _, m in ipairs(queue) do
@@ -118,7 +116,7 @@ function ns.Offline(key)
 		end
 	end
 	queue = keep
-	ns.listeners[key] = nil
+	ns.listeners[key], ns.statsSent[key] = nil, nil
 end
 
 local function Drain()

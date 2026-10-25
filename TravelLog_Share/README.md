@@ -1,30 +1,40 @@
 # TravelLog Share
 
-Shares what TravelLog records with other players you choose. Players on your allow list get your looted chests, herbs and ore automatically, and can ask for your log; everyone else is refused. Every request you get is recorded. Needs [TravelLog](../TravelLog/); install [TravelLog_Nodes](../TravelLog_Nodes/) to share nodes and see other players' on the map.
+You and a friend see each other's looted chests, herbs and ore on the map, and each other's TravelLog totals in the [TravelLog window](../TravelLog/README.md#window) and `/tl stats`, like an alt's. Needs [TravelLog](../TravelLog/); install [TravelLog_Nodes](../TravelLog_Nodes/) to share nodes. Both players need TravelLog Share.
 
-## The Sharing tab
+## The Friends tab
 
-Open it with `/tl share`, or from the [TravelLog window](../TravelLog/README.md#window). On the left is everyone you share with, follow or who asked you for something, tagged `share`, `follow` or `asked`. Type a name and press Enter or **Add** to add someone; names without a realm are on your realm, and they stay listed after a reload once you tick a box. Pick a player to see and change:
+Open it with `/tl share`, or from the TravelLog window. Type a name and press Enter or **Add**; names without a realm are on your realm. Nothing is shared until you've both added each other. A friend is one character, so add each one your friend plays.
+
+The list tags a friend with their level once their totals arrive, or `waiting` when they haven't added you. Pick one to see:
+
+- when you last heard from them,
+- how many of their nodes you have,
+- their level and when their totals arrived.
+
+**Show totals** opens their totals in the Totals tab. **Remove** drops their nodes and totals.
+
+## What's shared
 
 | | |
 | --- | --- |
-| **Share my nodes and log** | They get your nodes and may ask for your log. |
-| **Get their nodes** | Follow them: their nodes show [on your map](#on-the-map), with how many you have. Unticking drops them. |
-| **Asked** | How often they asked you, and what they asked for last, from which character, and whether it was sent. |
-| **Ask for log** | Ask for their last 20, 50 or 100 entries. They're listed below, newest first, and kept until the next ones arrive. |
+| **Nodes** | Every chest, herb and ore your characters looted, with the total loot count, but not who looted it. Your friend's addon asks at their login, at yours and when they add you. After that, only new or updated nodes are sent, and nodes you loot go to them right away. |
+| **Totals** | The totals of the character you're on (TravelLog's, and Path's jumps and distance), with its level, class and race. They're sent in full when your friend asks, then every 5 minutes only what changed. Not your log, sessions or time played. |
 
-With nobody picked, the tab shows the last request you got. The Totals tab shows how many players you share with and follow, and when the last request came.
+Your friend list is account-wide, so all your characters answer.
 
-| | You share | You receive |
-| --- | --- | --- |
-| **Nodes** | Sent whenever an allowed player asks, which their addon does on its own: at their login, at yours, and when they follow you. Nodes you loot afterwards go to them right away. | New or updated nodes since the last batch are sent. The newest second may be sent again so simultaneous nodes aren't missed. |
-| **Log** | Sent only when they ask. Chat tells you who asked. | Chat tells you when it arrives. |
+A friend's totals show up as a character after yours under **Character** in the Totals tab, and with `/tl stats <name>`. They never count in **All characters** or `/tl stats all`. Rows only the character you're on has say so.
 
-The allow list is account-wide, so all your characters answer. Each sends the nodes all your characters looted, with the total loot count, and its own log. Both players need TravelLog Share.
+The whispers are addon messages, which chat doesn't show. Chat tells you:
+
+- when someone who isn't your friend asks (at most once a minute),
+- when a friend hasn't added you yet,
+- when new nodes arrive,
+- the first time a friend's totals arrive.
 
 ## On the map
 
-Other players' nodes are drawn like yours, a little smaller and dimmer, on zone maps while `/tl nodes` is on. The tooltip says who shared it, when they last looted it and how many times.
+Friends' nodes are drawn like yours, a little smaller and dimmer, on zone maps and the minimap while TravelLog_Nodes shows yours. The tooltip says who shared it, when they last looted it and how many times.
 
 ## Where the data is
 
@@ -32,26 +42,24 @@ Other players' nodes are drawn like yours, a little smaller and dimmer, on zone 
 
 ```lua
 TravelLogShareDB = {
-  allowed = { ["bob-forever"] = "Bob-Forever" },
-  follow = { ["rasmus-forever"] = "Rasmus-Forever" },
-  requests = {   -- oldest first, the last 200
-    { time = 1760000000, from = "Bob-Forever", to = "Rasmus-Forever", what = "log", count = 20, allowed = true },
-  },
-  peers = {   -- what others sent you
-    ["rasmus-forever"] = { name = "Rasmus-Forever", nodesSince = 1760000000,
+  friends = { ["bob-forever"] = "Bob-Forever" },
+  peers = {   -- what friends sent you
+    ["bob-forever"] = { name = "Bob-Forever", seen = 1760000000, nodesSince = 1760000000,
       nodes = { [1429] = { [3] = { kind = "herb", name = "Peacebloom", id = 1618, x = 42.1, y = 65.3, last = 1760000000, count = 8 } } },
-      log = { received = 1760000000, entries = { { time = 1760000000, where = "Goldshire (42.1, 65.3)", text = "Looted ..." } } } },
+      char = { name = "Bob", realm = "Forever", class = "WARRIOR", race = "Human", level = 12, received = 1760000000,
+               stats = { ... } } },   -- as in TravelLogDB.chars
   },
 }
 ```
 
-- `what`: `nodes` or `log`; `count` is how many log entries were asked for, `allowed` whether they were sent.
-- A peer's nodes are keyed by map and by their place in that player's own list. Log entries arrive as text, as `/tl log` shows them.
-- `/tl wipe confirm` drops the requests that character got; the rest stays.
+- `seen`: when they last whispered you. `nodesSince`: the newest node you got from them.
+- A peer's nodes are keyed by map and by their place in that player's own list.
+
+0.1 had separate lists for sharing and following, kept every request and fetched logs. Both lists become friends at the first login with 0.2; requests and logs are dropped.
 
 ## Limits
 
 - Both players must be online. Whispers to someone offline are dropped, and the game's "No player named ... is currently playing" reply to them is hidden.
-- Messages go out three a second, so a 100-entry log takes about half a minute. While the game blocks addon messages, they wait.
-- A log line longer than one message (255 bytes) loses its item links, then is cut short.
+- Messages go out three a second. A well-travelled character's full totals are about 150 messages, so they take about a minute after each login. Updates are a few messages. While the game blocks addon messages, they wait.
+- Totals over 256 KB packed aren't taken.
 - Untested in the live game; tested against a fake client ([tests](../tests/README.md)).
