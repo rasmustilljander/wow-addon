@@ -36,7 +36,7 @@ Every entry is stamped with character, time, zone, subzone, map ID and map coord
 Pick TravelLog from the addons dropdown on the minimap, or type `/tl`, for a window with these tabs:
 
 - **Totals**: numbers under Travel, Loot (money in and out by reason, largest first), Life (quest and PvP outcomes, discoveries, mounts, pets, world buffs, time played, reputation and XP) and Log. Reputation and time by zone show the top three (most changed factions, longest zones) here and all in `/tl stats`; XP sources are largest first. **Character**'s `<` and `>` step from the character you're on through your other characters to all of them added up (a place several visited counts once). Rows only the character you're on has (time played, log entries, and the Kills and Group rows) show for that character.
-- **Settings**: the companions' map options, Path's trail curves and interval, whether gold and XP per hour leave out AFK time and whether each level-up says in chat what it gave (both on by default), and [automatic screenshots](#automatic-screenshots).
+- **Settings**: the companions' map options, Path's trail fade, curves and interval, whether gold and XP per hour leave out AFK time and whether each level-up says in chat what it gave (both on by default), and [automatic screenshots](#automatic-screenshots).
 - **History**: what's in the character file, newest first, in views:
   - **Events**: every event. Filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search event types, descriptions, names, places, dates and saved fields. Search `death` to list deaths with their level, killer or cause and location, `revival` for how you came back, `level` for each level-up, how long it took and what it gave, or `note` for your notes.
   - **Sessions**: each session's length and time AFK, levels, where it started and ended, money and experience gained (per hour after 10 minutes; by default AFK time is left out of both), and its quests done and failed, XP kills and deaths. Hover a session for its XP by source.
@@ -84,7 +84,7 @@ None is taken within 1 s of another screenshot, so a level-up and a challenge to
 | `/tl screenshots [level\|boss\|first\|achievement on\|off]` | Show or change [automatic screenshots](#automatic-screenshots); for example, `/tl screenshots achievement on` |
 | `/tl wipe confirm` | Delete everything for this character, including its Path, Nodes and Share data. Kills and Group have their own `wipe confirm`. |
 
-`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail`, `/tl smooth` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
+`/travellog` works too. TravelLog_Path adds `/tl jumps`, `/tl trail`, `/tl fade`, `/tl smooth` and `/tl interval`, TravelLog_Nodes adds `/tl nodes`, and both add lines to `/tl stats`. TravelLog_Share adds `/tl share`, which opens its tab.
 
 ## Where the data is
 

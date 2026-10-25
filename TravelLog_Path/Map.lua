@@ -1,7 +1,7 @@
 -- Draws your recorded path on the world map, with markers for jumps, and for
 -- loot, deaths, level-ups, notes and other milestones from TravelLog's log,
 -- and your alts' paths in their class color. "/tl trail" picks how far back
--- each shows.
+-- each shows; "/tl fade" how older parts fade.
 local _, ns = ...
 local tl = TravelLog
 
@@ -10,12 +10,15 @@ local MAX_DOTS = 3000
 local LINE_WIDTH = 2.5   -- screen pixels
 local ALT_LINE_WIDTH = 1.5
 local ALT_ALPHA = 0.7
+local MIN_WIDTH = 1      -- screen pixels a faded line or jump dot keeps
 local MIN_SEGMENT = 4    -- screen pixels between drawn trail points
 local CURVE_ERROR = 0.5  -- screen pixels a curve's straight pieces may stray from it
 local MAX_PIECES = 8     -- straight pieces per curved segment
 local MAX_STEP = 300     -- yards between consecutive points; more is a teleport
 local REFRESH = 3        -- seconds between adding new points while the map is open
 local RANGE_REFRESH = 60 -- seconds before a rolling trail cutoff is recomputed
+local FADE_REFRESH = 60  -- seconds between refading the trail while the map is open
+local FADE_STEP = 0.02   -- the least change in opacity or width worth refading for
 
 -- Trail colors by how you were moving, and marker colors. Changes from the
 -- Colors tab (tl.settings.trailColors, markerColors) take their place.
@@ -38,6 +41,19 @@ ns.MARKER_COLORS = {
 	note = { 1, 1, 0.6, 1 },
 }
 
+-- How the trail fades with age, in played minutes and percent of full
+-- opacity and width. Changes from /tl fade (tl.settings.trailFade) take
+-- their place.
+ns.TRAIL_FADE = { on = true, alphaFrom = 15, alphaTo = 120, alpha = 50, widthFrom = 60, widthTo = 180, width = 60 }
+
+function ns.FadeSetting(key)
+	local value = tl.settings.trailFade[key]
+	if value == nil then
+		return ns.TRAIL_FADE[key]
+	end
+	return value
+end
+
 -- Marker sizes (screen pixels).
 local MARKER_SIZES = { jump = 3, loot = 5, death = 9, level = 9, learned = 7, taxipath = 7, standing = 7, mount = 9, note = 9 }
 
@@ -49,7 +65,7 @@ local HOVERED = { death = true, note = true }
 
 local overlay
 local lines, dots, pins = {}, {}, {}
-local drawnMap, drawnScale, drawnVersion, drawnRange, drawnAt = nil, nil, nil, nil, 0
+local drawnMap, drawnScale, drawnVersion, drawnRange, drawnAt, fadedAt = nil, nil, nil, nil, 0, 0
 
 -- A stable key until a rolling range needs its cutoff recomputed. Calendar
 -- days change at local midnight; hour/day durations and week age once a
@@ -203,30 +219,110 @@ end
 -- Drawing
 --------------------------------------------------------------------------------
 
--- Alts' lines go on sublevel -1, below yours.
-local function SetLine(i, x1, y1, x2, y2, color, thickness, sublevel)
+-- Drawing state for the map being shown. A full redraw happens when the map,
+-- zoom or setting changes; otherwise only newly recorded points are added.
+local view = { progress = {}, cells = {}, sources = {}, logNext = {} }
+
+-- 0 until age reaches from, 1 from to on, easing in and out between.
+local function Ease(age, from, to)
+	if age <= from then
+		return 0
+	elseif age >= to then
+		return 1
+	end
+	local t = (age - from) / (to - from)
+	return t * t * (3 - 2 * t)
+end
+
+-- How faded something drawn at a played-clock time is (see Clock): its
+-- opacity and width factors, and whether it's as faded as it gets. Without
+-- a clock it doesn't fade.
+local function Fade(source, clock)
+	local fade = view.fade
+	if not (fade and clock) then
+		return 1, 1, true
+	end
+	local age = source.endClock - clock
+	if source.live then
+		age = age + view.now - source.clockedAt
+	end
+	local a = 1 - Ease(age, fade.alphaFrom, fade.alphaTo) * (1 - fade.alpha)
+	local w = 1 - Ease(age, fade.widthFrom, fade.widthTo) * (1 - fade.width)
+	return a, w, age >= fade.alphaTo and age >= fade.widthTo
+end
+
+-- What each line and dot is drawn from, so it can be refaded in place: its
+-- source, played-clock time, full color, full width or size, and (lines)
+-- sublevel; the opacity and width factors it's drawn with, and whether it
+-- can fade further.
+local lineSource, lineClock, lineColor, lineWidth, lineLayer = {}, {}, {}, {}, {}
+local lineAlpha, lineThin, lineDone = {}, {}, {}
+local dotSource, dotClock, dotColor, dotSize = {}, {}, {}, {}
+local dotAlpha, dotThin, dotDone = {}, {}, {}
+
+-- Whether refading something drawn with factors a0 and w0 changes it
+-- enough to see.
+local function Changed(a, w, done, a0, w0)
+	return done or math.abs(a - a0) >= FADE_STEP or math.abs(w - w0) >= FADE_STEP
+end
+
+-- Faded lines thin no further than MIN_WIDTH, unless already thinner.
+local function Thinned(full, w)
+	return math.max(full * w, math.min(full, view.minWidth))
+end
+
+-- Fades line i to its age; when refading, only if that's a visible change.
+-- Alts' lines go on sublevel -1, below yours. Yours that haven't started
+-- fading go above the rest, so the recent path is on top where it crosses.
+local function StyleLine(i, refading)
+	local a, w, done = Fade(lineSource[i], lineClock[i])
+	if refading and not Changed(a, w, done, lineAlpha[i], lineThin[i]) then
+		return
+	end
+	local color, layer = lineColor[i], lineLayer[i]
+	local line = lines[i]
+	line:SetDrawLayer("OVERLAY", layer == 0 and a == 1 and w == 1 and 1 or layer)
+	line:SetColorTexture(color[1], color[2], color[3], color[4] * a)
+	line:SetThickness(Thinned(lineWidth[i], w))
+	lineAlpha[i], lineThin[i], lineDone[i] = a, w, done
+end
+
+local function StyleDot(i, refading)
+	local a, w, done = Fade(dotSource[i], dotClock[i])
+	if refading and not Changed(a, w, done, dotAlpha[i], dotThin[i]) then
+		return
+	end
+	local color = dotColor[i]
+	local size = Thinned(dotSize[i], w)
+	local dot = dots[i]
+	dot:SetVertexColor(color[1], color[2], color[3], color[4] * a)
+	dot:SetSize(size, size)
+	dotAlpha[i], dotThin[i], dotDone[i] = a, w, done
+end
+
+local function SetLine(i, x1, y1, x2, y2, color, thickness, sublevel, source, clock)
 	local line = lines[i]
 	if not line then
 		line = overlay:CreateLine(nil, "OVERLAY")
 		lines[i] = line
 	end
-	line:SetDrawLayer("OVERLAY", sublevel)
-	line:SetColorTexture(color[1], color[2], color[3], color[4])
-	line:SetThickness(thickness)
+	lineSource[i], lineClock[i], lineColor[i], lineWidth[i], lineLayer[i] = source, clock, color, thickness, sublevel
+	StyleLine(i)
 	line:SetStartPoint("TOPLEFT", overlay, x1, -y1)
 	line:SetEndPoint("TOPLEFT", overlay, x2, -y2)
 	line:Show()
 end
 
-local function SetDot(i, x, y, color, size)
+-- Markers go on sublevel 2, above all lines.
+local function SetDot(i, x, y, color, size, source, clock)
 	local dot = dots[i]
 	if not dot then
-		dot = overlay:CreateTexture(nil, "OVERLAY", nil, 1)
+		dot = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
 		dot:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask")
 		dots[i] = dot
 	end
-	dot:SetVertexColor(color[1], color[2], color[3], color[4])
-	dot:SetSize(size, size)
+	dotSource[i], dotClock[i], dotColor[i], dotSize[i] = source, clock, color, size
+	StyleDot(i)
 	dot:ClearAllPoints()
 	dot:SetPoint("CENTER", overlay, "TOPLEFT", x, -y)
 	dot:Show()
@@ -270,11 +366,8 @@ local function HideFrom(pool, first)
 	end
 end
 
--- Drawing state for the map being shown. A full redraw happens when the map,
--- zoom or setting changes; otherwise only newly recorded points are added.
-local view = { progress = {}, cells = {}, sources = {}, logNext = {} }
-
-local function Dot(x, y, kind, event)
+-- Jumps pass their source and played-clock time, to fade with the trail.
+local function Dot(x, y, kind, event, source, clock)
 	if view.dots >= MAX_DOTS then
 		return
 	end
@@ -286,7 +379,7 @@ local function Dot(x, y, kind, event)
 	end
 	view.cells[cell] = true
 	view.dots = view.dots + 1
-	SetDot(view.dots, x, y, tl.settings.markerColors[kind] or ns.MARKER_COLORS[kind], size)
+	SetDot(view.dots, x, y, tl.settings.markerColors[kind] or ns.MARKER_COLORS[kind], size, source, clock)
 	if HOVERED[kind] then
 		view.pins = view.pins + 1
 		SetPin(view.pins, event, x, y, size)
@@ -313,7 +406,8 @@ end
 -- (0-1) is how round it is; 0 draws a straight line. Lines are taken from
 -- slots first, if given, then from the pool; keep adds the pool's to slots
 -- so the segment can be redrawn in place once the point after it is known.
-local function DrawCurve(slots, keep, ax, ay, bx, by, cx, cy, dx, dy, color, thickness, sublevel)
+-- bt and ct are b's and c's played-clock times, for fading each piece.
+local function DrawCurve(slots, keep, ax, ay, bx, by, cx, cy, dx, dy, color, thickness, sublevel, source, bt, ct)
 	local ex, ey = cx - bx, cy - by
 	local s = view.smooth * (ex * ex + ey * ey) ^ 0.25
 	local t1x, t1y = Tangent(ax, ay, bx, by, cx, cy)
@@ -340,7 +434,7 @@ local function DrawCurve(slots, keep, ax, ay, bx, by, cx, cy, dx, dy, color, thi
 		local t = k / n
 		local h1, h2 = t * (1 - t) ^ 2, t * t * (t - 1)
 		local x, y = bx + t * ex + h1 * u1x + h2 * u2x, by + t * ey + h1 * u1y + h2 * u2y
-		SetLine(i, x0, y0, x, y, color, thickness, sublevel)
+		SetLine(i, x0, y0, x, y, color, thickness, sublevel, source, bt and bt + (k - 0.5) / n * (ct - bt))
 		x0, y0 = x, y
 	end
 	for k = n + 1, slots and #slots or 0 do
@@ -350,11 +444,11 @@ end
 
 -- Finishes the trail drawn so far in progress, so the next point starts a
 -- new one.
-local function EndTrail(c, thickness, sublevel)
+local function EndTrail(c, thickness, sublevel, source)
 	if c.color and not c.tail then
-		DrawCurve(nil, false, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel)
+		DrawCurve(nil, false, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel, source, c.bt, c.t)
 	end
-	c.ax, c.ay, c.bx, c.by, c.x, c.y, c.color, c.tail = nil, nil, nil, nil, nil, nil, nil, nil
+	c.ax, c.ay, c.bx, c.by, c.x, c.y, c.color, c.tail, c.bt, c.t = nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
 end
 
 -- Draws a session's points not drawn yet. source is the history it's from
@@ -362,9 +456,11 @@ end
 local function DrawSession(s, data, progress, source)
 	local since, before, map, w, h = source.since, source.before or math.huge, view.map, view.w, view.h
 	local color, thickness, sublevel = source.color, source.width / view.scale, source.color and -1 or 0
+	local clock = source.clocks[s]
 	-- Each segment waits for the point after it, which shapes its curve.
-	-- progress holds the last three points kept (a, b and x), the color of
-	-- the waiting segment b-x, and its lines if already drawn as an end.
+	-- progress holds the last three points kept (a, b and x) and b's and x's
+	-- played-clock times, the color of the waiting segment b-x, and its
+	-- lines if already drawn as an end.
 	local p, c = data.path, progress
 	for i = progress.path, #p, PATH_STRIDE do
 		local x, y
@@ -373,20 +469,22 @@ local function DrawSession(s, data, progress, source)
 			x, y = Project(p[i + 1], p[i + 2], p[i + 3], map)
 		end
 		if not x then
-			EndTrail(c, thickness, sublevel)
+			EndTrail(c, thickness, sublevel, source)
 		else
 			x, y = x * w, y * h
+			local pt = clock and clock + p[i]
 			if c.x and p[i + 5] then
 				if (x - c.x) ^ 2 + (y - c.y) ^ 2 >= view.minSegment and view.lines < MAX_LINES then
 					if c.color then
-						DrawCurve(c.tail, false, c.ax, c.ay, c.bx, c.by, c.x, c.y, x, y, c.color, thickness, sublevel)
+						DrawCurve(c.tail, false, c.ax, c.ay, c.bx, c.by, c.x, c.y, x, y, c.color, thickness, sublevel,
+							source, c.bt, c.t)
 					end
-					c.ax, c.ay, c.bx, c.by, c.x, c.y = c.bx, c.by, c.x, c.y, x, y
+					c.ax, c.ay, c.bx, c.by, c.x, c.y, c.bt, c.t = c.bx, c.by, c.x, c.y, x, y, c.t, pt
 					c.color, c.tail = color or TrailColor(p[i + 4]), nil
 				end
 			else
-				EndTrail(c, thickness, sublevel)
-				c.x, c.y = x, y
+				EndTrail(c, thickness, sublevel, source)
+				c.x, c.y, c.t = x, y, pt
 			end
 		end
 	end
@@ -394,7 +492,8 @@ local function DrawSession(s, data, progress, source)
 	-- The newest segment is drawn as an end until a point follows it.
 	if c.color and not c.tail then
 		c.tail = {}
-		DrawCurve(c.tail, true, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel)
+		DrawCurve(c.tail, true, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel,
+			source, c.bt, c.t)
 	end
 	if not source.jumps then
 		return
@@ -406,11 +505,39 @@ local function DrawSession(s, data, progress, source)
 		if t >= since and t < before then
 			local x, y = Project(j[i + 1], j[i + 2], j[i + 3], map)
 			if x then
-				Dot(x * w, y * h, "jump")
+				Dot(x * w, y * h, "jump", nil, source, clock and clock + j[i])
 			end
 		end
 	end
 	progress.jumps = #j + 1
+end
+
+-- When a session that wasn't closed (by a logout or reload) ended: its
+-- last stored path point.
+local function LastRecorded(s)
+	local chunk = s.track and s.track[#s.track]
+	local dt = chunk and tonumber(chunk:match("([^;]*)$"):match("^(%d+)"))
+	return s.start + (dt or 0)
+end
+
+-- Sets up a history's played clock, which runs only while the character is
+-- logged in, up to the end of its range: clocks has each session's start
+-- on it, endClock where it was at clockedAt. If live, the range ends now
+-- and the clock is still running.
+local function Clock(history)
+	local now = time()
+	local stop = math.min(history.before or now, now)
+	local clocks, played = {}, 0
+	for _, s in ipairs(history.sessions) do
+		if s.start > stop then
+			break
+		end
+		clocks[s] = played
+		local finish = s == ns.session and now or s.stop or LastRecorded(s)
+		played = played + math.max(0, math.min(finish, stop) - s.start)
+	end
+	history.clocks, history.endClock, history.clockedAt = clocks, played, now
+	history.live = clocks[ns.session] ~= nil and stop == now
 end
 
 -- Adds a character's stored history in a range to the list. alt is an entry
@@ -426,20 +553,19 @@ local function AddSources(list, range, alt)
 		local r, g, b = GetClassColor(alt.profile.class)
 		style = { since = since, before = before, width = ALT_LINE_WIDTH, color = { r, g, b, ALT_ALPHA } }
 	end
-	local function Add(history)
-		for key, value in pairs(style) do
-			history[key] = value
-		end
-		list[#list + 1] = history
+	local history = { sessions = sessions, log = not alt and tl.char.log or nil }
+	for key, value in pairs(style) do
+		history[key] = value
 	end
-
-	Add({ sessions = sessions, log = not alt and tl.char.log or nil })
+	Clock(history)
+	list[#list + 1] = history
 end
 
 -- Where the trails come from, each { sessions, log, since, before, width,
--- color, jumps }: path sessions, TravelLog's log for the markers (yours
--- only), the time range, and how to draw them. Yours come first so they
--- get the line budget; alts' lines are drawn below them anyway.
+-- color, jumps, clocks, endClock, clockedAt, live }: path sessions,
+-- TravelLog's log for the markers (yours only), the time range, how to draw
+-- them, and the played clock they fade by (see Clock). Yours come first so
+-- they get the line budget; alts' lines are drawn below them anyway.
 local function Sources()
 	local list = {}
 	AddSources(list, tl.settings.trail)
@@ -465,6 +591,7 @@ local function DrawNew()
 		return
 	end
 	local now = time()
+	view.now = now
 	for _, history in ipairs(view.sources) do
 		for _, s in ipairs(history.sessions) do
 			if (s.stop or now) >= history.since and (not history.before or s.start < history.before) then
@@ -497,15 +624,48 @@ local function DrawNew()
 	end
 end
 
+-- The fade in seconds and fractions, or nil when it's off.
+local function FadeShape()
+	local S = ns.FadeSetting
+	if not S("on") then
+		return nil
+	end
+	return {
+		alphaFrom = S("alphaFrom") * 60, alphaTo = S("alphaTo") * 60, alpha = S("alpha") / 100,
+		widthFrom = S("widthFrom") * 60, widthTo = S("widthTo") * 60, width = S("width") / 100,
+	}
+end
+
+-- Fades what's drawn from a live history (one whose clock still runs) to
+-- its age now, without redrawing it.
+local function Refade()
+	fadedAt, view.now = GetTime(), time()
+	for i = 1, view.lines do
+		local source = lineSource[i]
+		if source and source.live and not lineDone[i] then
+			StyleLine(i, true)
+		end
+	end
+	for i = 1, view.dots do
+		local source = dotSource[i]
+		if source and source.live and not dotDone[i] then
+			StyleDot(i, true)
+		end
+	end
+end
+
 local function Redraw()
 	drawnMap = WorldMapFrame:GetMapID()
 	drawnScale = WorldMapFrame:GetCanvasScale() or 1
 	drawnRange = CurrentRangeKey()
+	fadedAt = GetTime()
 
 	view.map, view.scale = drawnMap, drawnScale
 	view.w, view.h = overlay:GetSize()
 	view.minSegment = (MIN_SEGMENT / view.scale) ^ 2
+	view.minWidth = MIN_WIDTH / view.scale
 	view.smooth = tl.settings.smooth / 100
+	view.fade = FadeShape()
 	view.lines, view.dots, view.pins = 0, 0, 0
 	view.sources = Sources()
 	view.logNext = {}
@@ -537,6 +697,9 @@ local function OnUpdate()
 		Redraw()
 	elseif drawnVersion ~= tl.version and sinceDraw > REFRESH then
 		DrawNew()
+	end
+	if view.fade and GetTime() - fadedAt > FADE_REFRESH then
+		Refade()
 	end
 end
 

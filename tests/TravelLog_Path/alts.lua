@@ -114,9 +114,10 @@ SlashCmdList.TRAVELLOG("trail alts today")
 check(ns.settings.altTrail == "today" and ns.settings.trail == "today", "alts' range set apart from yours")
 mine, alts = Lines()
 check(#alts == today * 2, "Rasmus's walks today drawn: " .. #alts)
-local a = alts[1]
-check(a.color[1] == 0.25 and a.color[2] == 0.78 and a.color[4] == 0.7 and a.thickness < mine[1].thickness,
-	"in mage blue, thinner and fainter than yours")
+-- The newest, a little faded: Rasmus stayed logged in an hour after it.
+local a = alts[#alts]
+check(a.color[1] == 0.25 and a.color[2] == 0.78 and a.color[4] < 0.7 and a.color[4] > 0.5
+	and a.thickness < mine[1].thickness, "in mage blue, thinner and fainter than yours: " .. a.color[4])
 check(#M.shown(M.mapOverlay(2010).textures) == 0, "no markers or jumps for alts")
 
 SlashCmdList.TRAVELLOG("trail alts session")

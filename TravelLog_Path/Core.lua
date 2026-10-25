@@ -12,6 +12,7 @@ tl.Defaults({
 	hiddenAlts = {},    -- alts whose trail isn't shown, by "Name-Realm"
 	trailColors = {},   -- trail colors changed in the Colors tab, by how you moved: { r, g, b, a }
 	markerColors = {},  -- the same for map markers, by kind
+	trailFade = {},     -- how the map trail fades, the fields /tl fade changed (see ns.TRAIL_FADE)
 })
 
 -- Path points and jumps are packed this many records per string, which keeps

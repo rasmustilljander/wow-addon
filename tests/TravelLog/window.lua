@@ -64,7 +64,7 @@ check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(tota
 check(Texts(totals, 18) == "Character, Places visited, Time by zone, Flights, Flight paths, Teleports, Boat rides, Instances, Resting, Screenshots, Notes, Jumps, Distance, Looted, Vendors, Rolls, Items out, Guild bank items, Money in, Money out, Nodes, "
 	.. "Played, Quests, Discoveries, Learned, Mounts, Pets, New gear, Legacy Challenges, World buffs, Reputation, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General, Screenshots", "setting sections: " .. Texts(settings, 14))
-check(Texts(settings, 18) == "Your trail, Trail curves (%), Path interval (s)", "setting labels: " .. Texts(settings, 18))
+check(Texts(settings, 18) == "Your trail, Trail fade, Trail curves (%), Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Items out") == "0 traded, 0 mailed, 0 auctioned, 0 destroyed", "items out: " .. Stat(w, "Items out"))
