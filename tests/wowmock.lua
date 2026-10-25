@@ -764,6 +764,7 @@ function M.loseAura(spellID)
 end
 -- M.group lists the other members' units ("party1", ...), set in M.units.
 function GetNumGroupMembers() return #M.group > 0 and #M.group + 1 or 0 end
+function IsInGroup() return #M.group > 0 end
 function IsInRaid() return M.raid end
 function GetMoney() return M.money end
 function IsMounted() return M.mounted end

@@ -137,8 +137,13 @@ function ns.ChallengesText(st)
 	return ("%s earned, %s points"):format(Count(st.achievements), Count(st.achievementPoints))
 end
 
--- Time logged in per zone, longest first: "Elwynn Forest 3h 12m, Westfall
--- 45m". With most, only that many zones and how many more.
+local ZONE_STATES = {
+	{ "combat", "combat" }, { "dead", "dead" }, { "afk", "AFK" }, { "flight", "flying" }, { "group", "grouped" },
+}
+
+-- Time logged in per zone, longest first: "Elwynn Forest 3h 12m (combat
+-- 20m, grouped 1h 5m), Westfall 45m". With most, only that many zones and
+-- how many more, without the states. States under a minute are left out.
 function ns.ZoneTimeText(st, most)
 	local list = {}
 	for zone, seconds in pairs(st.zoneTime or {}) do
@@ -159,7 +164,20 @@ function ns.ZoneTimeText(st, most)
 			parts[#parts + 1] = ("%d more"):format(#list - most)
 			break
 		end
-		parts[i] = ("%s %s"):format(z.zone, ns.Duration(z.seconds))
+		local text = ("%s %s"):format(z.zone, ns.Duration(z.seconds))
+		if not most then
+			local states = {}
+			for _, s in ipairs(ZONE_STATES) do
+				local seconds = ((st.zoneStateTime or {})[s[1]] or {})[z.zone] or 0
+				if seconds >= 60 then
+					states[#states + 1] = ("%s %s"):format(s[2], ns.Duration(seconds))
+				end
+			end
+			if #states > 0 then
+				text = ("%s (%s)"):format(text, table.concat(states, ", "))
+			end
+		end
+		parts[i] = text
 	end
 	return table.concat(parts, ", ")
 end

@@ -30,11 +30,6 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
   - The controls are a frame of our own, not a child of the world map, so the map stays click-through and untainted.
   - Risk: redraw cost on long ranges; check with `tests/TravelLog/stress.lua`.
 
-- **Time per zone by state.** Per zone, how long you were in combat, dead or a ghost, AFK, on flights and grouped.
-  - TravelLog `Travel.lua`: `CountZoneTime` (every second) also adds to `stats.zoneStateTime[state][zone]`; `stats.zoneTime` stays the total.
-  - States overlap (AFK while grouped), so each is its own counter, not a split of the total.
-  - API: `UnitAffectingCombat`, `UnitIsDeadOrGhost`, `UnitIsAFK` (secret in chat lockdown), `UnitOnTaxi`, `IsInGroup` (undocumented; Blizzard's UI calls it).
-
 - **Player notes and ratings.** An account-wide note and a behavior and skill rating per player, shown in the Players tab and the player's tooltip.
   - TravelLog_Group: Group's file is per character, so this needs a new account-wide `SavedVariables` keyed by `Name-Realm`, like `players`.
   - Set from the Players tab (an edit box) and with `/grouped note` and `/grouped rate`.

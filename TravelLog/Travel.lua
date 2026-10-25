@@ -36,13 +36,30 @@ end
 local lastZone, lastSubzone
 local zoneSince -- time() the zone you're in was last counted up to
 
+-- What you were doing, each counted per zone in stats.zoneStateTime[state].
+-- They overlap (AFK while grouped), so each is its own counter, not a split
+-- of the zone's total.
+local ZONE_STATES = {
+	combat = function() return UnitAffectingCombat("player") end,
+	dead = function() return UnitIsDeadOrGhost("player") end, -- ghosts too
+	afk = function() return UnitIsAFK("player") end,          -- secret in chat lockdown
+	flight = function() return UnitOnTaxi("player") end,
+	group = function() return IsInGroup() end,
+}
+
 -- Adds the seconds since the last count to the zone you're in, in
--- stats.zoneTime. Runs every second, on zone changes and on logout, so a
--- reload counts each second once; time logged out isn't counted.
+-- stats.zoneTime, and to its states you're in now. Runs every second, on
+-- zone changes and on logout, so a reload counts each second once; time
+-- logged out isn't counted.
 local function CountZoneTime()
 	local now = time()
 	if lastZone and zoneSince and now > zoneSince then
 		ns.Add(now - zoneSince, "zoneTime", lastZone)
+		for state, active in pairs(ZONE_STATES) do
+			if ns.Clean(active()) then
+				ns.Add(now - zoneSince, "zoneStateTime", state, lastZone)
+			end
+		end
 	end
 	zoneSince = now
 end
