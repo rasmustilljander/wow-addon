@@ -1,7 +1,6 @@
 -- TravelLog_Nodes: chests and gathering nodes remembered by place, with
 -- when they were last looted and by whom, their map pins and tooltips, alts
--- sharing them, wiping, and moving old per-character nodes into the
--- account-wide file.
+-- sharing them and wiping.
 local ns = M.Login()
 local nodeNS = M.ns("TravelLog_Nodes")
 check(ns.settings.nodeMinimap and ns.settings.nodes, "minimap and world map pins on by default")
@@ -272,44 +271,3 @@ check(#Nodes() == 5 and Total(herbNode) == 8 and herbNode.counts["Altie-Forever"
 check(herbNode.by[1] == "Rasmus-Forever" and #herbNode.times == 4 and herbNode.last == herbNode.times[1], "and its time")
 M.Logout()
 M.player = { name = "Rasmus", realm = "Forever" }
-
---------------------------------------------------------------------------------
--- Nodes from 0.1's per-character file, and from TravelLog's file before
--- TravelLog_Nodes existed, move into the shared file
---------------------------------------------------------------------------------
-
-M.saved, M.savedChar = {}, { ["Rasmus-Forever"] = { TravelLog = [[
-TravelLogCharDB = {
-	["log"] = {},
-	["sessions"] = {},
-	["nodes"] = { [1429] = { { ["kind"] = "herb", ["name"] = "Peacebloom", ["x"] = 30, ["y"] = 40,
-		["count"] = 3, ["last"] = 1759990000, ["times"] = { 1759990000 } } } },
-}
-]] }, ["Altie-Forever"] = { TravelLog_Nodes = [[
-TravelLogNodesDB = { ["maps"] = { [1429] = {
-	{ ["kind"] = "herb", ["name"] = "Silverleaf", ["x"] = 30.1, ["y"] = 40.1, ["inst"] = 0, ["a"] = -9101, ["b"] = -301,
-		["count"] = 2, ["last"] = 1759995000, ["times"] = { 1759995000, 1759980000 } },
-	{ ["kind"] = "ore", ["name"] = "Copper Vein", ["x"] = 60, ["y"] = 60, ["inst"] = 0, ["a"] = -9500, ["b"] = -700,
-		["count"] = 1, ["last"] = 1759985000, ["times"] = { 1759985000 } },
-} } }
-]] } }
-ns = M.Login()
-check(TravelLogCharDB.nodes == nil and #Nodes() == 1 and Total(Nodes()[1]) == 3 and Nodes()[1].by[1] == "Rasmus-Forever",
-	"old nodes moved out of TravelLog's file, as the character's")
-M.Logout()
-
-M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
-ns = M.Login()
-local merged = Nodes()[1]
-check(TravelLogNodesDB == nil and #Nodes() == 2, "0.1's per-character nodes moved into the shared file")
-check(Total(merged) == 5 and merged.counts["Altie-Forever"] == 2 and merged.counts["Rasmus-Forever"] == 3, "the same spot merges into one node")
-check(merged.times[1] == 1759995000 and merged.times[2] == 1759990000 and merged.times[3] == 1759980000
-	and merged.by[1] == "Altie-Forever" and merged.by[2] == "Rasmus-Forever" and merged.last == 1759995000 and merged.name == "Silverleaf",
-	"merged times in order, named after the newest loot")
-M.x, M.y, M.wa, M.wb = 0.30, 0.40, -9100, -300
-M.cast(2366, "Peacebloom")
-M.loot = Herb("Peacebloom", 1618)
-M.lootAll()
-check(#Nodes() == 2 and Total(Nodes()[1]) == 6 and last("loot").lastHere == 1759995000, "a moved node is found again by place")
-ns = M.Reload()
-check(#Nodes() == 2 and TravelLogNodesDB == nil and M.savedSize("TravelLog_Nodes", true) == 0, "and stays moved")

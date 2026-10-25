@@ -1,6 +1,6 @@
--- Alts' trails and trail ranges: the path moving to the account-wide file,
--- alts drawn in their class color, ranges by hours, days and calendar day,
--- the window's alt rows, old stored paths and wiping.
+-- Alts' trails and trail ranges: the path saved account-wide, alts drawn
+-- in their class color, ranges by hours, days and calendar day, the
+-- window's alt rows, old stored paths and wiping.
 local HOUR, DAY = 3600, 86400
 M.installed = { "TravelLog", "TravelLog_Path" }
 M.now = os.time({ year = 2025, month = 10, day = 9, hour = 12 })
@@ -33,18 +33,16 @@ local function Walk(seconds)
 end
 
 --------------------------------------------------------------------------------
--- A path from version 0.1, in the character's own file, moves to the
--- account-wide one
+-- The path is saved in the account-wide file, under the character's name
 --------------------------------------------------------------------------------
 
-M.savedChar["Rasmus-Forever"] = { TravelLog_Path = ([[
-TravelLogPathDB = { ["sessions"] = { { ["start"] = %d, ["stop"] = %d,
-	["track"] = { "0,1429,30.00,30.00,0,-9100.0,-200.0,0;60,1429,40.00,30.00,0,-9100.0,-300.0,0" }, ["jumps"] = {} } } }
-]]):format(M.now - DAY, M.now - DAY + HOUR) }
+M.saved.TravelLog_Path = ([[
+TravelLogPathAccountDB = { ["chars"] = { ["Rasmus-Forever"] = { ["sessions"] = { { ["start"] = %d, ["stop"] = %d,
+	["track"] = { "0,1429,30.00,30.00,0,-9100.0,-200.0,0;60,1429,40.00,30.00,0,-9100.0,-300.0,0" }, ["jumps"] = {} } } } } }
+]]):format(M.now - DAY, M.now - DAY + HOUR)
 local ns = M.Login()
 local path = M.ns("TravelLog_Path")
-check(TravelLogPathDB == nil and #path.db.sessions == 2 and path.db.sessions[1].start == M.now - DAY,
-	"old per-character path moved into the account-wide file")
+check(#path.db.sessions == 2 and path.db.sessions[1].start == M.now - DAY, "yesterday's path loaded, today's session added")
 check(TravelLogPathAccountDB.chars["Rasmus-Forever"] == path.db, "kept under the character's name")
 Walk(10)
 M.Logout()

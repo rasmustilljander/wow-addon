@@ -192,7 +192,6 @@ frame:SetScript("OnEvent", function(_, event, arg)
 	if event == "ADDON_LOADED" and arg == "CVarBrowser" then
 		CVarBrowserDB = CVarBrowserDB or {}
 		CVarBrowserDB.bookmarks = CVarBrowserDB.bookmarks or {}
-		CVarBrowserDB.minimap = nil -- the minimap button's, before the addon compartment
 	elseif ns.Refresh then
 		-- A CVar changed, or combat started or ended.
 		ns.Refresh()

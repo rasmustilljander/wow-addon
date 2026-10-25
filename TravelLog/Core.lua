@@ -427,8 +427,6 @@ local function Init()
 			db.settings[key] = value
 		end
 	end
-	-- Left over from removed features.
-	db.settings.minimap, db.settings.minimapAngle, db.archive = nil, nil, nil
 	db.chars = db.chars or {}
 
 	-- Who each character is and their totals live in the account-wide file.

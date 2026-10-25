@@ -196,11 +196,8 @@ w:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -80)
 M.script(w, "OnDragStop")
 check(CVarBrowserDB.point[1] == "TOPLEFT" and CVarBrowserDB.point[3] == 100 and CVarBrowserDB.point[4] == -80, "position saved")
 
--- Bookmarks and the position survive a reload; the minimap button's old
--- settings are dropped.
-CVarBrowserDB.minimap = { angle = 90, hide = true }
+-- Bookmarks and the position survive a reload.
 ns = M.Reload()
-check(CVarBrowserDB.minimap == nil, "old minimap settings dropped")
 check(ns.IsBookmarked("autoLootDefault") and ns.IsBookmarked("hiddenThing") and not ns.IsBookmarked("maxFPS"), "bookmarks kept")
 SlashCmdList.CVARBROWSER("")
 check(ns.window.point[1] == "TOPLEFT" and ns.window.point[4] == 100, "position restored")

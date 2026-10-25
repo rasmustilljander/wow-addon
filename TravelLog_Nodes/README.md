@@ -29,7 +29,7 @@ Names are in the character's class color, with the realm when it isn't yours. No
 
 ## Where the data is
 
-`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Nodes.lua`, one file for every character on every realm. Nodes stay there until that character's `/tl wipe confirm`. Nodes from 0.1's per-character file, and from TravelLog's file before this addon existed, move into it at each character's first login; the same spot from two characters becomes one node.
+`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Nodes.lua`, one file for every character on every realm. Nodes stay there until that character's `/tl wipe confirm`.
 
 Pin settings are in `SavedVariables/TravelLog.lua`: `TravelLogDB.settings.nodeMinimap` controls the minimap and `TravelLogDB.settings.nodes` controls the world map.
 
