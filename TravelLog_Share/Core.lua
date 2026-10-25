@@ -87,13 +87,16 @@ ns.listeners = {}
 -- Friends who asked for your totals this session, by key: what they were
 -- last sent, so only changes go out after that.
 ns.statsSent = {}
+-- Friends who asked for your path this session, by key, and get new points
+-- every few seconds (Trails.lua).
+ns.pathListeners = {}
 
 local queue, budget = {}, PER_SECOND
 local whispered = {} -- key -> GetTime() of our last whisper to them
 local R = Enum.SendAddonMessageResult or {}
 
 -- Everything still queued for someone who turned out to be offline is
--- dropped, and they stop getting new nodes and totals.
+-- dropped, and they stop getting new nodes, totals and path points.
 function ns.Offline(key)
 	local keep = {}
 	for _, m in ipairs(queue) do
@@ -102,7 +105,7 @@ function ns.Offline(key)
 		end
 	end
 	queue = keep
-	ns.listeners[key], ns.statsSent[key] = nil, nil
+	ns.listeners[key], ns.statsSent[key], ns.pathListeners[key] = nil, nil, nil
 end
 
 local function Drain()

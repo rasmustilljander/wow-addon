@@ -1,13 +1,14 @@
 ## Interface: 16001
 ## Title: TravelLog Share
-## Notes: Shares looted chests, herbs and ore and your TravelLog totals with a friend who shares theirs.
+## Notes: Shares looted chests, herbs and ore, your TravelLog totals and your path with a friend who shares theirs.
 ## Author: rasmustilljander
 ## Version: 0.1.0
 ## Dependencies: TravelLog
-## OptionalDeps: TravelLog_Nodes
+## OptionalDeps: TravelLog_Nodes, TravelLog_Path
 ## SavedVariables: TravelLogShareDB
 
 Core.lua
 Protocol.lua
 Stats.lua
+Trails.lua
 Window.lua

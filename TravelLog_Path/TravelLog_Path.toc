@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: TravelLog Path
-## Notes: Records the path you walk, ride, swim and fly, and every jump, and draws it and your alts' paths on the world map.
+## Notes: Records the path you walk, ride, swim and fly, and every jump, and draws it and your alts' and friends' paths on the world map.
 ## Author: rasmustilljander
 ## Version: 0.2.0
 ## Dependencies: TravelLog

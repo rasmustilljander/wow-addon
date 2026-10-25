@@ -314,7 +314,7 @@ check(stats:find("Jumps: 3 ") and stats:find("Distance: ") and stats:find("Path:
 M.out = {}
 SlashCmdList.TRAVELLOG("help")
 local help = table.concat(M.out, "\n")
-check(help:find("/tl trail [alts] session", 1, true) and help:find("/tl interval 1%-5") and help:find("/tl nodes on|off", 1, true)
+check(help:find("/tl trail [alts|friends] session", 1, true) and help:find("/tl interval 1%-5") and help:find("/tl nodes on|off", 1, true)
 	and help:find("/tl jumps"), "help lists the companion addons' commands: " .. help)
 SlashCmdList.TRAVELLOG("jumps")
 SlashCmdList.TRAVELLOG("log 40")

@@ -9,11 +9,6 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
 
 ## Planned
 
-- **Friends' trails.** Draw a [TravelLog_Share](TravelLog_Share/) friend's path on your world map while you're both online, like an alt's trail.
-  - Share: stream new path points to friends who ask (Path's packed records, a few per message), and keep them per friend for the session or saved.
-  - TravelLog_Path: alts' trails come from `TravelLogPathAccountDB.chars`; add a source for friends' points, drawn in their class color under yours.
-  - Catching up on old trail is too slow at three messages a second (about 100 KB per hour of movement), so only points since you both came online.
-
 - **TravelLog export.** The log and totals can't be copied out of the game; only the raw SavedVariables file has them. Add a command or button that opens a copyable text box (CSV or similar) with the log or the totals. A text box because addons can't write files of their own.
 
 - **Damage and healing totals.** Your damage, healing and DPS per boss fight and per session, from Forever's built-in meter.
@@ -43,6 +38,7 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
 
 ## Maybe
 
+- **Friends' trails across reloads.** [TravelLog_Share](TravelLog_Share/) keeps friends' trails in memory, so a reload or relog on your side loses what you had, and catching up is capped at 150 points. Saving them in `TravelLogShareDB` would keep them, at about 100 KB per hour of a friend's movement; they'd need pruning.
 - **Kills by tap.** Count kills of mobs you tapped when someone outside your party lands the blow; TravelLog_Kills counts only `PARTY_KILL`. `UNIT_DIED` gives just a GUID, and `UnitTokenFromGUID` and `UnitIsTapDenied` need a unit token (target, nameplate), so many kills are missed. Small gain.
 - **Milestone announcements.** Post level-ups and other milestones to guild or party. `C_ChatInfo.SendChatMessage` has restrictions (`HasRestrictions`); check which channels work without a key press.
 - **Stats by level range.** Only log entries and sessions (`level`, `levelEnd`) can be filtered: `stats` are running totals with no time, so distance and zone time would need per-session counters.

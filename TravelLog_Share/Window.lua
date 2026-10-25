@@ -57,6 +57,10 @@ local function Status(f)
 	local char = peer.char
 	lines[3] = char and ("Totals: level %d, from %s ago."):format(char.level or 0, tl.Ago(char.received))
 		or "Totals: none yet."
+	if tl.AddTrailSource then
+		local trail = ns.trails[f.key]
+		lines[4] = trail and ("Trail: %d points this session."):format(trail.points) or "Trail: none this session."
+	end
 	return table.concat(lines, "\n")
 end
 
@@ -179,10 +183,10 @@ local function Build(f)
 	d.title = Text(d, "GameFontNormalLarge", 0, -2, DETAIL_WIDTH)
 	d.title:SetWordWrap(false)
 	d.status = Text(d, "GameFontHighlightSmall", 0, -26, DETAIL_WIDTH)
-	d.totals = Button(d, "Show totals", 100, 0, -84, function()
+	d.totals = Button(d, "Show totals", 100, 0, -98, function()
 		tl.ShowTotals(ns.db.peers[selected].name)
 	end)
-	d.remove = Button(d, "Remove", 80, 106, -84, function()
+	d.remove = Button(d, "Remove", 80, 106, -98, function()
 		ns.RemoveFriend(selected)
 		selected = nil
 		Refresh()

@@ -88,11 +88,11 @@ check(said("map trail: last hour"), "described in chat")
 for _, bad in ipairs({ "0h", "2025-02-30", "fortnight", "alts" }) do
 	M.out = {}
 	SlashCmdList.TRAVELLOG("trail " .. bad)
-	check(ns.settings.trail == "1h" and said("/tl trail %[alts%]"), "rejected: " .. bad)
+	check(ns.settings.trail == "1h" and said("/tl trail %[alts|friends%]"), "rejected: " .. bad)
 end
 M.out = {}
 SlashCmdList.TRAVELLOG("help")
-check(said("now: last hour, alts: off"), "help shows both ranges")
+check(said("now: last hour, alts: off, friends: today"), "help shows all three ranges")
 SlashCmdList.TRAVELLOG("trail today")
 M.Logout()
 

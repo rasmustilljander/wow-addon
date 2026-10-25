@@ -34,9 +34,12 @@ local function Moved(a, b)
 	return a.map ~= b.map or math.abs(a.x - b.x) + math.abs(a.y - b.y) > 0.0002
 end
 
+-- Fires TL_PATH(record, session start) after, for TravelLog_Share.
 local function Record(h)
-	ns.track:Add(ns.Pack(h))
+	local rec = ns.Pack(h)
+	ns.track:Add(rec)
 	last = h
+	tl.Fire("TL_PATH", rec, ns.session.start)
 end
 
 local function Tick()

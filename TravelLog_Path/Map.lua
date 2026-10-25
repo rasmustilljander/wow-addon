@@ -1,7 +1,7 @@
 -- Draws your recorded path on the world map, with markers for jumps, and for
 -- loot, deaths, level-ups, notes and other milestones from TravelLog's log,
--- and your alts' paths in their class color. "/tl trail" picks how far back
--- each shows; "/tl fade" how older parts fade.
+-- and your alts' and friends' paths in their class color. "/tl trail" picks
+-- how far back each shows; "/tl fade" how older parts fade.
 local _, ns = ...
 local tl = TravelLog
 
@@ -80,7 +80,8 @@ local function RangeKey(range)
 end
 
 local function CurrentRangeKey()
-	return RangeKey(tl.settings.trail) .. ":" .. RangeKey(tl.settings.altTrail)
+	local S = tl.settings
+	return RangeKey(S.trail) .. ":" .. RangeKey(S.altTrail) .. ":" .. RangeKey(S.friendTrail)
 end
 
 local function ModeOf(flags)
@@ -541,7 +542,8 @@ local function Clock(history)
 end
 
 -- Adds a character's stored history in a range to the list. alt is an entry
--- of ns.Alts(), or nil for this character.
+-- of ns.Alts() or a friend ({ sessions, profile = { class } }), or nil for
+-- this character.
 local function AddSources(list, range, alt)
 	local sessions = alt and alt.sessions or ns.db.sessions
 	local since, before = ns.TrailSpan(range, sessions)
@@ -561,11 +563,17 @@ local function AddSources(list, range, alt)
 	list[#list + 1] = history
 end
 
+-- Other addons' trails (TravelLog_Share's, from friends). get(add) calls
+-- add(class, sessions) for each, sessions being shaped like a character's
+-- path sessions. Call tl.TrailsChanged() when one is added or removed.
+local trailSources = {}
+
 -- Where the trails come from, each { sessions, log, since, before, width,
 -- color, jumps, clocks, endClock, clockedAt, live }: path sessions,
 -- TravelLog's log for the markers (yours only), the time range, how to draw
 -- them, and the played clock they fade by (see Clock). Yours come first so
--- they get the line budget; alts' lines are drawn below them anyway.
+-- they get the line budget; alts' and friends' lines are drawn below them
+-- anyway.
 local function Sources()
 	local list = {}
 	AddSources(list, tl.settings.trail)
@@ -574,6 +582,13 @@ local function Sources()
 			if not tl.settings.hiddenAlts[alt.key] then
 				AddSources(list, tl.settings.altTrail, alt)
 			end
+		end
+	end
+	if tl.settings.friendTrail ~= "off" then
+		for _, get in ipairs(trailSources) do
+			get(function(class, sessions)
+				AddSources(list, tl.settings.friendTrail, { sessions = sessions, profile = { class = class } })
+			end)
 		end
 	end
 	return list
@@ -704,7 +719,8 @@ local function OnUpdate()
 end
 
 local function Shown()
-	return tl.settings.trail ~= "off" or tl.settings.altTrail ~= "off"
+	local S = tl.settings
+	return S.trail ~= "off" or S.altTrail ~= "off" or (#trailSources > 0 and S.friendTrail ~= "off")
 end
 
 local function Create()
@@ -730,6 +746,16 @@ function ns.RefreshTrail()
 	end
 	overlay:SetShown(Shown())
 	drawnMap = nil
+end
+
+function tl.AddTrailSource(get)
+	trailSources[#trailSources + 1] = get
+	ns.AddFriendRows()
+	ns.RefreshTrail()
+end
+
+function tl.TrailsChanged()
+	ns.RefreshTrail()
 end
 
 tl.On("TL_ROTATED", ns.RefreshTrail)
