@@ -14,6 +14,7 @@ tl.Defaults({
 	trailColors = {},   -- trail colors changed in the Colors tab, by how you moved: { r, g, b, a }
 	markerColors = {},  -- the same for map markers, by kind
 	trailFade = {},     -- how the map trail fades, the fields /tl fade changed (see ns.TRAIL_FADE)
+	replaySpeed = 300,  -- played seconds a map replay plays per second
 })
 
 -- Path points and jumps are packed this many records per string, which keeps

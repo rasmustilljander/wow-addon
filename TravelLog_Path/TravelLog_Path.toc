@@ -12,4 +12,5 @@ Jumps.lua
 Range.lua
 Map.lua
 Commands.lua
+Replay.lua
 Colors.lua

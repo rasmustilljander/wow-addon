@@ -405,10 +405,11 @@ local function Items(items)
 end
 
 -- Inventory slots by number, for equip entries.
-local SLOT_NAMES = {
+ns.SLOT_NAMES = {
 	"head", "neck", "shoulder", "shirt", "chest", "waist", "legs", "feet", "wrist", "hands",
 	"finger", "finger", "trinket", "trinket", "back", "main hand", "off hand", "ranged", "tabard",
 }
+local SLOT_NAMES = ns.SLOT_NAMES
 
 -- "4:05" for times under an hour, "1h 12m" from there.
 local function Clock(s)
