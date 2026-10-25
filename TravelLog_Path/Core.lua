@@ -8,6 +8,7 @@ tl.Defaults({
 	interval = 2,       -- seconds between recorded path points while moving (1-5)
 	trail = "today",    -- how far back the world map trail goes (see Range.lua)
 	altTrail = "off",   -- the same for alts' trails
+	friendTrail = "today", -- and for friends' trails (TravelLog_Share)
 	smooth = 50,        -- how round the map trail's turns are, 0 (straight lines) to 100
 	hiddenAlts = {},    -- alts whose trail isn't shown, by "Name-Realm"
 	trailColors = {},   -- trail colors changed in the Colors tab, by how you moved: { r, g, b, a }
@@ -153,6 +154,30 @@ end)
 tl.On("TL_WIPE", function()
 	ns.account.chars[tl.charKey] = nil
 end)
+
+-- This session's start and its newest path records, at most max of them,
+-- from since (epoch) on. TravelLog_Share sends them to friends.
+function tl.RecentPath(since, max)
+	local list, from = {}, since - ns.session.start
+	local function Take(rec)
+		if tonumber(rec:match("^%d+")) >= from then
+			list[#list + 1] = rec
+		end
+	end
+	for _, chunk in ipairs(ns.session.track) do
+		for rec in chunk:gmatch("[^;]+") do
+			Take(rec)
+		end
+	end
+	for _, rec in ipairs(ns.track.buffer) do
+		Take(rec)
+	end
+	local newest = {}
+	for i = math.max(#list - max + 1, 1), #list do
+		newest[#newest + 1] = list[i]
+	end
+	return ns.session.start, newest
+end
 
 -- The other characters with a recorded path, sorted by "Name-Realm". Each
 -- is { key, sessions, profile }, profile being TravelLog's (class, level).

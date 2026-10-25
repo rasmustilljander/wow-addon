@@ -1,6 +1,6 @@
 # TravelLog Path
 
-Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, and draws the trail on the world map, along with your alts' trails if you want them. Needs [TravelLog](../TravelLog/).
+Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, and draws the trail on the world map, along with your alts' and [friends'](../TravelLog_Share/) trails if you want them. Needs [TravelLog](../TravelLog/).
 
 ## What it records
 
@@ -17,6 +17,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `/tl jumps` | Jumps per zone |
 | `/tl trail <range>` | How far back your map trail goes (default `today`) |
 | `/tl trail alts <range>` | The same for alts' trails (default `off`) |
+| `/tl trail friends <range>` | The same for friends' trails (default `today`) |
 | `/tl fade` | How the trail fades (see [Fading](#fading)) |
 | `/tl smooth 0-100` | How round the trail's turns are; 0 draws straight lines (default 50) |
 | `/tl interval 1-5` | Seconds between path points (default 2) |
@@ -31,7 +32,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `all` | Everything stored |
 | `off` | Nothing |
 
-`/tl stats` adds jumps, distance (in yards and by form, if any) and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps, distance and distance by form (in miles). Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the fade (`off`, `1h`, `3h`, `6h`, `12h`), the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
+`/tl stats` adds jumps, distance (in yards and by form, if any) and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps, distance and distance by form (in miles). Its settings have buttons for your trail, the alts' trail and, with TravelLog_Share, the friends' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the fade (`off`, `1h`, `3h`, `6h`, `12h`), the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
 
 ## Distance by form
 
@@ -53,7 +54,7 @@ Distance in a shapeshift form or in stealth is also counted in `stats.formDistan
 
 ## World map
 
-Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry: who or what killed you, or your note. Alts' trails are thinner lines in the alt's class color, drawn under yours, without markers.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry: who or what killed you, or your note. Alts' and friends' trails are thinner lines in their class color, drawn under yours, without markers.
 
 Trails curve through the recorded points (a centripetal Catmull-Rom spline) instead of turning sharply at each one. `/tl smooth` (saved as `smooth` in TravelLog's settings) sets how round: 100 is the full spline, lower values flatten it toward straight lines. Each turn is drawn as up to 8 short lines, as few as look smooth at the current zoom; straight stretches stay single lines.
 

@@ -1,6 +1,6 @@
--- Path's part of /tl: jumps, the map trail (yours and alts'), its curves
--- and fading, the recording interval and its lines in /tl stats, and the
--- same in the TravelLog window.
+-- Path's part of /tl: jumps, the map trail (yours, alts' and friends'), its
+-- curves and fading, the recording interval and its lines in /tl stats, and
+-- the same in the TravelLog window.
 local _, ns = ...
 local tl = TravelLog
 
@@ -95,18 +95,29 @@ local function SetAltTrail(range)
 	ns.RefreshTrail()
 end
 
+local function SetFriendTrail(range)
+	tl.settings.friendTrail = range
+	ns.RefreshTrail()
+end
+
+-- /tl trail alts and friends: the setting each sets and how chat names it.
+local OTHERS = { alts = { SetAltTrail, "alts'" }, friends = { SetFriendTrail, "friends'" } }
+
 tl.Command("trail", function()
-	return ("trail [alts] session|today|week|all|off|<n>h|<n>d|yesterday|<yyyy-mm-dd> - how far back the map trail goes (now: %s, alts: %s)")
-		:format(ns.DescribeTrail(tl.settings.trail), ns.DescribeTrail(tl.settings.altTrail))
+	local S = tl.settings
+	return ("trail [alts|friends] session|today|week|all|off|<n>h|<n>d|yesterday|<yyyy-mm-dd> - how far back the map trail goes"
+		.. " (now: %s, alts: %s, friends: %s)"):format(ns.DescribeTrail(S.trail), ns.DescribeTrail(S.altTrail),
+		ns.DescribeTrail(S.friendTrail))
 end, function(arg)
-	local alts, text = arg:match("^(alts)%s+(%S+)$")
-	local range = ns.ParseTrail(text or arg)
+	local who, text = arg:match("^(%a+)%s+(%S+)$")
+	local other = OTHERS[who]
+	local range = ns.ParseTrail(other and text or arg)
 	if not range then
 		return false
 	end
-	if alts then
-		SetAltTrail(range)
-		tl.Print("alts' map trail: %s", ns.DescribeTrail(range))
+	if other then
+		other[1](range)
+		tl.Print("%s map trail: %s", other[2], ns.DescribeTrail(range))
 	else
 		SetTrail(range)
 		tl.Print("map trail: %s", ns.DescribeTrail(range))
@@ -249,6 +260,21 @@ tl.AddSetting("World map", "Trail curves (%)", function() return tl.settings.smo
 tl.AddSetting("General", "Path interval (s)", function() return tl.settings.interval end, function(seconds)
 	tl.settings.interval = seconds
 end, { 1, 2, 3, 4, 5 })
+
+-- Friends' trails come from TravelLog_Share, so their rows are added once it
+-- adds them (tl.AddTrailSource).
+local friendRows = false
+function ns.AddFriendRows()
+	if friendRows then
+		return
+	end
+	friendRows = true
+	tl.AddSetting("World map", "Friends' trail", function() return tl.settings.friendTrail end, SetFriendTrail,
+		TRAIL_CHOICES)
+	tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.friendTrail) end, function(step)
+		SetFriendTrail(ns.StepDay(tl.settings.friendTrail, step))
+	end)
+end
 
 -- Alts are known once the saved data is loaded, so their rows come last.
 tl.On("PLAYER_LOGIN", function()

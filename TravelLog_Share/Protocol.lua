@@ -8,6 +8,7 @@
 --   N <node>;<node>...    nodes: map,index,kind,x,y,last,count,objectID,name
 --   NEND <n>              that was all n nodes
 --   SB, S, SE             totals (Stats.lua)
+--   PATH, P               path points (Trails.lua)
 --
 -- Only friends get your data, and you take only theirs. Data moves once
 -- both players have added each other.
@@ -47,7 +48,7 @@ local function NodeRecord(map, index, node)
 end
 
 -- Sends "<head> rec;rec;..." in as few messages as fit.
-local function SendPacked(target, head, records)
+function ns.SendPacked(target, head, records)
 	local text
 	for _, rec in ipairs(records) do
 		if text and #text + 1 + #rec > ns.MAX_LENGTH then
@@ -70,7 +71,7 @@ local function SendNodes(target, since)
 			end
 		end
 	end
-	SendPacked(target, "N", records)
+	ns.SendPacked(target, "N", records)
 	ns.Send(target, "NEND " .. #records)
 end
 
@@ -131,6 +132,7 @@ end
 local function Request(key)
 	RequestNodes(key)
 	ns.RequestStats(key)
+	ns.RequestPath(key)
 end
 
 -- Adds a friend, says hello and asks for their data.
@@ -148,8 +150,9 @@ function ns.RemoveFriend(key)
 		tl.friends[peer.name] = nil
 	end
 	ns.db.friends[key], ns.db.peers[key] = nil, nil
-	ns.listeners[key], ns.statsSent[key], ns.waiting[key] = nil, nil, nil
+	ns.listeners[key], ns.statsSent[key], ns.waiting[key], ns.pathListeners[key] = nil, nil, nil, nil
 	nodeBatches[key] = nil
+	ns.DropTrail(key)
 	ns.Changed()
 	if tl.NodesChanged then
 		tl.NodesChanged()
@@ -211,7 +214,7 @@ end
 
 -- Requests are answered for friends only; what a friend sends is taken
 -- only from friends.
-local REQUESTS = { NODES = true, STATS = true }
+local REQUESTS = { NODES = true, STATS = true, PATH = true }
 
 tl.On("CHAT_MSG_ADDON", function(prefix, text, channel, sender)
 	prefix, text, channel, sender = tl.Clean(prefix), tl.Clean(text), tl.Clean(channel), tl.Clean(sender)

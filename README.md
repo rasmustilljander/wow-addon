@@ -5,9 +5,9 @@ My addons for **World of Warcraft: Forever**, one per folder.
 | Addon | What it does |
 | --- | --- |
 | [TravelLog](TravelLog/) | Records loot, vendor trades, money, flights, deaths, quests and more, with a window from the minimap's addons dropdown, and shows when you first got rare items on their tooltips. |
-| [TravelLog_Path](TravelLog_Path/) | Records your path and jumps and draws the trail, and your alts', on the world map. Needs TravelLog. |
+| [TravelLog_Path](TravelLog_Path/) | Records your path and jumps and draws the trail, and your alts' and friends', on the world map. Needs TravelLog. |
 | [TravelLog_Nodes](TravelLog_Nodes/) | Pins chests, herbs and ore any of your characters looted on the minimap and world map, with when and by whom. Needs TravelLog. |
-| [TravelLog_Share](TravelLog_Share/) | You and a friend see each other's looted nodes on the map and totals in the TravelLog window, like an alt's. Needs TravelLog. |
+| [TravelLog_Share](TravelLog_Share/) | You and a friend see each other's looted nodes and trail on the map and totals in the TravelLog window, like an alt's. Needs TravelLog. |
 | [TravelLog_Kills](TravelLog_Kills/) | Records every kill per mob (count, when, where) and what its corpses held, with map pins and tooltips showing counts and top drops. TravelLog optional. |
 | [TravelLog_NPCs](TravelLog_NPCs/) | Remembers vendors, trainers and other NPCs with what they sell: searchable, pinned on the minimap and world map, and named on item tooltips. TravelLog optional. |
 | [TravelLog_Group](TravelLog_Group/) | Records every player you group with (how often, when, how long, where), searchable in a window tab. TravelLog optional. |

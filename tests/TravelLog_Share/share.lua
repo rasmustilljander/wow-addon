@@ -166,7 +166,8 @@ check(Rows(page.friends) == "Bob-Forever " and d:IsShown() and d.title:GetText()
 check(d.status:GetText():find("^Not heard from yet") and d.status:GetText():find("Nodes: 0 of theirs") and d.status:GetText():find("Totals: none yet")
 	and not d.totals:IsEnabled(), "status: " .. d.status:GetText())
 sent = Take("Bob-Forever")
-check(sent[1] == "HELLO" and sent[2] == "NODES 0" and sent[3] == "STATS" and #sent == 3, "adding says hello and asks: " .. table.concat(sent, " / "))
+check(sent[1] == "HELLO" and sent[2] == "NODES 0" and sent[3] == "STATS" and sent[4] == "PATH " .. ns.session.start and #sent == 4,
+	"adding says hello and asks: " .. table.concat(sent, " / "))
 
 M.addonMessage("Bob-Forever", PREFIX, "NODES 0")
 sent = Take("Bob-Forever")
@@ -375,6 +376,7 @@ check(Rows(Tab().friends) == "Rasmus-Forever level 5", "not waiting once they an
 -- An interrupted batch stores its nodes but does not advance the durable
 -- watermark, so the next login asks for them again.
 local committed = peer.nodesSince
+Take("Rasmus-Forever")
 M.addonMessage("Rasmus-Forever", PREFIX, "HELLO")
 sent = Take("Rasmus-Forever")
 check(sent[1] == "NODES " .. math.max(committed - 1, 0) and sent[2] == "STATS", "hello asks again, overlapping the newest second")
