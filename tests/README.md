@@ -62,7 +62,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP (not from rested kills whose line leaves the bonus out), a newer data version left unread and untouched. |
 | `CVarBrowser/browser.lua` | Listing, searching, filtering, bookmarking and changing CVars, in code and through the window, its addon compartment entry, and a reload. |
 | `JunkToss/junk.lua` | Picking the cheapest grey or allowlisted stack, throwing it away from the minimap button, window and commands, the allowlist, a reload. |
-| `TravelLog_Share/share.lua` | Two accounts sharing: the allow list, refused and recorded requests, nodes on request and as they're looted, a log on request, pacing and throttling, offline players, shared pins, the Sharing tab, a reload. |
+| `TravelLog_Share/share.lua` | Two friends sharing: packing totals, refusing non-friends, nodes on request and as they're looted, totals in full and as updates (broken batches ignored), pacing and throttling, offline players, shared pins, a friend's totals in `/tl stats` and the Totals tab, the Friends tab, a reload. |
 | `ItemCount/count.lua` | Bags, bank and account bank, mail and mail to alts, auctions running out, equipped items, tooltip lines, commands, a reload. |
 | `ItemCount/guildbank.lua` | The Options page, the guild bank counted tab by tab (hidden and removed tabs), shown only in its own guild and outside the total, turned off, a reload. |
 | `TravelLog_Group/group.lua` | Groups from the roster, other realms, kills together, unreadable names, raids, reloads and long logouts while grouped, tooltips, commands, the Players tab. |
@@ -89,7 +89,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | --- | --- |
 | `M.Login()`, `M.Logout()`, `M.Reload()` | Logging out writes each loaded addon's SavedVariables to text (an unloaded addon keeps its old text, as in the game) and drops all addon state, hooks and frames. |
 | `M.fire(event, ...)` | Send a game event. Registering an event the fake doesn't know errors, like the real client. |
-| `M.tick(n)`, `M.advance(s)`, `M.frame()` | Run `C_Timer` tickers and timers for n seconds, move the clock, run one `OnUpdate` frame. |
+| `M.tick(n)`, `M.advance(s)`, `M.frame()` | Run `C_Timer` timers, and tickers when due (at most once a second), for n seconds; move the clock; run one `OnUpdate` frame. |
 | `M.cast(spellID, target)`, `M.lootAll(take)` | Cast a spell (SENT, then SUCCEEDED); loot the window in `M.loot`. |
 | `M.channel(spellID, seconds)`, `M.channelStop(interrupted)` | Start channeling (CHANNEL_START, and `UnitChannelInfo`); stop (INTERRUPTED first when `interrupted`, then CHANNEL_STOP). |
 | `M.x`, `M.y`, `M.wa`, `M.wb`, `M.mapID`, `M.zone`, `M.subzone`, `M.mounted`, `M.taxi`, `M.money`, ... | Player state read by the fake API. `M.x = nil` means inside a dungeon. |

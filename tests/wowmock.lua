@@ -474,14 +474,20 @@ end
 
 C_Timer = {}
 M.tickers = {}
-function C_Timer.NewTicker(seconds, fn) M.tickers[#M.tickers + 1] = { seconds = seconds, fn = fn } end
+-- A ticker runs at most once per M.tick, and only every `seconds` of them.
+function C_Timer.NewTicker(seconds, fn) M.tickers[#M.tickers + 1] = { seconds = seconds, fn = fn, due = (M.gametime or 0) + seconds } end
 M.timers = {}
 function C_Timer.After(seconds, fn) M.timers[#M.timers + 1] = { at = M.gametime + seconds, fn = fn } end
 
 function M.tick(n)
 	for _ = 1, n or 1 do
 		M.advance(1)
-		for _, t in ipairs(M.tickers) do t.fn() end
+		for _, t in ipairs(M.tickers) do
+			if t.due <= M.gametime then
+				repeat t.due = t.due + t.seconds until t.due > M.gametime
+				t.fn()
+			end
+		end
 		local due, keep = {}, {}
 		for _, t in ipairs(M.timers) do
 			if t.at <= M.gametime then due[#due + 1] = t else keep[#keep + 1] = t end
