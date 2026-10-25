@@ -30,13 +30,6 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
   - The controls are a frame of our own, not a child of the world map, so the map stays click-through and untainted.
   - Risk: redraw cost on long ranges; check with `tests/TravelLog/stress.lua`.
 
-- **Distance by form.** Distance per shapeshift form and in stealth, next to the per-mode totals.
-  - TravelLog `ns.FLAGS`: stealth as bit 64, the form as a number in the bits above (form × 128). `ns.HasFlag` ignores higher bits, so older readers still work.
-  - TravelLog_Path `Track.lua`: a new `stats.formDistance` by `cat`, `bear`, `travel`, `aquatic`, `moonkin`, `ghostwolf`, `stealth`; `stats.distance` stays as it is.
-  - API: `GetShapeshiftFormID()` (undocumented; Blizzard's UI calls it), `IsStealthed()`.
-  - Form IDs: Blizzard's Cata constants have cat 1, travel 3, aquatic 4, bear 5, Ghost Wolf 16, moonkin 31 and 35; the Camelot ones list none, so confirm in game.
-  - A form change changes the flags, which records a path point, so shifting often adds points.
-
 - **Player notes and ratings.** An account-wide note and a behavior and skill rating per player, shown in the Players tab and the player's tooltip.
   - TravelLog_Group: Group's file is per character, so this needs a new account-wide `SavedVariables` keyed by `Name-Realm`, like `players`.
   - Set from the Players tab (an edit box) and with `/grouped note` and `/grouped rate`.

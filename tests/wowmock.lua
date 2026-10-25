@@ -19,7 +19,7 @@ M = {
 	instance = nil, group = {}, raid = false, mapID = 1429, x = 0.42, y = 0.65,
 	inst = 0, wa = -9000, wb = -100, zone = "Elwynn Forest", subzone = "Goldshire",
 	mounted = false, taxi = false, swimming = false, dead = false, ghost = false, falling = false, afk = false,
-	combat = false, indoors = false, secrets = {}, viewMap = 1429, facing = 0, minimapRadius = 200,
+	combat = false, indoors = false, stealthed = false, secrets = {}, viewMap = 1429, facing = 0, minimapRadius = 200,
 	auras = {},
 	loot = {}, buyback = {}, merchantItems = {}, units = {}, taxiNodes = {},
 	quests = {}, questLog = {}, failedQuests = {}, questTimers = {}, bind = "Goldshire", bags = {}, repairCost = 0, canRepair = false,
@@ -773,6 +773,8 @@ function IsSwimming() return M.swimming end
 function IsFlying() return false end
 function IsFalling() return M.falling end
 function IsIndoors() return M.indoors end
+function IsStealthed() return M.stealthed end
+function GetShapeshiftFormID() return M.form end
 function UnitIsDeadOrGhost() return M.dead or M.ghost end
 function UnitIsDead(unit)
 	if unit == "player" then return M.dead end
