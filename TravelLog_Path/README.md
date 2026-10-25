@@ -101,8 +101,6 @@ The colors below are the defaults. To change one, click its swatch in the Travel
 
 `WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Path.lua`, every character's path, about 100 KB per hour of movement. It's account-wide so alts can see each other's trails. Paths are not pruned automatically; `/tl wipe confirm` removes that character's path.
 
-Before 0.2 each character's path was in `<Realm>/<Character>/SavedVariables/TravelLog_Path.lua`. It moves to the account-wide file at that character's first login with 0.2, so an alt's trail appears once you've logged in on it. Path data TravelLog kept before this addon existed moves too.
-
 ```lua
 TravelLogPathAccountDB = {
   chars = {

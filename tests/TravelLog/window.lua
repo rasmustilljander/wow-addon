@@ -170,10 +170,8 @@ check(w:IsShown(), "/tl opens")
 SlashCmdList.TRAVELLOG("")
 check(not w:IsShown(), "/tl closes")
 
--- Everything survives a reload; the minimap button's old settings are dropped.
-TravelLogDB.settings.minimap, TravelLogDB.settings.minimapAngle = false, 90
+-- Everything survives a reload.
 ns = M.Reload()
-check(ns.settings.minimap == nil and ns.settings.minimapAngle == nil, "old minimap settings dropped")
 SlashCmdList.TRAVELLOG("")
 w = ns.window
 check(w:IsShown() and w.point[1] == "TOPLEFT" and w.point[4] == 100, "position restored")

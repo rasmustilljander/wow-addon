@@ -2,7 +2,7 @@
 ## Title: KillXP
 ## Notes: Shows on a mob's tooltip how much experience it gives you, with Forever, rested and party bonuses, and how many kills you need to level up.
 ## Author: rasmustilljander
-## Version: 0.1.1
+## Version: 0.1.0
 ## SavedVariables: KillXPDB
 
 XP.lua

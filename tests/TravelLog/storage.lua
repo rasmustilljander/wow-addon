@@ -16,9 +16,8 @@ local function said(pattern)
 end
 
 -- Adds `days` worth of fake old sessions (about `mb` MB in total) to the
--- current character, ending `ago` days back. The path goes to TravelLog_Path
--- when it's loaded, and into TravelLog's sessions (like before it existed)
--- when it isn't.
+-- current character, ending `ago` days back, with their path in
+-- TravelLog_Path.
 local function AddOldHistory(mb, ago, days)
 	local record = "120,1429,42.10,65.30,0,-9000.0,-100.0,0"
 	local chunk = (record .. ";"):rep(199) .. record -- ~8.5 KB
@@ -28,11 +27,10 @@ local function AddOldHistory(mb, ago, days)
 	local sessions, paths, log = {}, {}, {}
 	for d = 1, days do
 		local s = { start = start + d * DAY, stop = start + d * DAY + 3600 }
-		local p = PathDB() and { start = s.start, stop = s.stop } or s
-		p.track, p.jumps = {}, {}
+		local p = { start = s.start, stop = s.stop, track = {}, jumps = {} }
 		for _ = 1, perSession do p.track[#p.track + 1] = chunk end
 		sessions[#sessions + 1] = s
-		paths[#paths + 1] = p ~= s and p or nil
+		paths[#paths + 1] = p
 		log[#log + 1] = { type = "loot", time = s.start + 60, map = 1429, x = 42.1, y = 65.3, source = "Old Kobold" }
 	end
 	local char = TravelLogCharDB
@@ -111,18 +109,15 @@ local stored = {
 	log = #TravelLogCharDB.log,
 	paths = #PathDB().sessions,
 }
-TravelLogDB.archive = { size = 4 * 1048576 } -- metadata left by the removed archive feature
 M.Logout()
 check(M.savedSize("TravelLog_Path") > 3 * 1048576, "large old path stays in TravelLog_Path")
 
 M.out = {}
 ns = M.Login()
-check(TravelLogDB.archive == nil, "old archive metadata removed")
 check(#TravelLogCharDB.sessions == stored.sessions + 1 and #PathDB().sessions == stored.paths + 1,
 	"old sessions and paths kept after login")
 check(#TravelLogCharDB.log >= stored.log and TravelLogCharDB.log[1].source == "Old Kobold"
 	and PathDB().sessions[1].track[1], "old events and path points kept")
-check(not said("moved .* history"), "old history is not rotated")
 
 -- "all" reads old history directly from the stored path and event log.
 SlashCmdList.TRAVELLOG("trail all")
@@ -132,10 +127,6 @@ local overlay = M.mapOverlay(2010)
 local purple = 0
 for _, t in ipairs(M.shown(overlay.textures)) do if t.color[1] == 0.75 then purple = purple + 1 end end
 check(purple >= 1, "old loot markers drawn from the stored log")
-
-M.out = {}
-SlashCmdList.TRAVELLOG("archive")
-check(said("commands:") and not said("/tl archive"), "/tl archive removed")
 
 -- Wiping a character removes its retained TravelLog and Path history.
 SlashCmdList.TRAVELLOG("wipe confirm")
@@ -149,17 +140,7 @@ M.Logout()
 -- TravelLog without its companion addons, and installing them later
 --------------------------------------------------------------------------------
 
--- A character file from before TravelLog_Path and TravelLog_Nodes existed
-local OLD_CHAR = [[
-TravelLogCharDB = {
-	["log"] = {},
-	["sessions"] = { { ["start"] = 1759990000, ["stop"] = 1759993600, ["jumpCount"] = 2,
-		["track"] = { "1,1436,40.00,40.00,0,-10000.0,-1000.0,0;9,1436,42.00,41.00,0,-10010.0,-1010.0,0" },
-		["jumps"] = { "5,1436,41.00,40.50,0,-10005.0,-1005.0,0,Westfall,Sentinel Hill" } } },
-	["nodes"] = { [1436] = { { ["kind"] = "ore", ["x"] = 41, ["y"] = 40, ["count"] = 1, ["last"] = 1759991000, ["times"] = { 1759991000 } } } },
-}
-]]
-M.saved, M.savedChar = {}, { ["Rasmus-Forever"] = { TravelLog = OLD_CHAR } }
+M.saved, M.savedChar = {}, {}
 M.installed = { "TravelLog" }
 M.out, M.errors = {}, {}
 ns = M.Login()
@@ -180,22 +161,12 @@ check(ns.window.Tabs[3]:GetText() == "History" and #history.views == 2 and histo
 	and #history.viewButtons == 2 and history.viewButtons[2]:GetText() == "Sessions", "History has only Events and Sessions")
 SlashCmdList.TRAVELLOG("")
 check(TravelLogCharDB.log[#TravelLogCharDB.log].source == "Peacebloom" and not TravelLogCharDB.log[#TravelLogCharDB.log].lastHere, "loot recorded without nodes")
-check(TravelLogCharDB.sessions[1].track and TravelLogCharDB.nodes[1436], "the old path and nodes are left alone")
 M.Logout()
 
 M.installed = { "TravelLog", "TravelLog_Path", "TravelLog_Nodes" }
 ns = M.Login()
-local moved = PathDB().sessions[1]
-check(not TravelLogCharDB.sessions[1].track and not TravelLogCharDB.nodes, "installing the companions moves the old data out of TravelLog's file")
-check(moved.start == 1759990000 and moved.stop == 1759993600 and moved.jumpCount == 2 and #moved.track == 1 and #moved.jumps == 1, "old path moved whole")
-check(#PathDB().sessions == 2 and PathDB().sessions[2].start == TravelLogCharDB.sessions[3].start, "path sessions in order, the new one last (none for the login without it)")
-check(TravelLogNodesAccountDB.maps[1436][1].kind == "ore", "old nodes moved")
-SlashCmdList.TRAVELLOG("trail week")
-M.viewMap = 1436
-M.frame()
-local overlay = M.mapOverlay(2010)
-check(#M.shown(overlay.lines) == 1 and #M.shown(overlay.textures) == 1, "the moved path and its jump are drawn")
-check(TravelLogCharDB.version == 1, "a character file without a version gets data version 1")
+check(#PathDB().sessions == 1 and PathDB().sessions[1].start == TravelLogCharDB.sessions[2].start
+	and next(TravelLogNodesAccountDB.maps) == nil, "companions installed later start from this login")
 M.Logout()
 
 --------------------------------------------------------------------------------

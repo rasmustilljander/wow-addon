@@ -99,8 +99,6 @@ WoW writes SavedVariables only on logout or `/reload`, so a crash loses everythi
 
 TravelLog keeps its log and sessions until `/tl wipe confirm`. TravelLog_Path keeps its path separately; see its [data and limits](../TravelLog_Path/README.md#where-the-data-is).
 
-Before 0.3, the path and nodes lived in TravelLog's character file. The first login with TravelLog_Path or TravelLog_Nodes installed moves them into that addon's file.
-
 Both files save `version`, TravelLog's data version (now 1). TravelLog reads only versions it knows. A file from a newer TravelLog is left as it is and nothing is recorded (Path, Nodes and Share included): for that character, or with the account file, for all of them. Chat, `/tl` and the addons dropdown say why.
 
 The character file:

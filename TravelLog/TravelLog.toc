@@ -2,7 +2,7 @@
 ## Title: TravelLog
 ## Notes: Records your travels (loot, vendor trades, money, flights, deaths, quests and more) so you can retrace them. Add TravelLog_Path and TravelLog_Nodes for your path and looted chests and herbs on the map.
 ## Author: rasmustilljander
-## Version: 0.3.0
+## Version: 0.1.0
 ## SavedVariables: TravelLogDB
 ## SavedVariablesPerCharacter: TravelLogCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Map_01

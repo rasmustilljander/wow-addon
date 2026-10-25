@@ -111,30 +111,6 @@ local function Init()
 	account.chars[tl.charKey] = db
 	db.sessions = db.sessions or {}
 
-	-- Version 0.1 kept the path in the character's own file, where alts
-	-- couldn't read it.
-	local moved = false
-	if TravelLogPathDB then
-		for _, s in ipairs(TravelLogPathDB.sessions or {}) do
-			db.sessions[#db.sessions + 1] = s
-			moved = true
-		end
-		TravelLogPathDB = nil
-	end
-
-	-- TravelLog kept the path in its own sessions before this addon existed.
-	for _, s in ipairs(tl.char.sessions) do
-		if s.track then
-			db.sessions[#db.sessions + 1] = { start = s.start, stop = s.stop, jumpCount = s.jumpCount,
-				track = s.track, jumps = s.jumps or {} }
-			s.track, s.jumps, s.jumpCount = nil, nil, nil
-			moved = true
-		end
-	end
-	if moved then
-		table.sort(db.sessions, function(a, b) return a.start < b.start end)
-	end
-
 	local session = { start = tl.session.start, track = {}, jumps = {} }
 	db.sessions[#db.sessions + 1] = session
 	ns.account, ns.db, ns.session = account, db, session

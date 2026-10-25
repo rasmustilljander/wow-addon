@@ -100,41 +100,11 @@ end
 -- by[i] is who looted at times[i]. Every character's nodes are in the
 -- account-wide file, so all of them see and add to the same nodes.
 
--- Adds nodes from an older per-character file, all looted by this
--- character, into the shared ones.
-local function MergeOld(maps)
-	for map, list in pairs(maps) do
-		for _, old in ipairs(list) do
-			local node = Find(map, old.kind, old.x, old.y, old.inst, old.a, old.b)
-			if not node.last or (old.last or 0) > node.last then
-				node.name, node.id = old.name or node.name, old.id or node.id
-			end
-			for _, t in ipairs(old.times or {}) do
-				AddTime(node, t, tl.charKey)
-			end
-			node.counts[tl.charKey] = (node.counts[tl.charKey] or 0) + (old.count or #(old.times or {}))
-		end
-	end
-end
-
 tl.On("PLAYER_LOGIN", function()
 	TravelLogNodesAccountDB = TravelLogNodesAccountDB or {}
 	local db = TravelLogNodesAccountDB
 	db.maps = db.maps or {}
 	ns.db = db
-
-	-- Version 0.1 kept the nodes in the character's own file, and TravelLog
-	-- in its own character file before that.
-	if TravelLogNodesDB then
-		MergeOld(TravelLogNodesDB.maps or {})
-		TravelLogNodesDB = nil
-	end
-	if tl.char.nodes then
-		MergeOld(tl.char.nodes)
-		tl.char.nodes = nil
-	end
-	-- 0.1 counted nodes per character in TravelLog's totals.
-	tl.stats.nodes = nil
 end)
 
 -- Takes this character out of the shared nodes, dropping the ones only it
