@@ -186,11 +186,17 @@ function ns.WorldPosition()
 	return instanceID, a, b
 end
 
--- Movement state bits, stored with every path point and jump.
-ns.FLAGS = { mounted = 1, taxi = 2, swimming = 4, dead = 8, combat = 16, indoors = 32 }
+-- Movement state bits, stored with every path point and jump. The shapeshift
+-- form ID goes in the bits above them, as form * FORM_BIT; ns.HasFlag ignores it.
+ns.FLAGS = { mounted = 1, taxi = 2, swimming = 4, dead = 8, combat = 16, indoors = 32, stealth = 64 }
+ns.FORM_BIT = 128
 
 function ns.HasFlag(flags, bit)
 	return flags % (bit * 2) >= bit
+end
+
+function ns.FormOf(flags)
+	return math.floor(flags / ns.FORM_BIT)
 end
 
 -- A snapshot of the player's position and state.
@@ -204,7 +210,10 @@ function ns.Here()
 	h.dead = UnitIsDeadOrGhost("player") and true or false
 	h.combat = ns.Clean(UnitAffectingCombat("player")) and true or false
 	h.indoors = IsIndoors() and true or false
-	local flags = 0
+	h.stealth = ns.Clean(IsStealthed()) and true or false
+	local form = ns.Clean(GetShapeshiftFormID())
+	h.form = type(form) == "number" and form > 0 and math.floor(form) or 0
+	local flags = h.form * ns.FORM_BIT
 	for name, bit in pairs(ns.FLAGS) do
 		if h[name] then
 			flags = flags + bit

@@ -55,6 +55,7 @@ Each file runs in a fresh Lua state. The output gives passed/failed counts and f
 | `TravelLog_Path/colors.lua` | The Colors tab: recoloring trail lines and markers with the color picker, cancelling, defaults, a reload. |
 | `TravelLog_Path/curves.lua` | Trail curves: straight lines at 0, a rounded corner through the recorded points, straight walks left alone, more pieces zoomed in, live drawing matching a full redraw, `/tl smooth`, the window's buttons, a reload. |
 | `TravelLog_Path/fade.lua` | Trail fade: lines and jumps fading by played time (eased, refaded with the map open), not while logged out, calendar days from their end, markers left alone, the width floor, `/tl fade`, the window's buttons, a reload. |
+| `TravelLog_Path/forms.lua` | Distance by form: each form and stealth (prowling as both), both moonkin IDs, other and secret forms not counted, the flags, `/tl stats`, the window's row, a reload and an alt added up. |
 | `TravelLog_Path/alts.lua` | The path's move to the account-wide file, trail ranges (hours, days, calendar days), alts' trails, the window's day steppers and alt checkboxes, old stored paths, wiping. |
 | `TravelLog_Nodes/nodes.lua` | Remembered nodes, their minimap and world map pins and tooltips, alts sharing them, wiping, migration from 0.1 and from TravelLog. |
 | `KillXP/tooltip.lua` | XP formula, rested and party bonuses, kills to level, tooltip lines, learning real XP (not from rested kills whose line leaves the bonus out), a newer data version left unread and untouched. |
@@ -114,6 +115,7 @@ check(TravelLogCharDB.sessions[1].stop, "session closed on logout")
 | `M.posts`, `M.postWarning` | What `C_AuctionHouse.PostItem`, `PostCommodity` and their `Confirm*` posted (`ItemLocation:CreateFromBagAndSlot` for the item); whether a post needs confirming. |
 | `M.enchantNames[id]`, `M.tempEnchants[weaponSlot]` | Enchants: the ID is the link's field after the item ID; its name is the worn item's tooltip line (`C_TooltipInfo.GetInventoryItem`). A weapon's temporary enchant ID by `Enum.WeaponSlot` (`C_Item.GetWeaponEnchantInfo`). Fire `UNIT_INVENTORY_CHANGED` after changing a worn link in place. |
 | `M.cursorItem`, `M.cursorSplit`, `M.deleteWarning` | The `"bag:slot"` (or `"equip:slot"`) whose item is on the cursor, how many after `C_Container.SplitContainerItem`, and whether the first `DeleteCursorItem` waits for confirmation. |
+| `M.form`, `M.stealthed` | Your shapeshift form ID (`GetShapeshiftFormID`; nil for none) and whether you're stealthed (`IsStealthed`). |
 | `M.combat`, `M.afk` | In combat (`InCombatLockdown`); AFK (`UnitIsAFK`; fire `PLAYER_FLAGS_CHANGED` after changing it). |
 | `M.dead`, `M.ghost`, `M.falling`, `M.durability[slot]`, `M.mirrorTimers` | Dead, a ghost or falling; worn items' `{ current, max }` durability; milliseconds left on the `BREATH` and `EXHAUSTION` bars. Tests fire the death, resurrection and bar events themselves. |
 | `M.resurrecter`, `M.resSickness`, `M.selfRes` | Who offers a resurrection, whether it brings resurrection sickness, and the death dialog's self-resurrect options (`{ name, optionType, id, canUse, ... }`). |

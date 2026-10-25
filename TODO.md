@@ -30,13 +30,6 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
   - The controls are a frame of our own, not a child of the world map, so the map stays click-through and untainted.
   - Risk: redraw cost on long ranges; check with `tests/TravelLog/stress.lua`.
 
-- **Distance by form.** Distance per shapeshift form and in stealth, next to the per-mode totals.
-  - TravelLog `ns.FLAGS`: stealth as bit 64, the form as a number in the bits above (form × 128). `ns.HasFlag` ignores higher bits, so older readers still work.
-  - TravelLog_Path `Track.lua`: a new `stats.formDistance` by `cat`, `bear`, `travel`, `aquatic`, `moonkin`, `ghostwolf`, `stealth`; `stats.distance` stays as it is.
-  - API: `GetShapeshiftFormID()` (undocumented; Blizzard's UI calls it), `IsStealthed()`.
-  - Form IDs: Blizzard's Cata constants have cat 1, travel 3, aquatic 4, bear 5, Ghost Wolf 16, moonkin 31 and 35; the Camelot ones list none, so confirm in game.
-  - A form change changes the flags, which records a path point, so shifting often adds points.
-
 - **Time per zone by state.** Per zone, how long you were in combat, dead or a ghost, AFK, on flights and grouped.
   - TravelLog `Travel.lua`: `CountZoneTime` (every second) also adds to `stats.zoneStateTime[state][zone]`; `stats.zoneTime` stays the total.
   - States overlap (AFK while grouped), so each is its own counter, not a split of the total.

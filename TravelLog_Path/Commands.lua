@@ -16,6 +16,22 @@ local function Sum(t)
 	return total
 end
 
+-- stats.formDistance keys in the order shown, with their labels.
+local FORMS = { "cat", "bear", "travel", "aquatic", "moonkin", "ghostwolf", "stealth" }
+local FORM_LABELS = { ghostwolf = "ghost wolf" }
+
+-- "cat 1,200, stealth 300", formatting each distance with fmt; nil if none.
+local function ByForm(st, fmt)
+	local parts = {}
+	for _, form in ipairs(FORMS) do
+		local d = st.formDistance and st.formDistance[form]
+		if d and d > 0 then
+			parts[#parts + 1] = (FORM_LABELS[form] or form) .. " " .. fmt(d)
+		end
+	end
+	return #parts > 0 and table.concat(parts, ", ") or nil
+end
+
 local function Top(t)
 	local best, bestCount
 	for key, count in pairs(t or {}) do
@@ -42,6 +58,10 @@ tl.On("TL_STATS", function(st, key)
 	tl.Print("Distance: %s yd (%.1f miles): foot %s, mount %s, flight %s, swim %s, ghost %s",
 		Count(total), total / YARDS_PER_MILE, Count(d.foot), Count(d.mount), Count(d.flight),
 		Count(d.swim), Count(d.ghost))
+	local forms = ByForm(st, Count)
+	if forms then
+		tl.Print("Distance by form (yd): %s", forms)
+	end
 
 	if key ~= tl.charKey then
 		return
@@ -215,6 +235,10 @@ end)
 tl.AddStat("Travel", "Jumps", Jumps)
 tl.AddStat("Travel", "Distance", function(st)
 	return ("%.1f miles"):format(Sum(st.distance) / YARDS_PER_MILE)
+end)
+tl.AddStat("Travel", "Distance by form", function(st)
+	local forms = ByForm(st, function(d) return ("%.1f"):format(d / YARDS_PER_MILE) end)
+	return forms and forms .. " miles" or "none"
 end)
 tl.AddSetting("World map", "Your trail", function() return tl.settings.trail end, SetTrail, TRAIL_CHOICES)
 tl.AddStepper("World map", nil, function() return ns.DescribeTrail(tl.settings.trail) end, function(step)

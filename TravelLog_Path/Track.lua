@@ -1,10 +1,13 @@
 -- Path recording: where you walk, ride, swim and fly, and how far you went
--- each way.
+-- each way, in each shapeshift form and in stealth.
 local _, ns = ...
 local tl = TravelLog
 
 local MAX_SPEED = 60   -- yards/second; anything faster is a teleport, not travel
 local MIN_MOVE = 1     -- yards moved before a new point is worth recording
+
+-- formDistance keys by GetShapeshiftFormID(), from Blizzard's constants.
+local FORMS = { [1] = "cat", [3] = "travel", [4] = "aquatic", [5] = "bear", [16] = "ghostwolf", [31] = "moonkin", [35] = "moonkin" }
 
 local last     -- last recorded path point
 local prev     -- previous sample, for distance
@@ -44,6 +47,12 @@ local function Tick()
 		local seconds = math.max(h.now - prev.now, 1)
 		if d and d > 0 and d / seconds <= MAX_SPEED then
 			tl.Add(d, "distance", Mode(h))
+			if FORMS[h.form] then
+				tl.Add(d, "formDistance", FORMS[h.form])
+			end
+			if h.stealth then
+				tl.Add(d, "formDistance", "stealth")
+			end
 		end
 	end
 	prev = h

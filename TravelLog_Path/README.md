@@ -8,7 +8,7 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | --- | --- |
 | **Path** | Your position every 2 seconds while moving (see `/tl interval`), with map and world coordinates and how you moved: on foot, mounted, flying, swimming or as a ghost. Nothing while standing still. |
 | **Jumps** | Every jump with time, zone, subzone and coordinates, and totals per zone. |
-| **Distance** | How far you've travelled by each of the ways above. |
+| **Distance** | How far you've travelled by each of the ways above, and in each form (see [Distance by form](#distance-by-form)). |
 
 ## Commands
 
@@ -31,7 +31,25 @@ Records the path you walk, ride, swim and fly in WoW: Forever, and every jump, a
 | `all` | Everything stored |
 | `off` | Nothing |
 
-`/tl stats` adds jumps, distance and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps and distance. Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the fade (`off`, `1h`, `3h`, `6h`, `12h`), the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
+`/tl stats` adds jumps, distance (in yards and by form, if any) and, for the character you're on, this session's jumps and stored path points. The [TravelLog window](../TravelLog/README.md#window) shows jumps, distance and distance by form (in miles). Its settings have buttons for your trail and the alts' trail (`session`, `today`, `24h`, `week`, `all`, `off`), each with `<` and `>` below to step one calendar day back or forward, a checkbox per alt with a recorded path to hide or show its trail, and buttons for the fade (`off`, `1h`, `3h`, `6h`, `12h`), the curves (`0`, `25`, `50`, `75`, `100`) and the interval.
+
+## Distance by form
+
+Distance in a shapeshift form or in stealth is also counted in `stats.formDistance` (yards, in TravelLog's file), next to `stats.distance` by way of travel.
+
+| Key | Form ID (`GetShapeshiftFormID()`) |
+| --- | --- |
+| `cat` | 1 |
+| `bear` | 5 |
+| `travel` | 3 |
+| `aquatic` | 4 |
+| `moonkin` | 31 or 35 |
+| `ghostwolf` | 16 |
+| `stealth` | `IsStealthed()`, any form |
+
+- Stealth overlaps the rest: prowling counts as `cat` and `stealth`.
+- Other forms (Tree of Life, Shadowform) are stored in the path's flags but not counted.
+- Shifting changes the flags, which records a path point, so shifting often adds points.
 
 ## World map
 
@@ -105,7 +123,7 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 
 - `x`, `y`: map coordinates 0–100, as shown in game.
 - `instanceID`, `world 1`, `world 2`: continent and `UnitPosition("player")` in yards, continuous across zones.
-- `flags`: sum of 1 mounted, 2 flight, 4 swimming, 8 dead or ghost, 16 in combat, 32 indoors.
+- `flags`: sum of 1 mounted, 2 flight, 4 swimming, 8 dead or ghost, 16 in combat, 32 indoors, 64 stealthed, and 128 × the form ID (0 for none).
 - Jump records end with `,zone,subzone`.
 - Values the game doesn't reveal (coordinates in dungeons) are empty.
 
@@ -113,5 +131,6 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 
 - No path in dungeons and raids, since addons get no position there. Jumps are still recorded, without coordinates.
 - Every login loads all characters' stored paths.
+- The form IDs are Blizzard's constants from other clients; Forever's UI code lists none, so they're unconfirmed in game.
 - Markers of one kind that would overlap are drawn once, so of several notes or deaths in one spot only the first can be hovered.
 - Untested in the live game; tested against a fake client ([tests](../tests/README.md)).
