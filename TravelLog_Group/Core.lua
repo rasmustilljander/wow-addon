@@ -103,8 +103,8 @@ end)
 -- }
 -- Each group: start time, seconds together, place it started (index into
 -- places), kills together, their level then, and "r" if it was a raid.
--- `open` holds the groups still going; they're written into `groups` when
--- they end.
+-- `open` holds the groups still going; each is already the last entry in
+-- `groups`, whose length and kills are filled in when it ends.
 
 local placeIndex = {} -- "Zone|Subzone" -> index into db.places
 ns.byGUID = {}        -- player GUID -> player

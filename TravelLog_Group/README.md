@@ -13,15 +13,13 @@ A group with a player starts when they show up in your party or raid and ends wh
 | **Kills** | Kills made together: killing blows by you, your pet or a party member while grouped. |
 | **Them** | Their level then, and whether it was a raid. Their class and latest level are kept per player. |
 
-Logging out ends your groups. Log back in within 5 minutes, still grouped with someone, and it carries on as the same group.
+Logging out ends your groups, unless you log back in within 5 minutes still grouped: then it's the same group.
 
 Tooltips of players you've grouped with show `Grouped 3 times (4h 12m), last 2d 4h ago`, or `in your group now`.
 
 ## Window
 
-With TravelLog installed, [its window](../TravelLog/README.md#window) gets a **Players** tab: everyone you've grouped with, most often first, in class colors, with a search box that matches any part of `Name-Realm`. Click a player for the number of groups, the total time together, the first and latest group and kills together, then every group, newest first: date, length (green while it's still going), where, and kills, their level and raid if any.
-
-The Totals tab also shows how many players you've grouped with and with whom most.
+With TravelLog, [its window](../TravelLog/README.md#window) gets a **Players** tab: everyone you've grouped with, most often first, in class colors, with a search box that matches any part of `Name-Realm`. Click a player for the number of groups, total time, first and latest group and kills together, then every group, newest first: date, length (green while it's still going), where, kills, their level and whether it was a raid. Totals show how many players you've grouped with and with whom most.
 
 ## Commands
 
@@ -32,7 +30,7 @@ The Totals tab also shows how many players you've grouped with and with whom mos
 | `/grouped target` | The same for your target |
 | `/grouped recent [n]` | Your last n groups with anyone (default 15) |
 | `/grouped window` | Open the [Players tab](#window) (needs TravelLog) |
-| `/grouped wipe confirm` | Delete every group for this character |
+| `/grouped wipe confirm` | Delete every group for this character, then reload |
 
 `/tlg` works too. Players from your own realm are shown by name, others as `Name-Realm`.
 
@@ -52,6 +50,7 @@ TravelLog Group Anna (Warrior): grouped 3 times, 4h 12m in total.
 
 ```lua
 TravelLogGroupDB = {
+  version = 1,
   total = 42,
   places = { "Elwynn Forest|Goldshire", "Westfall|Moonbrook", ... },
   players = {

@@ -1,10 +1,10 @@
 # TravelLog NPCs
 
-Remembers the NPCs you talk to in WoW: Forever, where they stand and what they sell. It pins them on the minimap and world map, shows on item tooltips who sells the item, and lets you search them by name, title, place or item. A companion to [TravelLog](../TravelLog/) that also works on its own. All your characters share the same NPCs.
+Remembers the NPCs you talk to in WoW: Forever, where they stand and what they sell. It pins them on the minimap and world map, names vendors on item tooltips, and lets you search NPCs by name, title, place or item. All your characters share the same NPCs. A companion to [TravelLog](../TravelLog/) that also works on its own.
 
 ## What it records
 
-An NPC is saved, or updated, each time you open one of these windows with it:
+An NPC is saved or updated each time you open one of these windows with it:
 
 | Window | Kind |
 | --- | --- |
@@ -16,11 +16,11 @@ An NPC is saved, or updated, each time you open one of these windows with it:
 | Auction house | auctioneer |
 | Stable | stable master |
 
-`/npcs add` saves your target too, as an other. Kinds add up: an innkeeper you've also bought from is both.
+`/npcs add` saves your target as an other. Kinds add up: an innkeeper you've also bought from is both.
 
-For each NPC: name, title (`General Supplies`), kinds, zone, subzone, map coordinates (your position, not the NPC's) and when you last visited. In dungeons there are no coordinates, so no pins.
+For each NPC: name, title (`General Supplies`), kinds, zone, subzone, map coordinates (your position, not the NPC's) and your last visit. Dungeons have no coordinates, so no pins.
 
-For vendors, every item on sale with its price, stack size, whether it's limited supply, and any currencies or items it costs (honor, marks, tokens). With the vendor's filter on **All**, each visit replaces the list. With a class filter, items are only added.
+For vendors, every item on sale with its price, stack size, whether it's limited supply, and any currencies or items it costs (honor, marks, tokens). With the vendor's filter on **All**, each visit replaces the list; with a class filter, items are only added.
 
 ## Item tooltips
 
@@ -37,7 +37,7 @@ A price can read `1g 20s, limited` or `2g + 30 Warsong Gulch Mark of Honor`. `ot
 
 ## Minimap and world map
 
-Saved NPCs within the minimap's range show as dots, rotating with a rotating minimap. The world map shows them on the map they were saved on, so Stormwind's NPCs are on the Stormwind map, not Elwynn Forest's. Hover a dot for the NPC's name, title, kinds, how many items it sells and when you last visited.
+Saved NPCs within the minimap's range show as dots, following its rotation. The world map shows them on the map they were saved on, so Stormwind's NPCs are on the Stormwind map, not Elwynn Forest's. Hover a dot for the NPC's name, title, kinds, how many items it sells and your last visit.
 
 An NPC with several kinds is drawn as the first of these:
 
@@ -57,15 +57,13 @@ Turn dots off for all NPCs (minimap or world map), one kind, or one NPC. A kind 
 
 ## Window
 
-With TravelLog installed, [its window](../TravelLog/README.md#window) gets an **NPCs** tab: every NPC by name with its subzone (or zone), and a search box that matches name, title, zone, subzone or any item it sells. Click an NPC for its title, kinds, place, last visit, a **Pins on the maps** checkbox and its items with prices (hover one for its tooltip). Click it again, or pick none, for a checkbox per kind.
-
-Totals shows how many NPCs and items you know, and Settings has **NPCs on the minimap** and **NPCs on the world map**.
+With TravelLog, [its window](../TravelLog/README.md#window) gets an **NPCs** tab: every NPC by name with its subzone (or zone), and a search box that matches name, title, zone, subzone or any item it sells. Click an NPC for its title, kinds, place, last visit, a **Pins on the maps** checkbox and its items with prices (hover one for its tooltip). Click it again for a checkbox per kind. Totals show how many NPCs and items you know, and Settings has **NPCs on the minimap** and **NPCs on the world map**.
 
 ## Commands
 
 | Command | |
 | --- | --- |
-| `/npcs` | How many NPCs and items, which pins are on, and these commands |
+| `/npcs` | How many NPCs and items, which pins are on, and the commands |
 | `/npcs <text>` | NPCs whose name, title, zone, subzone or items contain the text (up to 15), with where they are and the matching item's price |
 | `/npcs add` | Save your target |
 | `/npcs forget <name>\|target` | Delete a saved NPC |
@@ -83,6 +81,7 @@ Totals shows how many NPCs and items you know, and Settings has **NPCs on the mi
 
 ```lua
 TravelLogNPCsDB = {
+  version = 1,
   settings = { minimap = true, worldMap = true, hideKinds = { trainer = true } },
   npcs = {
     [1265] = { name = "Brog Hamfist", title = "General Supplies", kinds = { vendor = true, repair = true },
@@ -98,7 +97,7 @@ TravelLogNPCsDB = {
 }
 ```
 
-`x`, `y` are map coordinates 0–100. `price` is in copper and `cost` lists the other currencies and items, both for `stack` items when that's set. `special` without `cost` is an unreadable cost.
+`x`, `y` are map coordinates 0–100. `price` (copper) and `cost` (other currencies and items) are for `stack` items when that's set. `special` without `cost` is a cost the client didn't reveal.
 
 ## Limits
 

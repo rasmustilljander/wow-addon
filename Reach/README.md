@@ -7,7 +7,7 @@ While you auto-attack or shoot, Reach shows a red warning above the middle of th
 | `Out of melee range` | Your target is just out of reach of your melee weapon, and you have no ranged weapon that can hit it. |
 | `Dead zone: too close to shoot` | Your target is too close for your ranged weapon and too far for melee, like a hunter's dead zone between melee and shooting range. |
 
-It only warns when the target is within trade distance (about 8 yards), so chasing a mob or starting an attack from across the field stays quiet. It has no sound. It checks five times a second and hides as soon as you stop attacking, change target or the target dies.
+It only warns when the target is within trade distance (about 8 yards), so chasing a mob or attacking from across the field stays quiet. It has no sound, checks five times a second and hides as soon as you stop attacking, change target or the target dies.
 
 ## Commands
 
