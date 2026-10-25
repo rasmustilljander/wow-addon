@@ -55,8 +55,6 @@ TravelLogShareDB = {
 - `seen`: when they last whispered you. `nodesSince`: the newest node you got from them.
 - A peer's nodes are keyed by map and by their place in that player's own list.
 
-0.1 had separate lists for sharing and following, kept every request and fetched logs. Both lists become friends at the first login with 0.2; requests and logs are dropped.
-
 ## Limits
 
 - Both players must be online. Whispers to someone offline are dropped, and the game's "No player named ... is currently playing" reply to them is hidden.

@@ -402,22 +402,3 @@ check(TravelLogShareDB.peers["rasmus-forever"] == nil and ns.friends["Rasmus-For
 M.out = {}
 SlashCmdList.TRAVELLOG("stats rasmus")
 check(Printed("no character"), "and /tl stats forgets them")
-
---------------------------------------------------------------------------------
--- 0.1's separate lists, requests and logs
---------------------------------------------------------------------------------
-
-TravelLogShareDB = {
-	allowed = { ["ann-forever"] = "Ann-Forever" },
-	follow = { ["cid-forever"] = "Cid-Forever" },
-	requests = { { time = 1760000000, from = "Ann-Forever", to = "Bob-Forever", what = "log", count = 20, allowed = true } },
-	peers = {
-		["cid-forever"] = { name = "Cid-Forever", nodes = {}, log = { received = 1760000000, entries = {} } },
-		["zed-forever"] = { name = "Zed-Forever", nodes = {} },
-	},
-}
-ns = M.Reload()
-db = TravelLogShareDB
-check(db.friends["ann-forever"] == "Ann-Forever" and db.friends["cid-forever"] == "Cid-Forever", "both lists became friends")
-check(db.allowed == nil and db.follow == nil and db.requests == nil, "old lists and requests dropped")
-check(db.peers["cid-forever"] and db.peers["cid-forever"].log == nil and db.peers["zed-forever"] == nil, "logs and others' data dropped")

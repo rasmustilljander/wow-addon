@@ -33,20 +33,6 @@ tl.On("PLAYER_LOGIN", function()
 	local db = TravelLogShareDB
 	db.friends = db.friends or {}
 	db.peers = db.peers or {}
-	-- Before 0.2 sharing and following were separate lists, and logs and
-	-- every request were kept. Either list makes a friend now.
-	for _, list in ipairs({ db.allowed or {}, db.follow or {} }) do
-		for key, name in pairs(list) do
-			db.friends[key] = name
-		end
-	end
-	db.allowed, db.follow, db.requests = nil, nil, nil
-	for key, peer in pairs(db.peers) do
-		peer.log = nil
-		if not db.friends[key] then
-			db.peers[key] = nil
-		end
-	end
 	ns.db = db
 	ns.me = select(2, ns.Name(UnitName("player")))
 	-- Friends' characters show in TravelLog's totals beside yours.

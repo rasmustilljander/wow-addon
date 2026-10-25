@@ -2,7 +2,7 @@
 ## Title: TravelLog Share
 ## Notes: Shares looted chests, herbs and ore and your TravelLog totals with a friend who shares theirs.
 ## Author: rasmustilljander
-## Version: 0.2.0
+## Version: 0.1.0
 ## Dependencies: TravelLog
 ## OptionalDeps: TravelLog_Nodes
 ## SavedVariables: TravelLogShareDB
