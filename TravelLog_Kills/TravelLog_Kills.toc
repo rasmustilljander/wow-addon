@@ -8,6 +8,7 @@
 
 Core.lua
 Drops.lua
+MapView.lua
 Map.lua
 Commands.lua
 Window.lua

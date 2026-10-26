@@ -173,6 +173,7 @@ Enum = {
 		NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8, GeneralError = 9, NotInGuild = 10,
 		AddOnMessageLockdown = 11, TargetOffline = 12 },
 	PvPRanks = { RankNone = 0, Rank_1 = 5, Rank_14 = 18 },
+	UIMapType = { Cosmic = 0, World = 1, Continent = 2, Zone = 3, Dungeon = 4, Micro = 5, Orphan = 6 },
 	PlayerSwingType = { MainHand = 0, OffHand = 1, Ranged = 2 },
 }
 
@@ -866,6 +867,15 @@ function C_Map.GetMapRectOnMap(map, top)
 	local r = M.rects[map .. ":" .. top]
 	if r then return r[1], r[2], r[3], r[4] end
 end
+-- The zones (and cities) under Azeroth (947).
+M.zones = { 1429, 84, 1436, 1438 }
+function C_Map.GetMapChildrenInfo(map, mapType, all)
+	local list = {}
+	if map == 947 and mapType == Enum.UIMapType.Zone and all then
+		for _, id in ipairs(M.zones) do list[#list + 1] = { mapID = id, mapType = mapType } end
+	end
+	return list
+end
 -- Where maps lie in the world: { continent, left, top, width, height } in
 -- yards. Stormwind (84) is inside Elwynn's top left, Westfall west of it,
 -- Teldrassil (1438) on another continent. World positions here are { x = east,
@@ -1558,8 +1568,56 @@ WorldMapFrame.scale = 1
 function WorldMapFrame:GetCanvas() return M.canvas end
 function WorldMapFrame:GetMapID() return M.viewMap end
 function WorldMapFrame:GetCanvasScale() return self.scale end
+-- M.levelShift moves the highlight layer up, as OpenMap inserting its art
+-- below it does.
+M.levelShift = 0
 function WorldMapFrame:GetPinFrameLevelsManager()
-	return { GetValidFrameLevel = function(_, kind) assert(kind == "PIN_FRAME_LEVEL_MAP_HIGHLIGHT"); return 2009 end }
+	return { GetValidFrameLevel = function(_, kind) assert(kind == "PIN_FRAME_LEVEL_MAP_HIGHLIGHT"); return 2009 + M.levelShift end }
+end
+-- The part of the canvas in view, 0-1 (M.viewRect: { left, right, top, bottom }).
+function WorldMapFrame:GetViewRect()
+	local r = M.viewRect or { 0, 1, 0, 1 }
+	return { left = r[1], right = r[2], top = r[3], bottom = r[4] }
+end
+
+-- OpenMap's API for other addons (OpenMapAPI), as M.OpenMap() installs it:
+-- M.stitched says whether its seamless map is showing, M.stitch[map] where
+-- each map lies on its stitched world ({ u, width, v, height }, 0-1), and
+-- M.openMapMoved() runs the callbacks for its view moving. Menu switches
+-- addons add are in M.openMapToggles by id.
+function M.OpenMap()
+	local callbacks = {}
+	M.stitched, M.openMapToggles = true, {}
+	M.stitch = {
+		[1429] = { 0.50, 0.10, 0.60, 0.08 }, [84] = { 0.505, 0.03, 0.605, 0.02 },
+		[1436] = { 0.40, 0.10, 0.62, 0.08 }, [1438] = { 0.10, 0.10, 0.20, 0.10 },
+	}
+	OpenMapAPI = {
+		major = 1, version = 1,
+		IsStitched = function() return M.stitched end,
+		WorldFromMap = function(map, x, y)
+			local r = M.stitch[map]
+			if r then return r[1] + x * r[2], r[3] + y * r[4] end
+		end,
+		MapFromWorld = function(map, u, v)
+			local r = M.stitch[map]
+			if r then return (u - r[1]) / r[2], (v - r[3]) / r[4] end
+		end,
+		RegisterCallback = function(owner, event, fn)
+			assert(type(fn) == "function")
+			callbacks[#callbacks + 1] = { event = event, fn = fn }
+		end,
+		RegisterMenuToggle = function(owner, spec)
+			assert(type(owner) == "string" and type(spec.id) == "string" and type(spec.label) == "string"
+				and type(spec.get) == "function" and type(spec.set) == "function")
+			M.openMapToggles[spec.id] = spec
+		end,
+	}
+	function M.openMapMoved()
+		for _, c in ipairs(callbacks) do
+			if c.event == "OpenMap_ViewChanged" then c.fn(c.event, 0.5, 0.5, 4) end
+		end
+	end
 end
 UIParent = CreateFrame("Frame")
 -- The minimap: 140 wide, its center at (1800, 900) in screen coordinates.

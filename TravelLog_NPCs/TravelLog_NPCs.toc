@@ -8,6 +8,7 @@
 
 Core.lua
 Minimap.lua
+MapView.lua
 Map.lua
 Tooltip.lua
 Commands.lua

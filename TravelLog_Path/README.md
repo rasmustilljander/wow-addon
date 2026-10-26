@@ -53,7 +53,7 @@ Stealth overlaps the rest: prowling counts as `cat` and `stealth`. Other forms (
 
 ## World map
 
-Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry. Alts' and friends' trails are thinner lines in their class color, under yours, without markers.
+Zone and continent maps show your trail, broken at teleports (hearthstone, portals, graveyard), with markers for jumps and for TravelLog's loot, deaths, level-ups, notes and other milestones. Hover a death or note marker for its date and entry. Alts' and friends' trails are thinner lines in their class color, under yours, without markers. On [OpenMap](../README.md#openmap)'s map, every zone in view shows its trail.
 
 The trail curves through the recorded points instead of turning sharply at each; `/tl smooth` (setting `smooth`) sets how much.
 

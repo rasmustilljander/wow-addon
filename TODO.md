@@ -9,6 +9,11 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
 
 ## Planned
 
+- **OpenMap in the game.** The [OpenMap](README.md#openmap) support is tested only against a stand-in for its API. Check with the real addon:
+  - the overlays stay above its art, also if it ever sets up after them;
+  - other zones' trail and pins appear and go while panning, and cities show theirs: neighbours come from `C_Map.GetMapChildrenInfo(947, Enum.UIMapType.Zone, true)`, so a city of another map type would be missed;
+  - the TravelLog switches in its menu, and their icons (`INV_Misc_Map_01`, `INV_Misc_Herb_07`, `Ability_DualWield`, `INV_Misc_Coin_01`).
+
 - **TravelLog export.** The log and totals can't be copied out of the game; only the raw SavedVariables file has them. Add a command or button that opens a copyable text box (CSV or similar) with the log or the totals. A text box because addons can't write files of their own.
 
 - **Damage and healing totals.** Your damage, healing and DPS per boss fight and per session, from Forever's built-in meter.

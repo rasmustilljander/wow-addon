@@ -7,5 +7,6 @@
 ## SavedVariables: TravelLogNodesAccountDB
 
 Core.lua
+MapView.lua
 Map.lua
 Minimap.lua
