@@ -69,9 +69,12 @@ end
 -- Pins
 --------------------------------------------------------------------------------
 
+local MapView = ns.MapView
+local WHOLE = { 0, 1, 0, 1 } -- the shown map on itself
+
 local overlay
 local pins = {}
-local drawnMap, drawnScale, drawnVersion, drawnAt = nil, nil, nil, 0
+local drawnMap, drawnScale, drawnVersion, drawnAt, drawnNear, drawnMoved = nil, nil, nil, 0, nil, nil
 
 local function PinTooltip(pin)
 	local spot, filter = pin.spot, ns.db.settings.mapFilter
@@ -124,17 +127,19 @@ local function SetPin(i, spot, count, last, x, y, size)
 	pin:Show()
 end
 
--- Pins are only drawn on their own zone's map; continent maps would be a
--- carpet of them.
+-- Pins are only drawn on their own zone's map, and with OpenMap on other
+-- zones zoomed in on around it; continent maps would be a carpet of them.
 local function Redraw()
 	drawnMap, drawnScale, drawnVersion = WorldMapFrame:GetMapID(), WorldMapFrame:GetCanvasScale() or 1, ns.version
 	drawnAt = GetTime()
+	local near
+	near, drawnNear = MapView.Near(drawnMap)
+	drawnMoved = MapView.moved
 	local n = 0
-	local byMap = ns.db.settings.map and drawnMap and Spots()[drawnMap]
-	if byMap then
-		local filter = ns.db.settings.mapFilter
-		local w, h = overlay:GetSize()
-		for _, spot in pairs(byMap) do
+	local filter = ns.db.settings.mapFilter
+	local w, h = overlay:GetSize()
+	local function AddMap(map, r)
+		for _, spot in pairs(Spots()[map] or {}) do
 			local count, last = spot.count, spot.last
 			if filter then
 				local mob = spot.mobs[filter]
@@ -143,9 +148,16 @@ local function Redraw()
 			if count > 0 then
 				-- Grows with the log of the count: 1, 10 and 100 kills look different.
 				local size = math.min(MIN_SIZE + 2 * math.log(count) / math.log(2), MAX_SIZE) / drawnScale
+				local x, y = r[1] + spot.x / spot.count / 100 * r[2], r[3] + spot.y / spot.count / 100 * r[4]
 				n = n + 1
-				SetPin(n, spot, count, last, spot.x / spot.count / 100 * w, spot.y / spot.count / 100 * h, size)
+				SetPin(n, spot, count, last, x * w, y * h, size)
 			end
+		end
+	end
+	if ns.db.settings.map and drawnMap then
+		AddMap(drawnMap, WHOLE)
+		for map, r in pairs(near) do
+			AddMap(map, r)
 		end
 	end
 	for i = n + 1, #pins do
@@ -157,11 +169,14 @@ local function OnUpdate()
 	if not ns.db then
 		return
 	end
+	MapView.Raise(overlay, 2)
 	-- While zooming the scale changes every frame; redraw once it settles.
 	local zoomed = WorldMapFrame:GetCanvasScale() ~= drawnScale and GetTime() - drawnAt > 0.2
-	if WorldMapFrame:GetMapID() ~= drawnMap or zoomed or ns.version ~= drawnVersion then
+	if WorldMapFrame:GetMapID() ~= drawnMap or zoomed or ns.version ~= drawnVersion
+		or MapView.moved ~= drawnMoved and select(2, MapView.Near(drawnMap)) ~= drawnNear then
 		Redraw()
 	end
+	drawnMoved = MapView.moved
 end
 
 local function Create()
@@ -173,9 +188,7 @@ local function Create()
 	overlay:SetAllPoints(canvas)
 	-- Above the map art (and TravelLog_Path's trail), below icons like flight
 	-- masters and quest markers.
-	local manager = WorldMapFrame.GetPinFrameLevelsManager and WorldMapFrame:GetPinFrameLevelsManager()
-	local level = manager and manager:GetValidFrameLevel("PIN_FRAME_LEVEL_MAP_HIGHLIGHT")
-	overlay:SetFrameLevel(level and level + 2 or canvas:GetFrameLevel() + 2)
+	MapView.Raise(overlay, 2)
 	overlay:SetScript("OnUpdate", OnUpdate)
 	ns.mapOverlay = overlay
 end
@@ -185,7 +198,15 @@ function ns.RefreshMap()
 	drawnMap = nil
 end
 
-ns.On("PLAYER_LOGIN", Create)
+ns.On("PLAYER_LOGIN", function()
+	Create()
+	MapView.Setup("kills", "Kills", "Interface\\Icons\\Ability_DualWield", function()
+		return ns.db.settings.map
+	end, function(on)
+		ns.db.settings.map, ns.db.settings.mapFilter = on, nil
+		ns.RefreshMap()
+	end)
+end)
 ns.On("ADDON_LOADED", function(name)
 	if name == "Blizzard_WorldMap" then
 		Create()

@@ -13,9 +13,12 @@ local NODE_COLORS = {
 }
 local NODE_LABELS = { herb = "Herb", ore = "Ore", chest = "Chest", object = "Object" }
 
+local MapView = ns.MapView
+local WHOLE = { 0, 1, 0, 1 } -- the shown map on itself
+
 local overlay
 local pins = {}
-local drawnMap, drawnScale, drawnVersion
+local drawnMap, drawnScale, drawnVersion, drawnNear, drawnMoved
 
 -- A character's name in their class color, with the realm if it isn't yours.
 local function Who(key)
@@ -106,24 +109,36 @@ local function SetPin(i, node, x, y, size, from)
 	pin:Show()
 end
 
--- Nodes are only drawn on their own zone's map; continent maps would be a
--- carpet of them.
+-- Nodes are only drawn on their own zone's map, and with OpenMap on other
+-- zones zoomed in on around it; continent maps would be a carpet of them.
 local function Draw()
 	drawnMap = WorldMapFrame:GetMapID()
 	drawnScale = WorldMapFrame:GetCanvasScale() or 1
 	drawnVersion = ns.version
+	local near
+	near, drawnNear = MapView.Near(drawnMap)
+	drawnMoved = MapView.moved
 	local n = 0
 	local w, h = overlay:GetSize()
+	local r -- where the map being drawn sits on the shown one
 	local function Add(node, from)
 		n = n + 1
-		SetPin(n, node, node.x / 100 * w, node.y / 100 * h, (from and SHARED_SIZE or NODE_SIZE) / drawnScale, from)
+		SetPin(n, node, (r[1] + node.x / 100 * r[2]) * w, (r[3] + node.y / 100 * r[4]) * h,
+			(from and SHARED_SIZE or NODE_SIZE) / drawnScale, from)
+	end
+	local function AddMap(map, rect)
+		r = rect
+		for _, get in ipairs(ns.sources) do
+			get(map, Add)
+		end
+		for _, node in ipairs(ns.db.maps[map] or {}) do
+			Add(node)
+		end
 	end
 	if drawnMap then
-		for _, get in ipairs(ns.sources) do
-			get(drawnMap, Add)
-		end
-		for _, node in ipairs(ns.db.maps[drawnMap] or {}) do
-			Add(node)
+		AddMap(drawnMap, WHOLE)
+		for map, rect in pairs(near) do
+			AddMap(map, rect)
 		end
 	end
 	for i = n + 1, #pins do
@@ -132,10 +147,13 @@ local function Draw()
 end
 
 local function OnUpdate()
+	MapView.Raise(overlay, 3)
 	if WorldMapFrame:GetMapID() ~= drawnMap or (WorldMapFrame:GetCanvasScale() or 1) ~= drawnScale
-		or ns.version ~= drawnVersion then
+		or ns.version ~= drawnVersion
+		or MapView.moved ~= drawnMoved and select(2, MapView.Near(drawnMap)) ~= drawnNear then
 		Draw()
 	end
+	drawnMoved = MapView.moved
 end
 
 local function Create()
@@ -147,9 +165,7 @@ local function Create()
 	overlay:SetAllPoints(canvas)
 	-- Above TravelLog_Path's trail and TravelLog_Kills' pins, below icons like
 	-- flight masters and quest markers.
-	local manager = WorldMapFrame.GetPinFrameLevelsManager and WorldMapFrame:GetPinFrameLevelsManager()
-	local level = manager and manager:GetValidFrameLevel("PIN_FRAME_LEVEL_MAP_HIGHLIGHT")
-	overlay:SetFrameLevel(level and level + 3 or canvas:GetFrameLevel() + 3)
+	MapView.Raise(overlay, 3)
 	overlay:SetScript("OnUpdate", OnUpdate)
 	overlay:SetShown(tl.settings.nodes)
 end
@@ -163,7 +179,15 @@ function ns.RefreshMap()
 	drawnMap = nil
 end
 
-tl.On("PLAYER_LOGIN", Create)
+tl.On("PLAYER_LOGIN", function()
+	Create()
+	MapView.Setup("nodes", "Looted nodes", "Interface\\Icons\\INV_Misc_Herb_07", function()
+		return tl.settings.nodes
+	end, function(on)
+		tl.settings.nodes = on
+		ns.RefreshMap()
+	end)
+end)
 tl.On("ADDON_LOADED", function(name)
 	if name == "Blizzard_WorldMap" then
 		Create()

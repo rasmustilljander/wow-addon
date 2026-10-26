@@ -69,6 +69,7 @@ local HOVERED = { death = true, note = true }
 local overlay, head
 local lines, dots, pins = {}, {}, {}
 local drawnMap, drawnScale, drawnVersion, drawnRange, drawnAt, fadedAt = nil, nil, nil, nil, 0, 0
+local drawnNear, drawnMoved -- MapView.Near's key and MapView.moved as drawn
 local drawnReplay -- ns.replayAt as drawn
 
 -- A stable key until a rolling range needs its cutoff recomputed. Calendar
@@ -106,14 +107,17 @@ end
 -- Map projection
 --------------------------------------------------------------------------------
 
+local MapView = ns.MapView
+
 -- Where each zone sits on the map being viewed, e.g. Elwynn Forest inside
 -- Eastern Kingdoms. false means "not part of that map".
 local rects = {}
 
-local function Project(map, x, y, view)
-	if map == view then
-		return x, y
-	end
+-- With OpenMap, the other zones in view around the one shown (MapView.Near),
+-- as of the last full redraw.
+local near = {}
+
+local function Rect(map, view)
 	local byView = rects[view]
 	if not byView then
 		byView = {}
@@ -125,9 +129,24 @@ local function Project(map, x, y, view)
 		r = minX and maxX > minX and maxY > minY and { minX, maxX - minX, minY, maxY - minY } or false
 		byView[map] = r
 	end
+	return r
+end
+
+local function Project(map, x, y, view)
+	if map == view then
+		return x, y
+	end
+	local r = Rect(map, view) or near[map]
 	if r then
 		return r[1] + x * r[2], r[3] + y * r[4]
 	end
+end
+
+-- The zones OpenMap shows around the map being viewed that aren't part of it.
+local function Near(view)
+	return MapView.Near(view, true, function(map)
+		return Rect(map, view)
+	end)
 end
 
 --------------------------------------------------------------------------------
@@ -729,6 +748,8 @@ local function Redraw()
 	drawnRange = CurrentRangeKey()
 	drawnReplay = ns.replayAt
 	fadedAt = GetTime()
+	near, drawnNear = Near(drawnMap)
+	drawnMoved = MapView.moved
 
 	view.map, view.scale = drawnMap, drawnScale
 	view.w, view.h = overlay:GetSize()
@@ -762,12 +783,16 @@ local function Redraw()
 end
 
 local function OnUpdate()
+	MapView.Raise(overlay, 1)
 	local map, scale = WorldMapFrame:GetMapID(), WorldMapFrame:GetCanvasScale()
 	local sinceDraw = GetTime() - drawnAt
 	-- A replay moving forward draws on; moving back takes a redraw.
 	local at = ns.replayAt
 	local back = at ~= drawnReplay and not (at and drawnReplay and at > drawnReplay)
-	if map ~= drawnMap or CurrentRangeKey() ~= drawnRange or back or (scale ~= drawnScale and sinceDraw > 0.2) then
+	-- OpenMap's view moving brings other zones into view without a new map.
+	local moved = MapView.moved ~= drawnMoved and select(2, Near(map)) ~= drawnNear
+	drawnMoved = MapView.moved
+	if map ~= drawnMap or CurrentRangeKey() ~= drawnRange or back or moved or (scale ~= drawnScale and sinceDraw > 0.2) then
 		Redraw()
 	elseif at ~= drawnReplay then
 		Advance()
@@ -793,9 +818,7 @@ local function Create()
 	overlay:SetAllPoints(canvas)
 	-- Above the map art and explored-area overlays, below icons like flight
 	-- masters and quest markers.
-	local manager = WorldMapFrame.GetPinFrameLevelsManager and WorldMapFrame:GetPinFrameLevelsManager()
-	local level = manager and manager:GetValidFrameLevel("PIN_FRAME_LEVEL_MAP_HIGHLIGHT")
-	overlay:SetFrameLevel(level and level + 1 or canvas:GetFrameLevel() + 1)
+	MapView.Raise(overlay, 1)
 	-- Above the markers.
 	head = overlay:CreateTexture(nil, "OVERLAY", nil, 3)
 	head:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask")
@@ -825,7 +848,23 @@ function tl.TrailsChanged()
 end
 
 tl.On("TL_ROTATED", ns.RefreshTrail)
-tl.On("PLAYER_LOGIN", Create)
+-- Your trail's range before OpenMap's menu turned it off, to turn it back on.
+local trailWas
+
+tl.On("PLAYER_LOGIN", function()
+	Create()
+	MapView.Setup("trail", "Your trail", "Interface\\Icons\\INV_Misc_Map_01", function()
+		return tl.settings.trail ~= "off"
+	end, function(on)
+		local S = tl.settings
+		if on and S.trail == "off" then
+			S.trail = trailWas or "today"
+		elseif not on and S.trail ~= "off" then
+			trailWas, S.trail = S.trail, "off"
+		end
+		ns.RefreshTrail()
+	end)
+end)
 tl.On("ADDON_LOADED", function(name)
 	if name == "Blizzard_WorldMap" then
 		Create()

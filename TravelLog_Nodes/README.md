@@ -16,7 +16,7 @@ Per spot: what it was, the five latest loot times with who looted each, and how 
 
 ## Map pins
 
-The minimap shows nearby nodes recorded on its current map, following its range and rotation. Zone maps (not continent maps) show every node in the zone. Pins are squares: green herbs, orange ore, gold chests, grey other objects. Hover one for when it was last looted, how long ago and by whom, how many times (split by character when more than one looted it), and the times before:
+The minimap shows nearby nodes recorded on its current map, following its range and rotation. Zone maps (not continent maps) show every node in the zone, and on [OpenMap](../README.md#openmap)'s map in the zones around it. Pins are squares: green herbs, orange ore, gold chests, grey other objects. Hover one for when it was last looted, how long ago and by whom, how many times (split by character when more than one looted it), and the times before:
 
 ```
 Peacebloom

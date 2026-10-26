@@ -41,6 +41,16 @@ Then `/reload` and make sure the addons are enabled on the character select scre
 
 The `.toc` files target Forever 1.60.1 (`## Interface: 16001`). If a patch marks them out of date, get the new number with `/dump select(4, GetBuildInfo())` and update every `## Interface` line.
 
+## OpenMap
+
+The map overlays of Path, Nodes, Kills and NPCs work with [OpenMap](https://github.com/fitzforge/wowforever-openmap)'s seamless map:
+
+- They stay above OpenMap's map art.
+- OpenMap keeps one of Blizzard's maps under its view, the zone at its centre, and shows that map's trail and pins. Other zones and cities in view (or within a quarter of the view's size of its edge) show their trail too, and their pins once they fill half the view's width or height.
+- OpenMap's menu gets a **TravelLog** section with **Your trail**, **Looted nodes**, **Kills** and **NPCs**, the same settings as `/tl trail`, `/tl nodes`, `/kills map` and `/npcs map`. Your trail comes back on at its range from before, or `today` after a reload.
+
+Tested against a stand-in for OpenMap's API, not in the game.
+
 ## Tests
 
 `pip install lupa`, then `python tests/run.py` runs the addons against a fake client. See [tests/README.md](tests/README.md).

@@ -37,7 +37,7 @@ A price can read `1g 20s, limited` or `2g + 30 Warsong Gulch Mark of Honor`. `ot
 
 ## Minimap and world map
 
-Saved NPCs within the minimap's range show as dots, following its rotation. The world map shows them on the map they were saved on, so Stormwind's NPCs are on the Stormwind map, not Elwynn Forest's. Hover a dot for the NPC's name, title, kinds, how many items it sells and your last visit.
+Saved NPCs within the minimap's range show as dots, following its rotation. The world map shows them on the map they were saved on, so Stormwind's NPCs are on the Stormwind map, not Elwynn Forest's. [OpenMap](../README.md#openmap)'s map also shows those of zones and cities around it that fill enough of the view. Hover a dot for the NPC's name, title, kinds, how many items it sells and your last visit.
 
 An NPC with several kinds is drawn as the first of these:
 

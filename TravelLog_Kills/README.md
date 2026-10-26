@@ -30,7 +30,7 @@ Coins count a corpse as looted but aren't listed. Pickpocketing, chests, fishing
 
 ## World map
 
-Zone maps (not continent maps) show red pins where you've killed things. Kills within 2% of the map's width share a pin that grows with the count. Hover a pin for its kill count, the latest kill and the mobs killed there, most first. Dungeon kills have no coordinates, so they aren't pinned.
+Zone maps (not continent maps) show red pins where you've killed things, and on [OpenMap](../README.md#openmap)'s map in the zones around it too. Kills within 2% of the map's width share a pin that grows with the count. Hover a pin for its kill count, the latest kill and the mobs killed there, most first. Dungeon kills have no coordinates, so they aren't pinned.
 
 ## Window
 
