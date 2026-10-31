@@ -14,6 +14,9 @@ local CHOICES_WIDTH = 6 * CHOICE_WIDTH -- the widest row of choices
 local STAT_HEIGHT = 18
 local SETTING_HEIGHT = 24
 local TOP = -52                        -- where the tabs' contents start
+local MIN_HEIGHT = 300                 -- the pages, at least
+local SCROLL_BAR = 24                  -- room right of a scrolling page for its bar
+local CONTENT_WIDTH = WIDTH - SCROLL_BAR
 local REFRESH = 1 -- seconds between redraws while the window is open
 
 -- Each tab's rows by section. Sections show in this order, then any others
@@ -254,7 +257,7 @@ local function Heading(f, text, y)
 	heading:SetText(text)
 	local rule = f:CreateTexture(nil, "ARTWORK")
 	rule:SetColorTexture(1, 0.82, 0, 0.25)
-	rule:SetSize(WIDTH - 2 * LEFT + 4, 1)
+	rule:SetSize(CONTENT_WIDTH - 2 * LEFT + 4, 1)
 	rule:SetPoint("TOPLEFT", LEFT - 4, y - 18)
 	return y - 24
 end
@@ -307,10 +310,10 @@ local function AddStepper(f, setting, y)
 	Button(f, ">", 24, VALUE_X + CHOICES_WIDTH - 24, y, function() setting.step(1) end)
 end
 
--- Fills a tab's page with its sections, from y (default 0) down, and returns
--- how tall it is.
-local function Fill(page, tab, AddRow, y)
-	y = y or 0
+-- Fills a tab's page with its sections, from the top down, and returns how
+-- tall it is.
+local function Fill(page, tab, AddRow)
+	local y = 0
 	for _, section in ipairs(tab.order) do
 		local rows = tab.rows[section]
 		if rows then
@@ -328,7 +331,7 @@ local function AddStatRow(page, stat, y)
 	Label(page, stat.label, y)
 	stat.text = page:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	stat.text:SetPoint("TOPLEFT", VALUE_X, y)
-	stat.text:SetWidth(WIDTH - VALUE_X - LEFT)
+	stat.text:SetWidth(CONTENT_WIDTH - VALUE_X - LEFT)
 	stat.text:SetJustifyH("LEFT")
 	stat.text:SetWordWrap(false)
 	return y - STAT_HEIGHT
@@ -343,6 +346,26 @@ local function AddSettingRow(page, setting, y)
 		AddCheck(page, setting, y)
 	end
 	return y - SETTING_HEIGHT
+end
+
+-- A scrolling area on a page, from y down to the page's bottom, with a
+-- scroll bar that shows only when its rows don't fit. Returns the frame to
+-- fill, which is also page.content.
+local function Scroller(page, y)
+	local scroll = CreateFrame("ScrollFrame", nil, page)
+	scroll:SetPoint("TOPLEFT", 0, y)
+	scroll:SetPoint("BOTTOMRIGHT", -SCROLL_BAR, 0)
+	scroll:EnableMouseWheel(true)
+	local bar = CreateFrame("EventFrame", nil, page, "MinimalScrollBar")
+	bar:SetPoint("TOPLEFT", scroll, "TOPRIGHT", 4, 0)
+	bar:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", 4, 0)
+	bar:SetHideIfUnscrollable(true)
+	ScrollUtil.InitScrollFrameWithScrollBar(scroll, bar)
+	local content = CreateFrame("Frame", nil, scroll)
+	content:SetWidth(CONTENT_WIDTH)
+	scroll:SetScrollChild(content)
+	page.scroll, page.content = scroll, content
+	return content
 end
 
 -- Shows tab i's page and hides the other.
@@ -394,23 +417,32 @@ local function CreateWindow()
 	f.who = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	f.who:SetPoint("TOPLEFT", 14, -34)
 
-	-- A page per tab, the window as tall as the tallest one.
+	-- A page per tab, the window as tall as the tallest of the companions'
+	-- tabs and History. Totals and Settings scroll, so the window fits on
+	-- screen however many rows they have.
 	f.pages = {}
 	local all = {
-		{ name = "Totals", build = function(page)
+		{ name = "Totals", scroll = true, build = function(page)
 			AddStepper(page, picker, 0)
-			return Fill(page, stats, AddStatRow, -SETTING_HEIGHT - 4)
+			local content = Scroller(page, -SETTING_HEIGHT - 4)
+			content:SetHeight(Fill(content, stats, AddStatRow))
 		end },
-		{ name = "Settings", build = function(page) return Fill(page, settings, AddSettingRow) end },
+		{ name = "Settings", scroll = true, build = function(page)
+			local content = Scroller(page, 0)
+			content:SetHeight(Fill(content, settings, AddSettingRow))
+		end },
 	}
 	for _, tab in ipairs(extraTabs) do
 		all[#all + 1] = tab
 	end
-	local tabs, height = {}, 0
+	local tabs, height = {}, MIN_HEIGHT
 	for i, tab in ipairs(all) do
 		local page = CreateFrame("Frame", nil, f)
 		page:SetPoint("TOPLEFT", 0, TOP)
-		height = math.max(height, tab.height or 0, tab.build(page) or 0)
+		local built = tab.build(page)
+		if not tab.scroll then
+			height = math.max(height, tab.height or 0, built or 0)
+		end
 		tab.page = page
 		f.pages[i] = page
 

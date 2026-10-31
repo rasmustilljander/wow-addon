@@ -9,6 +9,20 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
 
 ## Planned
 
+- **UI first.** Everything a player reads or changes should be in the window; slash commands stay as shortcuts. Chat-only is fine for `/tl fade opacity|width` curves, custom `/tl trail` ranges (`6h`, `3d`) and `/tl log`.
+  - **Events detail pane.** The list is 410 px wide in a 600 px window. Clicking an entry shows its full text, every saved field, hoverable item links (shift-click to link in chat), **Show on map** (from `map`, `x`, `y`), and **Delete** / **Edit** buttons in place of the hidden right-click bar. Until then, a row tooltip with the full text: Events passes no tooltip to `ns.HistoryList`.
+  - **Add a note** from the Events view; only `/tl note` adds one now.
+  - **Totals tooltips.** Rows are cut off (`SetWordWrap(false)`) and show less than `/tl stats`. Hovering shows the rest: every zone with its states, every faction, money by every reason, vendor counts (bought, sold, repairs), distance by way of travel, jumps per zone (`/tl jumps`) and stored path points.
+  - **History links.** Clicking a session or a level opens Events filtered to its time span.
+  - **Replay** has no button: add one to the world map and next to **Your trail** in Settings.
+  - **Fade:** a custom `/tl fade` lights no preset button; show it as custom.
+  - **Wipes** in Settings with a confirm dialog (`StaticPopup`): TravelLog's, Kills' and Group's `wipe confirm`.
+  - **Kills view:** total XP, drops with their chance, the last kills with places (`/kills <name>`); your target (`/kills target`); a Recent list (`/kills recent`); "Only this mob on the map" (`/kills map <name>`).
+  - **Players tab:** your target (`/grouped target`) and a Recent list across players (`/grouped recent`).
+  - **NPCs tab:** **Save target** (`/npcs add`) and **Forget** (`/npcs forget`).
+  - **Discoverability:** a minimap or world-map entry besides the addons dropdown.
+  - **Refresh cost.** The window redraws every second while open; on All characters that adds up every character's totals each time. Redraw on `ns.version` or picker changes, and each minute for time played.
+
 - **OpenMap in the game.** The [OpenMap](README.md#openmap) support is tested only against a stand-in for its API. Check with the real addon:
   - the overlays stay above its art, also if it ever sets up after them;
   - other zones' trail and pins appear and go while panning, and cities show theirs: neighbours come from `C_Map.GetMapChildrenInfo(947, Enum.UIMapType.Zone, true)`, so a city of another map type would be missed;
