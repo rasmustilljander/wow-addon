@@ -413,6 +413,7 @@ ns.On("ENCOUNTER_END", function(id, name, difficultyID, size, success)
 		size = size and size > 0 and size or nil,
 		seconds = fight and id and fight.id == id and time() - fight.since or nil,
 		instance = inst and inst.name,
+		used = fight and fight.used and ns.ItemList(fight.used),
 	})
 	ns.Add(1, "bosses", result)
 	if inst then

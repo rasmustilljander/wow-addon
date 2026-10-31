@@ -13,6 +13,7 @@ Travel.lua
 Loot.lua
 Vendor.lua
 Outgoing.lua
+Use.lua
 Money.lua
 Life.lua
 WorldBuffs.lua
