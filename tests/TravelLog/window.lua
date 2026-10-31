@@ -11,11 +11,13 @@ local function Stat(w, label)
 		if r.kind == "FontString" and r:GetText() == label then return all[i + 1]:GetText() end
 	end
 end
--- The font strings at x on a page, in order.
+-- The font strings at x on a page, its scrolling rows too, in order.
 local function Texts(page, x)
 	local list = {}
-	for _, fs in ipairs(page.fontStrings or {}) do
-		if fs.point and fs.point[2] == x and fs:GetText() ~= "" then list[#list + 1] = fs:GetText() end
+	for _, fs in ipairs(M.descendants(page)) do
+		if fs.kind == "FontString" and fs.point and fs.point[2] == x and fs:GetText() ~= "" then
+			list[#list + 1] = fs:GetText()
+		end
 	end
 	return table.concat(list, ", ")
 end
@@ -66,6 +68,19 @@ check(Texts(totals, 18) == "Character, Places visited, Time by zone, Flights, Fl
 check(Texts(settings, 14) == "World map, General, Screenshots", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Trail fade, Trail curves (%), Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
+
+-- Totals and Settings scroll, the picker staying above the totals, so the
+-- window is as tall as History, not as all the rows.
+check(w.h == history.h + 60 and history.h < 400, ("window as tall as History: %s, %s"):format(w.h, history.h))
+for _, page in ipairs({ totals, settings }) do
+	local scroll = page.scroll
+	check(scroll and scroll.kind == "ScrollFrame" and scroll:GetScrollChild() == page.content and scroll.mouseWheel
+		and scroll.scrollBar and scroll.scrollBar.hideIfUnscrollable, "a scroll frame with a bar shown when needed")
+end
+check(totals.content.h > totals.h, ("the totals scroll: %s rows in %s"):format(totals.content.h, totals.h))
+local fixed = {}
+for _, fs in ipairs(totals.fontStrings) do fixed[#fixed + 1] = fs:GetText() end
+check(table.concat(fixed, ", ") == "Character, Rasmus-Forever, level 5", "the picker stays put above the totals: " .. table.concat(fixed, ", "))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Items out") == "0 traded, 0 mailed, 0 auctioned, 0 destroyed", "items out: " .. Stat(w, "Items out"))
 check(Stat(w, "Items used") == "0, 0 of them in crafts", "items used: " .. Stat(w, "Items used"))

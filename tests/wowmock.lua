@@ -270,6 +270,10 @@ function Region:SetChecked(v) self.checked = v and true or false end
 function Region:GetChecked() return self.checked or false end
 function Region:GetFrameLevel() return self.level or 1 end
 function Region:EnableMouse(v) self.mouse = v end
+function Region:EnableMouseWheel(v) self.mouseWheel = v end
+-- Scroll frames: the child they show.
+function Region:SetScrollChild(child) self.scrollChild = child end
+function Region:GetScrollChild() return self.scrollChild end
 function Region:SetMouseClickEnabled(v) self.mouseClicks = v end
 function Region:RegisterEvent(e)
 	if not M.KNOWN_EVENTS[e] then error('Attempt to register unknown event "' .. e .. '"') end
@@ -390,6 +394,9 @@ M.templates = {
 		f.clearButton = CreateFrame("Button", nil, f)
 		f.clearButton:SetScript("OnClick", function() f:SetText("") end)
 	end,
+	MinimalScrollBar = function(f)
+		function f:SetHideIfUnscrollable(hide) self.hideIfUnscrollable = hide end
+	end,
 	WowScrollBoxList = function(f)
 		f.rows = {}
 		-- Unlike the game, every element gets a row, so tests can reach them.
@@ -437,6 +444,7 @@ function CreateScrollBoxListLinearView()
 end
 ScrollUtil = {}
 function ScrollUtil.InitScrollBoxListWithScrollBar(box, bar, view) box.view, box.scrollBar = view, bar end
+function ScrollUtil.InitScrollFrameWithScrollBar(scrollFrame, bar) scrollFrame.scrollBar = bar end
 ScrollBoxConstants = { RetainScrollPosition = true }
 UISpecialFrames = {}
 GameFontNormal, GameFontHighlight = { name = "GameFontNormal" }, { name = "GameFontHighlight" }
