@@ -127,6 +127,7 @@ ns.AddStat("Life", "Played", function()
 	local total, level = ns.Played()
 	return total and ("%s, %s at this level"):format(ns.Duration(total), ns.Duration(level)) or "not known yet"
 end, true)
+ns.AddStat("Life", "Next level", function() return ns.NextLevelText() or "not known" end, true)
 ns.AddStat("Life", "Quests", function(st)
 	local quests = st.quests or {}
 	return ("%s accepted, %s done, %s abandoned, %s failed"):format(

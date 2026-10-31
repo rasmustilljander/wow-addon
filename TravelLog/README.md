@@ -41,6 +41,8 @@ Pick TravelLog from the minimap's addons dropdown, or type `/tl`.
 - **History**, newest first:
   - **Events**: filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search types, descriptions, names, places, dates and saved fields. Try `death`, `revival`, `level` or `note`.
   - **Sessions**: length, time AFK, levels, start and end place, money and XP gained (per hour after 10 minutes; AFK time left out by default), quests done and failed, XP kills and deaths. Hover one for XP by source.
+  - **Levels**: time played at each level, when you reached it, quests done and failed, XP kills, deaths, money gained or spent, and the zone with most events. Hover one for XP by source, discoveries, what the level gave and its top three zones.
+- **Next level** (top of Levels, and in Totals): XP to go and how long at your XP per hour, e.g. `1,400 xp to go (50%), about 1h 0m at 1,400 xp/h`. The rate is from your latest sessions, whole ones back to 2 hours of play, AFK left out by default; it shows after 10 minutes.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window).
 - **NPCs**, **Players**, **Colors** and **Friends** tabs come with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window), [TravelLog_Group](../TravelLog_Group/README.md#window), [TravelLog_Path](../TravelLog_Path/README.md#colors) and [TravelLog_Share](../TravelLog_Share/README.md#the-friends-tab).
 
@@ -241,6 +243,7 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - Durability lost needs a reading from before the death, so a revival after a reload while dead has none.
 - A failed quest is noticed at the next quest log update and logged once per time you take it: not again after a reload, and abandoning it then is a `questabandon`. One failed offline is logged when first seen. Only a timer running out is told apart, and a failed quest the server removes at once isn't seen.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
+- The Levels view counts what's in the log, so the level you installed at counts only from then; its time played is whole. The next-level estimate assumes your recent rate holds and doesn't count rested XP ahead.
 - XP by source splits the XP bar's gain into quests, kills, discoveries, rested and other (the rest, including kills and discoveries hidden in dungeons). Totals count from the oldest session that recorded XP.
 - Rested is counted from the rested pool going down (two pool points per bonus XP), not while logged out, at max level or when the pool can't be read. It assumes a kill's chat line includes the bonus, as Classic's did, so rested is taken out of kills, or out of other beyond the kills chat showed.
 - AFK time is when the game marks you AFK (`/afk`, or idle long enough), so idle minutes before that count as active. A change the client hides (dungeons) is missed.

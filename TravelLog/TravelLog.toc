@@ -23,5 +23,6 @@ Commands.lua
 UI.lua
 LogUI.lua
 Sessions.lua
+Levels.lua
 Tooltip.lua
 Screenshots.lua
