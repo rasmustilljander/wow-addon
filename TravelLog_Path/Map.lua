@@ -16,6 +16,8 @@ local MIN_SEGMENT = 4    -- screen pixels between drawn trail points
 local CURVE_ERROR = 0.5  -- screen pixels a curve's straight pieces may stray from it
 local MAX_PIECES = 8     -- straight pieces per curved segment
 local MAX_STEP = 300     -- yards between consecutive points; more is a teleport
+local MAX_PARSED = 200000 -- path points kept parsed between redraws
+local PARSE_STEP = 2000   -- path points parsed per frame before the rest waits
 local REFRESH = 3        -- seconds between adding new points while the map is open
 local RANGE_REFRESH = 60 -- seconds before a rolling trail cutoff is recomputed
 local FADE_REFRESH = 60  -- seconds between refading the trail while the map is open
@@ -212,8 +214,12 @@ local function CatchUp(data, read, store, buffer, add)
 end
 
 -- Parsed points per session, extended as new records arrive, so an open map
--- never re-reads a whole session.
-local parsed = {}
+-- never re-reads a whole session. Parsed points take about four times the
+-- memory of the saved text, so at most MAX_PARSED of them are kept: past
+-- that, a finished session is dropped once drawn, and parsed again for the
+-- next full redraw. parsedPoints counts what's kept; parsedNow, what this
+-- round of drawing has parsed.
+local parsed, parsedPoints, parsedNow = {}, 0, 0
 
 local function SessionData(s)
 	local data = parsed[s]
@@ -225,9 +231,25 @@ local function SessionData(s)
 		parsed[s] = data
 	end
 	local current = s == ns.session
+	local before = #data.path
 	CatchUp(data, data.pathRead, s.track, current and ns.track.buffer, AddPathRecord)
 	CatchUp(data, data.jumpsRead, s.jumps or {}, current and ns.jumps.buffer, AddJumpRecord)
+	local added = (#data.path - before) / PATH_STRIDE
+	parsedPoints, parsedNow = parsedPoints + added, parsedNow + added
 	return data
+end
+
+local function Unparse(s)
+	local data = parsed[s]
+	if data then
+		parsedPoints = parsedPoints - #data.path / PATH_STRIDE
+		parsed[s] = nil
+	end
+end
+
+-- Path points held parsed for the map, for tests.
+function ns.ParsedPoints()
+	return parsedPoints
 end
 
 local function ShowsOn(maps, view)
@@ -527,25 +549,28 @@ local function DrawSession(s, data, progress, source)
 		DrawCurve(c.tail, true, c.ax, c.ay, c.bx, c.by, c.x, c.y, nil, nil, c.color, thickness, sublevel,
 			source, c.bt, c.t)
 	end
-	if not source.jumps then
-		return
-	end
-
 	local j = data.jumps
-	stop = #j + 1
-	for i = progress.jumps, #j, JUMP_STRIDE do
-		local t = s.start + j[i]
-		if t >= before then
-			stop = i
-			break
-		elseif t >= since then
-			local x, y = Project(j[i + 1], j[i + 2], j[i + 3], map)
-			if x then
-				Dot(x * w, y * h, "jump", nil, source, clock and clock + j[i])
+	if source.jumps then
+		stop = #j + 1
+		for i = progress.jumps, #j, JUMP_STRIDE do
+			local t = s.start + j[i]
+			if t >= before then
+				stop = i
+				break
+			elseif t >= since then
+				local x, y = Project(j[i + 1], j[i + 2], j[i + 3], map)
+				if x then
+					Dot(x * w, y * h, "jump", nil, source, clock and clock + j[i])
+				end
 			end
 		end
+		progress.jumps = stop
 	end
-	progress.jumps = stop
+	-- A past session drawn to its end (not cut short by a replay) has nothing
+	-- left to draw until the next full redraw. Friends' sessions can still
+	-- grow, like your current one.
+	progress.done = not source.growing and s ~= ns.session and progress.path > #p
+		and (not source.jumps or progress.jumps > #j)
 end
 
 -- When a session ended: now for the current one, and for one that wasn't
@@ -587,8 +612,8 @@ local function ReplayCut(history)
 end
 
 -- Adds a character's stored history in a range to the list. alt is an entry
--- of ns.Alts() or a friend ({ sessions, profile = { class } }), or nil for
--- this character.
+-- of ns.Alts(), a friend ({ sessions, profile = { class }, growing = true },
+-- as a friend's sessions can still get points), or nil for this character.
 local function AddSources(list, range, alt)
 	local sessions = alt and alt.sessions or ns.db.sessions
 	local since, before = ns.TrailSpan(range, sessions)
@@ -600,7 +625,7 @@ local function AddSources(list, range, alt)
 		local r, g, b = GetClassColor(alt.profile.class)
 		style = { since = since, rangeBefore = before, width = ALT_LINE_WIDTH, color = { r, g, b, ALT_ALPHA } }
 	end
-	local history = { sessions = sessions, log = not alt and tl.char.log or nil }
+	local history = { sessions = sessions, log = not alt and tl.char.log or nil, growing = alt and alt.growing }
 	for key, value in pairs(style) do
 		history[key] = value
 	end
@@ -634,7 +659,7 @@ local function Sources()
 	if tl.settings.friendTrail ~= "off" then
 		for _, get in ipairs(trailSources) do
 			get(function(class, sessions)
-				AddSources(list, tl.settings.friendTrail, { sessions = sessions, profile = { class = class } })
+				AddSources(list, tl.settings.friendTrail, { sessions = sessions, profile = { class = class }, growing = true })
 			end)
 		end
 	end
@@ -645,26 +670,61 @@ end
 -- Redrawing
 --------------------------------------------------------------------------------
 
+-- Whether any of a session is inside a history's range.
+local function InRange(s, history, now)
+	return (s.stop or now) >= history.since and (not history.before or s.start < history.before)
+end
+
+-- Drops parsed sessions that no history being drawn reaches.
+local function UnparseUnused(now)
+	local used = {}
+	for _, history in ipairs(view.sources) do
+		for _, s in ipairs(history.sessions) do
+			if InRange(s, history, now) then
+				used[s] = true
+			end
+		end
+	end
+	for s in pairs(parsed) do
+		if not used[s] and s ~= ns.session then
+			Unparse(s)
+		end
+	end
+end
+
 -- Draws whatever was recorded since the last call.
 local function DrawNew()
 	drawnVersion = tl.version
 	drawnAt = GetTime()
+	view.pending = nil
 	if not view.map then
 		return
 	end
 	local now = time()
 	view.now = now
+	parsedNow = 0
 	for _, history in ipairs(view.sources) do
 		for _, s in ipairs(history.sessions) do
-			if (s.stop or now) >= history.since and (not history.before or s.start < history.before) then
+			local progress = view.progress[s]
+			if InRange(s, history, now) and not (progress and progress.done) then
+				-- Long histories are parsed a few sessions a frame; OnUpdate
+				-- carries on from here.
+				if not parsed[s] and parsedNow >= PARSE_STEP then
+					view.pending = true
+					return
+				end
 				local data = SessionData(s)
+				if not progress then
+					progress = { path = 1, jumps = 1 }
+					view.progress[s] = progress
+				end
 				if ShowsOn(data.maps, view.map) then
-					local progress = view.progress[s]
-					if not progress then
-						progress = { path = 1, jumps = 1 }
-						view.progress[s] = progress
-					end
 					DrawSession(s, data, progress, history)
+				else
+					progress.done = not history.growing and s ~= ns.session
+				end
+				if progress.done and parsedPoints > MAX_PARSED then
+					Unparse(s)
 				end
 			end
 		end
@@ -763,6 +823,7 @@ local function Redraw()
 	view.logNext = {}
 	wipe(view.progress)
 	wipe(view.cells)
+	UnparseUnused(time())
 
 	-- Logs are in time order: start each at its first event inside the range.
 	for _, history in ipairs(view.sources) do
@@ -796,7 +857,7 @@ local function OnUpdate()
 		Redraw()
 	elseif at ~= drawnReplay then
 		Advance()
-	elseif drawnVersion ~= tl.version and sinceDraw > REFRESH then
+	elseif view.pending or (drawnVersion ~= tl.version and sinceDraw > REFRESH) then
 		DrawNew()
 	end
 	if view.fade and GetTime() - fadedAt > FADE_REFRESH then

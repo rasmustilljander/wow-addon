@@ -26,17 +26,16 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
   - Check in game: that the client leaves a load-on-demand addon's saved file alone in sessions where it isn't loaded, and whether `C_AddOns.LoadAddOn` works in combat.
   - Path grows faster and is riskier: see Path size.
 
-- **Path size.** TravelLog_Path's file grows by about 100 KB per hour of movement. It's account-wide, so every character's path loads at every login, on every character. Measured on the fake client with a 35 MB file (about 350 hours):
-  - The map's `all` trail froze for 5 s on its first draw and then held 132 MB. Each session drawn stays parsed until a reload, at about 90 bytes per point. `altTrail all` adds every alt's sessions on top.
+- **Path size.** TravelLog_Path's file grows by about 100 KB per hour of movement. It's account-wide, so every character's path loads at every login, on every character. The map now parses a long range over several frames and keeps at most 200,000 parsed points, and `/tl forget` removes another character's path. What's left, measured on the fake client with a 35 MB file (about 350 hours):
+  - The `all` trail takes about 4.5 s, over about 250 frames, to draw in. Past the cap, each zoom or map change parses again.
   - `/tl stats` recounts every point each time (0.24 s).
 
-  A deleted character's path also stays in the file for good, since `/tl wipe confirm` only clears the character you're on. Totals (distance, jumps) are in TravelLog's `stats`, so none of the steps below change them. Steps, most urgent first:
-  1. **Bound the map.** Drop parsed sessions the map no longer shows. Parse over several frames instead of all at once.
-  2. **Forget a character.** Add `/tl forget Name-Realm confirm` to delete another character's path and its profile in TravelLog's account file.
-  3. **Show the size.** Save each session's point count and byte size at logout. Show this character's and all characters' sizes in `/tl stats` and Settings.
-  4. **Thin old sessions.** After 30 days, drop the points in near-straight stretches of a session's track (within about 2 yards, by world coordinates). Keep every point where the map or flags change, or where the path breaks. It's lossy and can't be undone, so it's a setting, and replays of old sessions get less exact. Measure the saving on a real file first.
-  5. **Archive** old sessions to TravelLog_Archive (see Log size), only if thinning isn't enough. Unlike the log's archive, this file must be account-wide for alts' trails. It loads when a trail range reaches back past the live sessions.
+  Totals (distance, jumps) are in TravelLog's `stats`, so none of the steps below change them. Steps:
+  1. **Show the size.** Save each session's point count and byte size at logout. Show this character's and all characters' sizes in `/tl stats` and Settings. This also ends the recount.
+  2. **Thin old sessions.** After 30 days, drop the points in near-straight stretches of a session's track (within about 2 yards, by world coordinates). Keep every point where the map or flags change, or where the path breaks. It's lossy and can't be undone, so it's a setting, and replays of old sessions get less exact. Measure the saving on a real file first.
+  3. **Archive** old sessions to TravelLog_Archive (see Log size), only if thinning isn't enough. Unlike the log's archive, this file must be account-wide for alts' trails. It loads when a trail range reaches back past the live sessions.
   - Friends' trails, if they're ever saved (see Maybe), would need the same thinning.
+  - The parse cap keeps the oldest sessions in range and parses the newest again. Keeping the newest would suit `all` better.
 
 - **Damage and healing totals.** Your damage, healing and DPS per boss fight and per session, from Forever's built-in meter.
   - TravelLog: `boss` entries get `damage`, `healing` and `dps`; sessions and `stats` get totals, shown in the Sessions view and `/tl sessions`.

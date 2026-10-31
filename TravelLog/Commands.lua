@@ -901,6 +901,41 @@ ns.Command("note", "note <text> - add a note to the log, stamped with the time a
 end)
 
 --------------------------------------------------------------------------------
+-- /tl forget
+--------------------------------------------------------------------------------
+
+-- Deletes another of your characters from the account-wide files: its
+-- profile and totals here, and through TL_FORGET what companions keep for it
+-- (Path's trail, Nodes' loot). Its own per-character files can't be reached
+-- from here, so they stay.
+local function Forget(arg)
+	local name, confirm = arg:match("^(%S+)%s*(.-)$")
+	local key = name and FindCharacter(name)
+	if not key or not ns.db.chars[key] or key == ns.charKey then
+		local others = ns.Characters()
+		table.remove(others, 1)
+		if key == ns.charKey then
+			ns.Print("that's the character you're on: /tl wipe confirm deletes its history.")
+		elseif name then
+			ns.Print("no other character of yours called \"%s\". Known: %s", name,
+				#others > 0 and table.concat(others, ", ") or "none")
+		else
+			ns.Print("usage: /tl forget <name> confirm. Your other characters: %s",
+				#others > 0 and table.concat(others, ", ") or "none")
+		end
+		return
+	end
+	if confirm ~= "confirm" then
+		ns.Print("/tl forget %s confirm deletes %s's totals, path and looted nodes for good.", name, key)
+		return
+	end
+	ns.db.chars[key] = nil
+	ns.Fire("TL_FORGET", key) -- companion addons drop theirs too
+	ns.version = ns.version + 1
+	ns.Print("forgot %s.", key)
+end
+
+--------------------------------------------------------------------------------
 -- Dispatch
 --------------------------------------------------------------------------------
 
@@ -913,6 +948,7 @@ local function Help()
 		local help = commands[name].help
 		print("  /tl " .. (type(help) == "function" and help() or help))
 	end
+	print("  /tl forget <name> confirm - delete another character's totals, path and looted nodes")
 	print("  /tl wipe confirm - delete everything recorded for this character")
 end
 
@@ -934,6 +970,8 @@ SlashCmdList.TRAVELLOG = function(msg)
 		ShowStats(arg)
 	elseif command == "log" then
 		ShowLog(arg)
+	elseif command == "forget" then
+		Forget(arg)
 	elseif command == "wipe" and arg == "confirm" then
 		ns.db.chars[ns.charKey] = nil
 		TravelLogCharDB = nil
