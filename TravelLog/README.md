@@ -39,7 +39,7 @@ Pick TravelLog from the minimap's addons dropdown, or type `/tl`.
 - **Totals**: Travel, Loot (money in and out by reason), Life and Log. Reputation and time by zone show the top three here and all in `/tl stats`, which also splits each zone's time by state: `Elwynn Forest 6m (combat 1m, AFK 2m, grouped 3m)`. **Character**'s `<` and `>` step through your characters, [friends'](../TravelLog_Share/) characters and all of yours added up (a place several visited counts once; friends aren't added). Time played, log entries and the Kills and Group rows show only for the character you're on.
 - **Settings**: the companions' map options; Path's trail, fade, curves and interval; whether gold and XP per hour leave out AFK time and whether each level-up says in chat what it gave (both on by default); [automatic screenshots](#automatic-screenshots).
 - **History**, newest first:
-  - **Events**: filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search types, descriptions, names, places, dates and saved fields. Try `death`, `revival`, `level` or `note`.
+  - **Events**: filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search types, descriptions, names, places, dates and saved fields. Try `death`, `revival`, `level` or `note`. Right-click an entry to delete it, or to edit a note (Enter saves, Escape cancels).
   - **Sessions**: length, time AFK, levels, start and end place, money and XP gained (per hour after 10 minutes; AFK time left out by default), quests done and failed, XP kills and deaths. Hover one for XP by source.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window).
 - **NPCs**, **Players**, **Colors** and **Friends** tabs come with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window), [TravelLog_Group](../TravelLog_Group/README.md#window), [TravelLog_Path](../TravelLog_Path/README.md#colors) and [TravelLog_Share](../TravelLog_Share/README.md#the-friends-tab).
@@ -74,8 +74,10 @@ None is taken within 1 s of another, so a level-up and a challenge together give
 | --- | --- |
 | `/tl` | Open or close the window |
 | `/tl stats [all\|name]` | Totals for this character, all of yours added up, or another or a friend's (`Name` or `Name-Realm`) |
-| `/tl log [n] [search]` | The last n matching events (default 15), e.g. `/tl log 20 death` |
+| `/tl log [n] [search]` | The last n matching events (default 15), e.g. `/tl log 20 death`, each with its `#` |
 | `/tl note <text>` | Add a note to the log |
+| `/tl edit <#> <text>` | Change a note's text |
+| `/tl delete <#>` | Delete one entry; asks for `/tl delete <#> confirm` first |
 | `/tl sessions [n]` | The last n sessions (default 10), with XP by source |
 | `/tl screenshots [level\|boss\|first\|achievement on\|off]` | Show or change automatic screenshots |
 | `/tl wipe confirm` | Delete everything TravelLog, Path and Nodes have for this character, then reload. Kills and Group have their own `wipe confirm`. |
@@ -91,7 +93,7 @@ WoW saves only on logout or `/reload`, so a crash loses everything since. `/relo
 | `SavedVariables/TravelLog.lua` | `TravelLogDB`: `settings` (the companions' too, and the window's `point`) and `chars["Name-Realm"]`, each character's profile and totals (`stats`) |
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | `TravelLogCharDB`: that character's log, sessions and what TravelLog compares against (below) |
 
-Companions' files are described in their READMEs. Nothing is pruned: the log and sessions stay until `/tl wipe confirm`.
+Companions' files are described in their READMEs. Nothing is pruned: the log and sessions stay until you delete entries or `/tl wipe confirm`. Deleting an entry leaves totals as they were, except the notes count; Nodes keeps its spots.
 
 Time by zone is in `stats.zoneTime[zone]` (seconds), and by state in `stats.zoneStateTime.<state>[zone]`, states being `combat`, `dead`, `afk`, `flight` and `group`.
 
@@ -269,4 +271,4 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 
 **Other**
 
-- A note can't be edited or deleted on its own.
+- An entry's `#` is its place in the log, oldest first, so deleting one renumbers those after it. A confirm for an entry that has since moved asks again.

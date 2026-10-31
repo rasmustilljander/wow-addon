@@ -848,6 +848,7 @@ function tl.TrailsChanged()
 end
 
 tl.On("TL_ROTATED", ns.RefreshTrail)
+tl.On("TL_LOG_CHANGED", ns.RefreshTrail) -- an entry deleted: its marker goes
 -- Your trail's range before OpenMap's menu turned it off, to turn it back on.
 local trailWas
 
