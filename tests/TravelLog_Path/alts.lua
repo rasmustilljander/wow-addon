@@ -208,3 +208,37 @@ M.player = { name = "Rasmus", realm = "Forever" }
 ns = M.Login()
 check(#M.ns("TravelLog_Path").Alts() == 0, "the wiped alt is gone from Rasmus's alts")
 M.Logout()
+
+--------------------------------------------------------------------------------
+-- Forgetting another character
+--------------------------------------------------------------------------------
+
+M.player = { name = "Bobby", realm = "Forever", class = "ROGUE" }
+ns = M.Login()
+Walk(10)
+M.Logout()
+M.player = { name = "Rasmus", realm = "Forever" }
+M.out = {}
+ns = M.Login()
+path = M.ns("TravelLog_Path")
+M.viewMap = 1429
+SlashCmdList.TRAVELLOG("trail alts all")
+_, alts = Lines()
+check(#path.Alts() == 1 and #alts > 0, "Bobby's trail drawn as an alt's")
+ns.settings.hiddenAlts["Bobby-Forever"] = true
+SlashCmdList.TRAVELLOG("forget")
+check(said("Your other characters: Bobby%-Forever"), "forget without a name lists your other characters")
+SlashCmdList.TRAVELLOG("forget bobby")
+check(said("/tl forget bobby confirm deletes Bobby%-Forever's") and TravelLogPathAccountDB.chars["Bobby-Forever"]
+	and ns.db.chars["Bobby-Forever"], "forget asks for confirm first")
+SlashCmdList.TRAVELLOG("forget rasmus confirm")
+check(said("the character you're on") and ns.db.chars["Rasmus-Forever"], "not the character you're on")
+SlashCmdList.TRAVELLOG("forget nobody confirm")
+check(said('no other character of yours called "nobody"'), "an unknown name")
+SlashCmdList.TRAVELLOG("forget Bobby-Forever confirm")
+check(said("forgot Bobby%-Forever") and not TravelLogPathAccountDB.chars["Bobby-Forever"] and not ns.db.chars["Bobby-Forever"]
+	and ns.settings.hiddenAlts["Bobby-Forever"] == nil, "forget deletes its path, totals and hidden setting")
+_, alts = Lines()
+check(#path.Alts() == 0 and #alts == 0, "its trail is gone from the map")
+M.Logout()
+check(not M.saved.TravelLog_Path:find('"Bobby%-Forever"') and not M.saved.TravelLog:find('"Bobby%-Forever"'), "gone from the saved files")

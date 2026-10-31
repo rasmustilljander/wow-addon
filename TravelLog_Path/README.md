@@ -105,7 +105,7 @@ To change a color, click its swatch in the TravelLog window's **Colors** tab and
 
 ## Where the data is
 
-`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Path.lua`: every character's path, about 100 KB per hour of movement. It's account-wide so alts can see each other's trails. Nothing is pruned; `/tl wipe confirm` removes that character's path.
+`WTF/Account/<ACCOUNT>/SavedVariables/TravelLog_Path.lua`: every character's path, about 100 KB per hour of movement. It's account-wide so alts can see each other's trails. Nothing is pruned: `/tl wipe confirm` removes the path of the character you're on, `/tl forget <name> confirm` another's.
 
 ```lua
 TravelLogPathAccountDB = {
@@ -134,6 +134,7 @@ seconds into session, uiMapID, x, y, instanceID, world 1, world 2, flags
 
 - No path in dungeons and raids, since addons get no position there. Jumps are still recorded, without coordinates.
 - Every login loads all characters' stored paths.
+- A long trail range is parsed a few sessions per frame, so it draws in over a few seconds instead of freezing the map. At most 200,000 parsed points are kept between redraws; sessions beyond that are parsed again on each zoom or map change.
 - The form IDs are Blizzard's constants from other clients; Forever's UI code lists none, so they're unconfirmed in game.
 - Overlapping markers of one kind are drawn once, so of several notes or deaths in one spot only the first can be hovered.
 - A replay's gear comes from TravelLog's log, which logs an item only the first time it's worn: a slot shows the last new item put on, not one swapped back in. Before the log's first level-up the level is one below it; with none, your current level.

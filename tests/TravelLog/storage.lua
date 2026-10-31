@@ -122,11 +122,28 @@ check(#TravelLogCharDB.log >= stored.log and TravelLogCharDB.log[1].source == "O
 -- "all" reads old history directly from the stored path and event log.
 SlashCmdList.TRAVELLOG("trail all")
 M.viewMap = 1429
-M.frame()
+M.frame() -- parses a few sessions; the rest follow a frame at a time
+local path = M.ns("TravelLog_Path")
+check(path.ParsedPoints() < 5000, "a long history isn't parsed in one frame: " .. path.ParsedPoints())
+for _ = 1, 40 do M.frame() end
 local overlay = M.mapOverlay(2010)
 local purple = 0
 for _, t in ipairs(M.shown(overlay.textures)) do if t.color[1] == 0.75 then purple = purple + 1 end end
 check(purple >= 1, "old loot markers drawn from the stored log")
+
+-- A shorter range lets go of parsed sessions; past 200,000 points, sessions
+-- are let go once drawn.
+SlashCmdList.TRAVELLOG("trail week")
+M.frame()
+check(path.ParsedPoints() < 100, "a shorter range lets go of old sessions: " .. path.ParsedPoints())
+AddOldHistory(7, 50, 30) -- ~170,000 more points, 80 to 50 days ago
+SlashCmdList.TRAVELLOG("trail all")
+for _ = 1, 100 do M.frame() end
+check(path.ParsedPoints() > 150000 and path.ParsedPoints() <= 210000, "parsed points capped: " .. path.ParsedPoints())
+-- Log markers come after the last session, so they show the drawing finished.
+purple = 0
+for _, t in ipairs(M.shown(overlay.textures)) do if t.color[1] == 0.75 then purple = purple + 1 end end
+check(purple >= 1, "the whole range still drawn")
 
 -- Wiping a character removes its retained TravelLog and Path history.
 SlashCmdList.TRAVELLOG("wipe confirm")

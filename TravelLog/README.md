@@ -84,6 +84,7 @@ None is taken within 1 s of another, so a level-up and a challenge together give
 | `/tl delete <#>` | Delete one entry; asks for `/tl delete <#> confirm` first |
 | `/tl sessions [n]` | The last n sessions (default 10), with XP by source |
 | `/tl screenshots [level\|boss\|first\|achievement on\|off]` | Show or change automatic screenshots |
+| `/tl forget <name> confirm` | Delete another of your characters (`Name` or `Name-Realm`) from the account-wide files: its totals, its path and its share of looted nodes. Its per-character files (under `<Realm>/<Character>/`) stay; delete them by hand. If it logs in again, its totals start from zero. |
 | `/tl wipe confirm` | Delete everything TravelLog, Path and Nodes have for this character, then reload. Kills and Group have their own `wipe confirm`. |
 
 `/travellog` works too. Companions add `/tl jumps`, `/tl trail`, `/tl fade`, `/tl smooth`, `/tl interval` ([Path](../TravelLog_Path/README.md#commands)), `/tl nodes` ([Nodes](../TravelLog_Nodes/README.md#commands)) and `/tl share` ([Share](../TravelLog_Share/README.md#the-friends-tab)), and lines to `/tl stats`.

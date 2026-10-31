@@ -132,6 +132,12 @@ tl.On("TL_WIPE", function()
 	ns.account.chars[tl.charKey] = nil
 end)
 
+tl.On("TL_FORGET", function(key)
+	ns.account.chars[key] = nil
+	tl.settings.hiddenAlts[key] = nil
+	ns.RefreshTrail() -- Map.lua
+end)
+
 -- This session's start and its newest path records, at most max of them,
 -- from since (epoch) on. TravelLog_Share sends them to friends.
 function tl.RecentPath(since, max)

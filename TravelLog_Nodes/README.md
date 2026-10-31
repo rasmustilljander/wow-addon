@@ -46,7 +46,7 @@ TravelLogNodesAccountDB = {
 - `kind`: `herb`, `ore`, `chest` or `object` (opened without a cast).
 - `x`, `y`: map coordinates 0–100. `inst`, `a`, `b`: continent and world position in yards, used to match spots.
 
-`/tl wipe confirm` takes the character out of every node and deletes the nodes only it looted.
+`/tl wipe confirm` takes the character out of every node and deletes the nodes only it looted; `/tl forget <name> confirm` does the same for another character.
 
 ## Limits
 

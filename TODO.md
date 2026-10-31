@@ -30,6 +30,27 @@ TravelLog's account and character files have a data version (`ns.DATA_VERSION` i
 
 - **TravelLog export.** The log and totals can't be copied out of the game; only the raw SavedVariables file has them. Add a command or button that opens a copyable text box (CSV or similar) with the log or the totals. A text box because addons can't write files of their own.
 
+- **Log size.** TravelLog's character file only grows. On the fake client an entry is about 320 bytes saved and 2 KB in memory, about 60 KB per hour of leveling, measured before items used up (`use`) were logged, which add more. All of it loads at every login, and each keystroke in the History search checks every entry (0.7 s at 50,000 entries, about 250 hours). Totals (`stats`) aren't built from the log, so moving or deleting entries never changes them. Steps, each useful on its own:
+  1. **Show the size.** Show the entry count, an estimated file size and the oldest entry's date on Totals' Log row and in `/tl stats`.
+  2. **Stop reading the whole log.** Item tooltips, the first-kill screenshot check, and the Sessions and Levels views' counts all scan the full log. Save what they need in the character file instead: first time and count per item ID, killed boss IDs, and each session's and level's counts when it ends. Keep `level` and `equip` entries live for Path's replay.
+  3. **Faster search.** Cache each entry's search text and search when typing pauses, not on every keystroke.
+  4. **Archive.** Add a load-on-demand companion, TravelLog_Archive, with its own per-character file. When the live log passes 15,000 entries, move whole months to it, oldest first, until 10,000 or fewer remain. Store each entry as one string of `key=value` pairs, item links cut to `item:ID:...`, about 120 bytes. It needs no per-type format, and a string takes about a fifteenth of the memory. Its file loads only when you ask History or `/tl log` to search older entries. If the companion is missing or turned off, nothing moves.
+  5. **Delete.** `/tl prune <days> confirm` deletes archived entries older than that. Use the planned export first to keep a copy.
+  - Not planned: deflate compression. It shrinks the file another 3–4×, but it's slow in Lua, the saved file can't be read, and one bad byte breaks a whole chunk. Memory and search time are the real costs, and not loading old entries fixes both.
+  - Check in game: that the client leaves a load-on-demand addon's saved file alone in sessions where it isn't loaded, and whether `C_AddOns.LoadAddOn` works in combat.
+  - Path grows faster and is riskier: see Path size.
+
+- **Path size.** TravelLog_Path's file grows by about 100 KB per hour of movement. It's account-wide, so every character's path loads at every login, on every character. The map now parses a long range over several frames and keeps at most 200,000 parsed points, and `/tl forget` removes another character's path. What's left, measured on the fake client with a 35 MB file (about 350 hours):
+  - The `all` trail takes about 4.5 s, over about 250 frames, to draw in. Past the cap, each zoom or map change parses again.
+  - `/tl stats` recounts every point each time (0.24 s).
+
+  Totals (distance, jumps) are in TravelLog's `stats`, so none of the steps below change them. Steps:
+  1. **Show the size.** Save each session's point count and byte size at logout. Show this character's and all characters' sizes in `/tl stats` and Settings. This also ends the recount.
+  2. **Thin old sessions.** After 30 days, drop the points in near-straight stretches of a session's track (within about 2 yards, by world coordinates). Keep every point where the map or flags change, or where the path breaks. It's lossy and can't be undone, so it's a setting, and replays of old sessions get less exact. Measure the saving on a real file first.
+  3. **Archive** old sessions to TravelLog_Archive (see Log size), only if thinning isn't enough. Unlike the log's archive, this file must be account-wide for alts' trails. It loads when a trail range reaches back past the live sessions.
+  - Friends' trails, if they're ever saved (see Maybe), would need the same thinning.
+  - The parse cap keeps the oldest sessions in range and parses the newest again. Keeping the newest would suit `all` better.
+
 - **Damage and healing totals.** Your damage, healing and DPS per boss fight and per session, from Forever's built-in meter.
   - TravelLog: `boss` entries get `damage`, `healing` and `dps`; sessions and `stats` get totals, shown in the Sessions view and `/tl sessions`.
   - API: `C_DamageMeter.GetCombatSessionFromID`/`FromType` by `Enum.DamageMeterType` (`DamageDone`, `HealingDone`, `Absorbs`, `Interrupts`, `Dispels`, `DamageTaken`, `Deaths`, ...), taking the source with `isLocalPlayer`; `GetCombatSessionSourceFromID` for your per-spell breakdown. `GetAvailableCombatSessions` lists the meter's sessions; events `DAMAGE_METER_COMBAT_SESSION_UPDATED`, `DAMAGE_METER_CURRENT_SESSION_UPDATED`, `DAMAGE_METER_RESET`.

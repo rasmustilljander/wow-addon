@@ -107,19 +107,18 @@ tl.On("PLAYER_LOGIN", function()
 	ns.db = db
 end)
 
--- Takes this character out of the shared nodes, dropping the ones only it
--- looted.
-tl.On("TL_WIPE", function()
-	local me = tl.charKey
+-- Takes a character ("Name-Realm") out of the shared nodes, dropping the
+-- ones only it looted.
+local function Remove(who)
 	for _, list in pairs(ns.db.maps) do
 		for i = #list, 1, -1 do
 			local node = list[i]
-			node.counts[me] = nil
+			node.counts[who] = nil
 			if next(node.counts) == nil then
 				table.remove(list, i)
 			else
 				for j = #node.by, 1, -1 do
-					if node.by[j] == me then
+					if node.by[j] == who then
 						table.remove(node.times, j)
 						table.remove(node.by, j)
 					end
@@ -128,7 +127,13 @@ tl.On("TL_WIPE", function()
 			end
 		end
 	end
+	ns.version = ns.version + 1
+end
+
+tl.On("TL_WIPE", function()
+	Remove(tl.charKey)
 end)
+tl.On("TL_FORGET", Remove)
 
 --------------------------------------------------------------------------------
 -- Recording

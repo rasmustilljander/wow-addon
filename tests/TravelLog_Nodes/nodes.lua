@@ -271,3 +271,28 @@ check(#Nodes() == 5 and Total(herbNode) == 8 and herbNode.counts["Altie-Forever"
 check(herbNode.by[1] == "Rasmus-Forever" and #herbNode.times == 4 and herbNode.last == herbNode.times[1], "and its time")
 M.Logout()
 M.player = { name = "Rasmus", realm = "Forever" }
+
+-- Forgetting the alt from the main takes it out the same way, and redraws
+M.player = { name = "Altie", realm = "Forever", class = "WARRIOR" }
+ns = M.Login()
+M.advance(600)
+M.x, M.y, M.wa, M.wb = 0.30, 0.40, -9100, -300
+M.cast(2366, "Peacebloom")
+M.loot = Herb("Peacebloom", 1618)
+M.lootAll()
+M.x, M.y, M.wa, M.wb = 0.80, 0.80, -8500, -1200
+M.cast(3365, "Battered Chest")
+M.loot = { { name = "Linen Cloth", link = "[Linen Cloth]", qty = 1, guid = "GameObject-0-1-0-1-2843-0000FEED" } }
+M.lootAll()
+M.Logout()
+M.player = { name = "Rasmus", realm = "Forever" }
+ns = M.Login()
+M.viewMap = 1429
+M.frame()
+check(#Nodes() == 6 and #M.shown(M.mapOverlay(2012).children) == 6, "the alt's chest is back")
+SlashCmdList.TRAVELLOG("forget altie confirm")
+M.frame()
+herbNode = Nodes()[2]
+check(#Nodes() == 5 and herbNode.counts["Altie-Forever"] == nil and herbNode.by[1] == "Rasmus-Forever"
+	and #M.shown(M.mapOverlay(2012).children) == 5, "forget drops the alt's loot and its chest, and the map follows")
+M.Logout()
