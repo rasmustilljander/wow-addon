@@ -263,6 +263,25 @@ function ns.Log(kind, data)
 	return ns.Save(ns.NewEvent(kind, data))
 end
 
+-- Takes entry e out of the log. Totals stay as they are, except the notes
+-- count. Fires TL_LOG_CHANGED, so whatever keeps its place in the log
+-- (item tooltips, Path's markers) starts over. Returns true if e was there.
+function ns.Remove(e)
+	local log = ns.char.log
+	for i = #log, 1, -1 do
+		if log[i] == e then
+			table.remove(log, i)
+			if e.type == "note" and (ns.stats.notes or 0) > 0 then
+				ns.Add(-1, "notes")
+			end
+			ns.version = ns.version + 1
+			ns.Fire("TL_LOG_CHANGED")
+			return true
+		end
+	end
+	return false
+end
+
 --------------------------------------------------------------------------------
 -- Which NPC window is open? Used to explain loot and money changes.
 --------------------------------------------------------------------------------

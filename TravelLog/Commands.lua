@@ -869,12 +869,11 @@ local function ShowLog(arg)
 	end
 	local limit = tonumber(number) or 15
 	query = query or (number and "" or arg)
-	local found = {}
+	local found = {} -- log positions, newest first
 	if limit > 0 then
 		for i = #ns.char.log, 1, -1 do
-			local e = ns.char.log[i]
-			if ns.LogMatches(e, query) then
-				found[#found + 1] = e
+			if ns.LogMatches(ns.char.log[i], query) then
+				found[#found + 1] = i
 				if #found >= limit then break end
 			end
 		end
@@ -885,9 +884,29 @@ local function ShowLog(arg)
 		ns.Print("Last %d events matching \"%s\":", #found, query)
 	end
 	for i = #found, 1, -1 do
-		local text, where = ns.Describe(found[i])
-		print(("  %s  %s  |cff999999%s|r"):format(date("%m-%d %H:%M", found[i].time), text, where))
+		local e = ns.char.log[found[i]]
+		local text, where = ns.Describe(e)
+		print(("  |cff999999#%d|r  %s  %s  |cff999999%s|r"):format(found[i], date("%m-%d %H:%M", e.time), text, where))
 	end
+end
+
+-- Log entry n as typed ("12" or "#12"), or nil and a message saying why not.
+local function Entry(n)
+	n = tonumber((n or ""):match("^#?(%d+)$"))
+	if not n then
+		return nil
+	end
+	local e = ns.char.log[n]
+	if not e then
+		ns.Print("no entry #%d: the log has %s (see /tl log)", n, Count(#ns.char.log))
+		return false
+	end
+	return e, n
+end
+
+local function EntryText(e, n)
+	local text, where = ns.Describe(e)
+	return ("#%d %s  %s, %s"):format(n, date("%Y-%m-%d %H:%M", e.time), text, where)
 end
 
 --------------------------------------------------------------------------------
@@ -902,6 +921,48 @@ ns.Command("note", "note <text> - add a note to the log, stamped with the time a
 	ns.Log("note", { text = text })
 	ns.Add(1, "notes")
 	ns.Print("note added: %s", text)
+end)
+
+--------------------------------------------------------------------------------
+-- /tl edit, /tl delete
+--------------------------------------------------------------------------------
+
+ns.Command("edit", "edit <#> <text> - change a note's text (# from /tl log)", function(_, text)
+	local n, new = text:match("^(%S+)%s+(.+)$")
+	local e, i = Entry(n)
+	if e == nil then
+		return false
+	elseif not e then
+		return
+	elseif e.type ~= "note" then
+		ns.Print("#%d isn't a note; only notes can be edited", i)
+		return
+	end
+	e.text = new
+	ns.version = ns.version + 1
+	ns.Print("note changed: %s", new)
+end)
+
+-- The entry the last "/tl delete <#>" asked about, so the confirm can't
+-- delete another one that took its number since.
+local asked
+
+ns.Command("delete", "delete <#> - delete one entry (# from /tl log); asks first", function(arg)
+	local n, confirm = arg:match("^(%S+)%s*(.-)$")
+	local e, i = Entry(n)
+	if e == nil or (confirm ~= "" and confirm ~= "confirm") then
+		return false
+	elseif not e then
+		return
+	end
+	if confirm == "" or asked ~= e then
+		asked = e
+		ns.Print("delete %s? Type /tl delete %d confirm", EntryText(e, i), i)
+		return
+	end
+	asked = nil
+	ns.Remove(e)
+	ns.Print("deleted %s", EntryText(e, i))
 end)
 
 --------------------------------------------------------------------------------
