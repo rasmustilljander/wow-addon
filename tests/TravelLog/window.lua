@@ -72,7 +72,7 @@ check(Stat(w, "Guild bank items") == "0 deposited, 0 withdrawn", "guild bank ite
 check(Stat(w, "Money in") == "0c" and Stat(w, "Money out") == "0c", "no money in or out yet")
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Quests") == "0 accepted, 0 done, 0 abandoned, 0 failed", "quests: " .. Stat(w, "Quests"))
-check(Stat(w, "Discoveries") == "0" and Stat(w, "Mounts") == "0" and Stat(w, "Pets") == "0 tamed, 0 levels gained, 0 abandoned",
+check(Stat(w, "Discoveries") == "0" and Stat(w, "Mounts") == "0" and Stat(w, "Pets") == "0 tamed, 0 levels gained, 0 deaths, 0 abandoned",
 	"empty progress totals")
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
 check(Stat(w, "Played") == "not known yet", "played before /played answers")
