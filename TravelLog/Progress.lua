@@ -1,8 +1,8 @@
 -- Progress while leveling: spells learned (and what the trainer charged), new
 -- skills and skill milestones, talent points spent, flight paths found,
 -- reputation standings reached and gained per faction, the first ride on each
--- mount, beasts tamed and your pet's level-ups, abandoning and stabling, the
--- first time you put on each piece of gear or bag, enchants on worn gear and
+-- mount, beasts tamed and your pet's level-ups, deaths, revives, abandoning
+-- and stabling, the first time you put on each piece of gear or bag, enchants on worn gear and
 -- Legacy Challenges earned.
 local _, ns = ...
 
@@ -376,7 +376,8 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 --------------------------------------------------------------------------------
--- Pets: each beast you tame, your pet's levels, abandoning and the stable
+-- Pets: each beast you tame, your pet's levels, deaths and revives,
+-- abandoning and the stable
 --------------------------------------------------------------------------------
 
 -- Tame Beast is a channel at your target. It worked if a pet appears once
@@ -386,13 +387,18 @@ local TAME_LONGEST = 30 -- seconds a channel can last, when its end isn't known
 local TAME_WAIT = 5     -- seconds after the channel for the pet to appear
 local taming            -- { name, id, level, family, started, ends, stopped }
 
-local function IsTame(spellID)
+-- Whether a cast is the given spell, or another rank or ID with its name.
+local function IsSpell(spellID, wanted)
 	spellID = ns.Clean(spellID)
-	if spellID == TAME_BEAST then
+	if spellID == wanted then
 		return true
 	end
 	local name = spellID and C_Spell and ns.Clean(C_Spell.GetSpellName(spellID))
-	return name ~= nil and name == ns.Clean(C_Spell.GetSpellName(TAME_BEAST))
+	return name ~= nil and name == ns.Clean(C_Spell.GetSpellName(wanted))
+end
+
+local function IsTame(spellID)
+	return IsSpell(spellID, TAME_BEAST)
 end
 
 ns.On("UNIT_SPELLCAST_CHANNEL_START", function(unit, _, spellID)
@@ -499,6 +505,77 @@ ns.On("UNIT_PET_EXPERIENCE", function(unit)
 	if unit == "player" then
 		CheckPetLevel()
 	end
+end)
+
+-- Deaths: the game's UNIT_DIED for the GUID of the hunter pet last out, or
+-- that pet showing as dead. Each death is logged once.
+local REVIVE_PET = 982
+local lastPet -- { key (its GUID), name, level, family } of the hunter pet last out
+local diedKey -- GUID of the pet last logged dead
+
+local function PetDied(pet)
+	if diedKey == pet.key then
+		return
+	end
+	diedKey = pet.key
+	ns.Log("petdeath", { name = pet.name, level = pet.level, family = pet.family })
+	ns.Add(1, "petDeaths")
+end
+
+local function CheckPetDead()
+	if select(2, UnitClass("player")) ~= "HUNTER" or not UnitExists("pet") then
+		return
+	end
+	local key = ns.Clean(UnitGUID("pet"))
+	if not key then
+		return
+	end
+	local pet = PetInfo()
+	pet.key = key
+	if not pet.level and lastPet and lastPet.key == key then
+		pet.level = lastPet.level
+	end
+	lastPet = pet
+	local dead = ns.Clean(UnitIsDead("pet"))
+	if dead then
+		PetDied(pet)
+	elseif dead == false and diedKey == key then
+		diedKey = nil
+	end
+end
+
+ns.On("UNIT_PET", function(unit)
+	if unit == "player" then
+		CheckPetDead()
+	end
+end)
+ns.On("UNIT_HEALTH", function(unit)
+	if unit == "pet" then
+		CheckPetDead()
+	end
+end)
+ns.On("UNIT_LEVEL", function(unit)
+	if unit == "pet" then
+		CheckPetDead()
+	end
+end)
+ns.On("UNIT_DIED", function(guid)
+	guid = ns.Clean(guid)
+	if guid and lastPet and guid == lastPet.key then
+		PetDied(lastPet)
+	end
+end)
+
+-- Revives: a Revive Pet cast that went through. The pet is the one that died,
+-- or else the one out.
+ns.On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
+	if unit ~= "player" or not IsSpell(spellID, REVIVE_PET) then
+		return
+	end
+	local pet = diedKey and lastPet and lastPet.key == diedKey and lastPet
+		or UnitExists("pet") and PetInfo() or {}
+	diedKey = nil
+	ns.Log("petrevive", { name = pet.name, level = pet.level, family = pet.family })
 end)
 
 -- Abandoning: the pet's portrait menu asks to confirm, then calls

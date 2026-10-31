@@ -117,6 +117,7 @@ hooksecurefunc("DeleteCursorItem", function()
 	-- confirmation. The accepted second call clears it; a cancellation goes
 	-- through ClearCursor above.
 	if held and not GetCursorInfo() and ns.char then
+		ns.Mark("destroy")
 		ns.Log("destroy", held)
 		ns.Add(held.count, "given", "destroy")
 	end
@@ -174,22 +175,11 @@ local function AddGrowth(into, from, to)
 	end
 end
 
--- By name, so the order is the same every time.
-local function List(counts)
-	local items = {}
-	for link, n in pairs(counts) do
-		items[#items + 1] = { item = link, count = n }
-	end
-	local function Name(it) return it.item:match("%[(.-)%]") or it.item end
-	table.sort(items, function(a, b) return Name(a) < Name(b) end)
-	return #items > 0 and items or nil
-end
-
 local function LeaveGuildBank()
 	if not moved then
 		return
 	end
-	local deposited, withdrawn = List(moved.deposited), List(moved.withdrawn)
+	local deposited, withdrawn = ns.ItemList(moved.deposited), ns.ItemList(moved.withdrawn)
 	bagCounts, moved = nil, nil
 	if deposited or withdrawn then
 		ns.Log("guildbank", { deposited = deposited, withdrawn = withdrawn, guild = ns.char.guild and ns.char.guild.name })

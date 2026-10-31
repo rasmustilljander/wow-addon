@@ -275,6 +275,9 @@ ns.On("CHAT_MSG_LOOT", function(text)
 			local e = ns.Log("receive", ns.WithCounterpart({ item = item, count = count, how = how }, how))
 			if how == "loot" then
 				chatLooted[item] = { event = e, at = GetTime() }
+			elseif how == "created" then
+				-- Use.lua adds the materials it took.
+				ns.Fire("TL_CREATED", e)
 			elseif how == "returned" then
 				ns.AuctionReturned(item, count)
 			end

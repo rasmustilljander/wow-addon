@@ -20,6 +20,9 @@ local page       -- the Events view
 local selectedGroup
 local drawn
 
+local EDIT_HEIGHT = 22  -- the bar for the right-clicked entry
+local EDIT_BUTTON = 60
+
 -- Lights the chosen one of a row of buttons, with white text.
 local function Light(buttons, chosen)
 	for _, button in ipairs(buttons) do
@@ -86,12 +89,18 @@ end
 -- views. fill(element) returns a row's texts: top left, top right, bottom left
 -- and bottom right. A row keeps its element as row.element. tooltip(element),
 -- if given, returns the lines shown while a row is hovered, or nil for none.
-function ns.HistoryList(parent, fill, tooltip)
+-- click(element, button), if given, runs when a row is clicked. The row whose
+-- element is list.selected is marked.
+function ns.HistoryList(parent, fill, tooltip, click)
+	local list
 	local function InitRow(row, element)
 		if not row.what then
 			local highlight = row:CreateTexture(nil, "HIGHLIGHT")
 			highlight:SetAllPoints()
 			highlight:SetColorTexture(1, 1, 1, 0.08)
+			row.mark = row:CreateTexture(nil, "BACKGROUND")
+			row.mark:SetAllPoints()
+			row.mark:SetColorTexture(0.31, 0.76, 0.97, 0.15)
 			row.when = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 			row.when:SetPoint("TOPRIGHT", -4, -2)
 			row.when:SetJustifyH("RIGHT")
@@ -116,16 +125,23 @@ function ns.HistoryList(parent, fill, tooltip)
 					GameTooltip:Hide()
 				end)
 			end
+			if click then
+				row:EnableMouse(true)
+				row:SetScript("OnMouseUp", function(self, button)
+					click(self.element, button)
+				end)
+			end
 		end
 		local what, when, where, kind = fill(element)
 		row.element = element
+		row.mark:SetShown(element == list.selected)
 		row.what:SetText(what)
 		row.when:SetText(when)
 		row.where:SetText(where)
 		row.kind:SetText(kind)
 	end
 
-	local list = CreateFrame("Frame", nil, parent, "WowScrollBoxList")
+	list = CreateFrame("Frame", nil, parent, "WowScrollBoxList")
 	local bar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar")
 	bar:SetPoint("TOPLEFT", list, "TOPRIGHT", 6, 0)
 	bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 6, 0)
@@ -139,6 +155,88 @@ end
 local function EventTexts(e)
 	local what, where = ns.Describe(e)
 	return what, date("%Y-%m-%d %H:%M", e.time), where, ns.LogTypeLabel(e)
+end
+
+--------------------------------------------------------------------------------
+-- Right-click an entry: a bar under the list to delete it, or edit a note.
+--------------------------------------------------------------------------------
+
+local function CloseEdit()
+	page.edit:Hide()
+	page.edit.text:ClearFocus()
+	page.events.selected = nil
+	page.events:SetPoint("BOTTOMLEFT", 14, 8)
+	drawn = nil
+	RefreshEvents()
+end
+
+local function OpenEdit(e, button)
+	if button ~= "RightButton" then
+		return
+	end
+	local bar = page.edit
+	bar.entry = e
+	local note = e.type == "note"
+	bar.label:SetShown(not note)
+	bar.label:SetText(("Delete \"%s\"?"):format((ns.Describe(e))))
+	bar.text:SetShown(note)
+	bar.text:SetText(note and e.text or "")
+	bar.save:SetShown(note)
+	bar:Show()
+	if note then
+		bar.text:SetFocus()
+	end
+	page.events.selected = e
+	page.events:SetPoint("BOTTOMLEFT", 14, 14 + EDIT_HEIGHT)
+	drawn = nil
+	RefreshEvents()
+end
+
+local function SaveNote()
+	local bar = page.edit
+	local text = bar.text:GetText():match("^%s*(.-)%s*$")
+	if text ~= "" and bar.entry.text ~= text then
+		bar.entry.text = text
+		ns.version = ns.version + 1
+	end
+	CloseEdit()
+end
+
+local function DeleteEntry()
+	ns.Remove(page.edit.entry)
+	CloseEdit()
+end
+
+local function EditButton(bar, text, x, onClick)
+	local button = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
+	button:SetSize(EDIT_BUTTON, EDIT_HEIGHT)
+	button:SetPoint("RIGHT", x, 0)
+	button:SetText(text)
+	button:SetScript("OnClick", onClick)
+	return button
+end
+
+local function BuildEdit(f)
+	local bar = CreateFrame("Frame", nil, f)
+	bar:SetSize(LIST_WIDTH, EDIT_HEIGHT)
+	bar:SetPoint("BOTTOMLEFT", 14, 8)
+	bar:Hide()
+	bar.cancel = EditButton(bar, "Cancel", 0, CloseEdit)
+	bar.delete = EditButton(bar, "Delete", -EDIT_BUTTON, DeleteEntry)
+	bar.save = EditButton(bar, "Save", -2 * EDIT_BUTTON, SaveNote)
+	bar.label = bar:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	bar.label:SetPoint("LEFT", 4, 0)
+	bar.label:SetPoint("RIGHT", bar.delete, "LEFT", -8, 0)
+	bar.label:SetJustifyH("LEFT")
+	bar.label:SetWordWrap(false)
+	bar.text = CreateFrame("EditBox", nil, bar, "InputBoxTemplate")
+	bar.text:SetHeight(EDIT_HEIGHT)
+	bar.text:SetPoint("LEFT", 6, 0)
+	bar.text:SetPoint("RIGHT", bar.save, "LEFT", -6, 0)
+	bar.text:SetAutoFocus(false)
+	bar.text:SetScript("OnEnterPressed", SaveNote)
+	bar.text:SetScript("OnEscapePressed", CloseEdit)
+	f.edit = bar
 end
 
 local function BuildEvents(f)
@@ -166,7 +264,7 @@ local function BuildEvents(f)
 		f.groupButtons[i] = button
 	end
 
-	f.events = ns.HistoryList(f, EventTexts)
+	f.events = ns.HistoryList(f, EventTexts, nil, OpenEdit)
 	f.events:SetPoint("TOPLEFT", 14, -54)
 	f.events:SetPoint("BOTTOMLEFT", 14, 8)
 	f.events:SetWidth(LIST_WIDTH)
@@ -174,6 +272,7 @@ local function BuildEvents(f)
 	f.hint:SetPoint("TOPLEFT", 18, -62)
 	f.hint:SetWidth(LIST_WIDTH - 8)
 	f.hint:SetJustifyH("LEFT")
+	BuildEdit(f)
 end
 
 --------------------------------------------------------------------------------

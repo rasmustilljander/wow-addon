@@ -92,6 +92,18 @@ function ns.IsMe(name)
 	return name:match("^[^%-]+") == UnitName("player")
 end
 
+-- Item link -> count as a list of { item, count }, by name so the order is
+-- the same every time; nil when empty.
+function ns.ItemList(counts)
+	local items = {}
+	for link, n in pairs(counts) do
+		items[#items + 1] = { item = link, count = n }
+	end
+	local function Name(it) return it.item:match("%[(.-)%]") or it.item end
+	table.sort(items, function(a, b) return Name(a) < Name(b) end)
+	return #items > 0 and items or nil
+end
+
 -- Adds n to a (possibly nested) counter in this character's stats, e.g.
 -- ns.Add(1, "jumps") or ns.Add(12.5, "distance", "mount").
 function ns.Add(n, ...)
@@ -261,6 +273,25 @@ end
 
 function ns.Log(kind, data)
 	return ns.Save(ns.NewEvent(kind, data))
+end
+
+-- Takes entry e out of the log. Totals stay as they are, except the notes
+-- count. Fires TL_LOG_CHANGED, so whatever keeps its place in the log
+-- (item tooltips, Path's markers) starts over. Returns true if e was there.
+function ns.Remove(e)
+	local log = ns.char.log
+	for i = #log, 1, -1 do
+		if log[i] == e then
+			table.remove(log, i)
+			if e.type == "note" and (ns.stats.notes or 0) > 0 then
+				ns.Add(-1, "notes")
+			end
+			ns.version = ns.version + 1
+			ns.Fire("TL_LOG_CHANGED")
+			return true
+		end
+	end
+	return false
 end
 
 --------------------------------------------------------------------------------

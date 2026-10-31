@@ -31,6 +31,10 @@ local function Got(item, e)
 	end
 end
 
+ns.On("TL_LOG_CHANGED", function()
+	index, indexed = {}, 0
+end)
+
 -- The first entry and the number of times you got an item, by item ID.
 function ns.ItemHistory(itemID)
 	local log = ns.char.log

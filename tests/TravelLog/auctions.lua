@@ -1,7 +1,8 @@
 -- How auctions end: sold (money from the mail, a partial commodity sale),
 -- expired (the item back from the mail), cancelled (at the auction house, by
 -- auction ID, with and without its quantity); posts that share an item, a
--- sale with no post, items won, a reload with auctions open; the post's
+-- sale with no post, items won, a reload with auctions open, deleted
+-- entries; the post's
 -- outcome, `/tl log`, History, `/tl stats`, item tooltips.
 local ns = M.Login()
 
@@ -173,6 +174,9 @@ M.fire("AUCTION_HOUSE_AUCTION_CREATED", 302)
 local second = last("post")
 check(Open() == 2 and first ~= second, "two open posts of ore")
 
+-- Deleting an older entry doesn't lose track of the posts.
+check(ns.Remove(TravelLogCharDB.log[1]), "an older entry deleted")
+
 -- The auction house no longer lists it: the cancel takes what's left of its post.
 M.ownedAuctions = {}
 C_AuctionHouse.CancelAuction(302)
@@ -202,15 +206,36 @@ check(Log(1):find("Sold at auction: Linen Cloth for 50s 0c to Bob", 1, true) and
 M.fire("MAIL_CLOSED")
 
 --------------------------------------------------------------------------------
+-- A deleted post
+--------------------------------------------------------------------------------
+
+M.fire("AUCTION_HOUSE_SHOW")
+M.advance(60)
+M.bags["0:6"] = SWORD
+C_AuctionHouse.PostItem(ItemLocation:CreateFromBagAndSlot(0, 6), 2, 1, nil, 9000)
+M.fire("AUCTION_HOUSE_AUCTION_CREATED", 401)
+local gone = last("post")
+check(ns.Remove(gone) and Open() == 1, "the post deleted, its auction still open")
+M.ownedAuctions = { { auctionID = 401, itemKey = { itemID = 2488 }, itemLink = SWORD, status = 0, quantity = 1 } }
+C_AuctionHouse.CancelAuction(401)
+M.fire("AUCTION_CANCELED", 401)
+ended = last("auction")
+check(ended.result == "cancelled" and ended.item == SWORD and ended.posted == gone.time and Open() == 0,
+	"its end is still logged")
+M.fire("AUCTION_HOUSE_CLOSED")
+
+--------------------------------------------------------------------------------
 -- Totals, History and a reload
 --------------------------------------------------------------------------------
 
-check(ns.stats.auctions.sold == 32 and ns.stats.auctions.expired == 5 and ns.stats.auctions.cancelled == 11, "ended items counted")
+check(ns.stats.auctions.sold == 32 and ns.stats.auctions.expired == 5 and ns.stats.auctions.cancelled == 12, "ended items counted")
 check(ns.stats.received.returned == 6, "returned items counted apart")
 M.out = {}
 SlashCmdList.TRAVELLOG("stats")
-check(table.concat(M.out, "\n"):find("Auctioned items: 32 sold, 5 expired, 11 cancelled", 1, true), "/tl stats line")
-check(ns.LogMatches(last("auction"), "", "Trade") and ns.LogMatches(last("auction"), "auction ended sold bob"), "History group and search")
+check(table.concat(M.out, "\n"):find("Auctioned items: 32 sold, 5 expired, 12 cancelled", 1, true), "/tl stats line")
+local bob
+for _, e in ipairs(TravelLogCharDB.log) do if e.type == "auction" and e.buyer == "Bob" then bob = e end end
+check(ns.LogMatches(bob, "", "Trade") and ns.LogMatches(bob, "auction ended sold bob"), "History group and search")
 
 ns = M.Reload()
-check(last("auction").buyer == "Bob" and ns.stats.auctions.sold == 32 and Open() == 0, "kept after a reload")
+check(last("auction").result == "cancelled" and ns.stats.auctions.sold == 32 and Open() == 0, "kept after a reload")

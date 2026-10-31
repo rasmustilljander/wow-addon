@@ -13,6 +13,7 @@ Travel.lua
 Loot.lua
 Vendor.lua
 Outgoing.lua
+Use.lua
 Auctions.lua
 Money.lua
 Life.lua
@@ -24,5 +25,6 @@ Commands.lua
 UI.lua
 LogUI.lua
 Sessions.lua
+Levels.lua
 Tooltip.lua
 Screenshots.lua

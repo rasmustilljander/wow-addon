@@ -52,7 +52,7 @@ check(w.who:GetText() == "Rasmus-Forever, level 5 Human Mage", "who: " .. w.who:
 -- Totals, Settings and History, then the companions' tabs in load order;
 -- Totals open first, the other pages hidden.
 local totals, settings, history = w.pages[1], w.pages[2], w.pages[3]
-local log, killsView = history.views[1], history.views[3]
+local log, killsView = history.views[1], history.views[4]
 check(#w.Tabs == 4 and w.Tabs[1]:GetText() == "Totals" and w.Tabs[2]:GetText() == "Settings"
 	and w.Tabs[3]:GetText() == "History" and w.Tabs[4]:GetText() == "Colors", "tabs")
 check(w.selectedTab == 1 and totals:IsShown() and not settings:IsShown() and not history:IsShown()
@@ -61,19 +61,20 @@ check(not w.Tabs[1]:IsEnabled() and w.Tabs[2]:IsEnabled(), "the open tab is disa
 
 -- Totals by section, each companion's rows in its section in load order.
 check(Texts(totals, 14) == "Travel, Loot, Life, Log", "sections: " .. Texts(totals, 14))
-check(Texts(totals, 18) == "Character, Places visited, Time by zone, Flights, Flight paths, Teleports, Boat rides, Instances, Resting, Screenshots, Notes, Jumps, Distance, Distance by form, Looted, Vendors, Rolls, Items out, Auctioned items, Guild bank items, Money in, Money out, Nodes, "
-	.. "Played, Quests, Discoveries, Learned, Mounts, Pets, New gear, Legacy Challenges, World buffs, Reputation, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
+check(Texts(totals, 18) == "Character, Places visited, Time by zone, Flights, Flight paths, Teleports, Boat rides, Instances, Resting, Screenshots, Notes, Jumps, Distance, Distance by form, Looted, Vendors, Rolls, Items out, Items used, Auctioned items, Guild bank items, Money in, Money out, Nodes, "
+	.. "Played, Next level, Quests, Discoveries, Learned, Mounts, Pets, New gear, Legacy Challenges, World buffs, Reputation, XP, XP kills, Bosses, Deaths, Came back, PvP, Battlegrounds, Guild, All kills, Most killed, Entries", "rows: " .. Texts(totals, 18))
 check(Texts(settings, 14) == "World map, General, Screenshots", "setting sections: " .. Texts(settings, 14))
 check(Texts(settings, 18) == "Your trail, Trail fade, Trail curves (%), Path interval (s)", "setting labels: " .. Texts(settings, 18))
 check(Texts(totals, 152) == "Rasmus-Forever, level 5", "picker on the character you're on: " .. Texts(totals, 152))
 check(Stat(w, "Looted") == "0 items from 0 sources, 0c in coins", "loot: " .. Stat(w, "Looted"))
 check(Stat(w, "Items out") == "0 traded, 0 mailed, 0 auctioned, 0 destroyed", "items out: " .. Stat(w, "Items out"))
+check(Stat(w, "Items used") == "0, 0 of them in crafts", "items used: " .. Stat(w, "Items used"))
 check(Stat(w, "Auctioned items") == "0 sold, 0 expired, 0 cancelled", "auctioned items: " .. Stat(w, "Auctioned items"))
 check(Stat(w, "Guild bank items") == "0 deposited, 0 withdrawn", "guild bank items: " .. Stat(w, "Guild bank items"))
 check(Stat(w, "Money in") == "0c" and Stat(w, "Money out") == "0c", "no money in or out yet")
 check(Stat(w, "Places visited") == "1", "places: " .. Stat(w, "Places visited"))
 check(Stat(w, "Quests") == "0 accepted, 0 done, 0 abandoned, 0 failed", "quests: " .. Stat(w, "Quests"))
-check(Stat(w, "Discoveries") == "0" and Stat(w, "Mounts") == "0" and Stat(w, "Pets") == "0 tamed, 0 levels gained, 0 abandoned",
+check(Stat(w, "Discoveries") == "0" and Stat(w, "Mounts") == "0" and Stat(w, "Pets") == "0 tamed, 0 levels gained, 0 deaths, 0 abandoned",
 	"empty progress totals")
 check(Stat(w, "Most killed") == "nothing yet", "no kills yet")
 check(Stat(w, "Played") == "not known yet", "played before /played answers")
@@ -98,15 +99,15 @@ check(Stat(w, "Came back") == "corpse run 0, spirit healer 0, by a player 0, sel
 check(Stat(w, "All kills") == "1 of 1 mobs", "all kills: " .. Stat(w, "All kills"))
 check(Stat(w, "Most killed") == "Kobold Worker (1)", "most killed: " .. Stat(w, "Most killed"))
 
--- History: Events, Sessions and Kills buttons, Events first. Events lists individual
+-- History: Events, Sessions, Levels and Kills buttons, Events first. Events lists individual
 -- entries newest first, with category buttons and searches over both visible
 -- text and saved fields such as a death's level.
 w.Tabs[3]:Click()
-check(#history.viewButtons == 3 and history.viewButtons[1]:GetText() == "Events"
-	and history.viewButtons[2]:GetText() == "Sessions" and history.viewButtons[3]:GetText() == "Kills", "view buttons")
+check(#history.viewButtons == 4 and history.viewButtons[1]:GetText() == "Events" and history.viewButtons[2]:GetText() == "Sessions"
+	and history.viewButtons[3]:GetText() == "Levels" and history.viewButtons[4]:GetText() == "Kills", "view buttons")
 check(history.viewButtons[1].highlightLocked and log:IsShown() and not killsView:IsShown(), "events view first")
-history.viewButtons[3]:Click()
-check(killsView:IsShown() and not log:IsShown() and history.viewButtons[3].highlightLocked
+history.viewButtons[4]:Click()
+check(killsView:IsShown() and not log:IsShown() and history.viewButtons[4].highlightLocked
 	and not history.viewButtons[1].highlightLocked, "kills view")
 check(killsView.found:GetText() == "1 mobs, 1 kills", "kills view drawn: " .. killsView.found:GetText())
 history.viewButtons[1]:Click()

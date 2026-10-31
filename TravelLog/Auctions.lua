@@ -16,16 +16,22 @@ local function NameOf(item)
 	return type(item) == "string" and (item:match("%[(.-)%]") or item) or nil
 end
 
--- Open posts, oldest first: { entry = the post's log index, left = items not
--- yet ended, ids = { auction IDs } }.
+-- Open posts, oldest first: { posted = the post's time, item, left = items
+-- not yet ended, ids = { auction IDs } }.
 local function Open()
 	ns.char.auctions = ns.char.auctions or {}
 	return ns.char.auctions
 end
 
+-- The post's log entry, or nil once it's been deleted.
 local function PostOf(open)
-	local e = ns.char.log[open.entry]
-	return e and e.type == "post" and e or nil
+	local log = ns.char.log
+	for i = #log, 1, -1 do
+		local e = log[i]
+		if e.type == "post" and e.time == open.posted and e.item == open.item then
+			return e
+		end
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -64,7 +70,7 @@ ns.On("AUCTION_HOUSE_AUCTION_CREATED", function(id)
 	if posting then
 		ns.Log("post", posting)
 		ns.Add(posting.count, "given", "auction")
-		posted = { entry = #ns.char.log, left = posting.count, ids = {} }
+		posted = { posted = ns.char.log[#ns.char.log].time, item = posting.item, left = posting.count, ids = {} }
 		table.insert(Open(), posted)
 	end
 	posting = nil
@@ -94,16 +100,11 @@ end
 -- Open posts an ending belongs to: the one with its auction ID, or else
 -- those of the same item, oldest first.
 local function Matching(id, name)
-	local found, list = {}, Open()
-	for i = #list, 1, -1 do
-		if not PostOf(list[i]) then
-			table.remove(list, i) -- its entry is gone
-		end
-	end
-	for _, open in ipairs(list) do
+	local found = {}
+	for _, open in ipairs(Open()) do
 		if id and Has(open.ids, id) then
 			return { open }
-		elseif NameOf(PostOf(open).item) == name then
+		elseif NameOf(open.item) == name then
 			found[#found + 1] = open
 		end
 	end
@@ -111,7 +112,8 @@ local function Matching(id, name)
 end
 
 -- Logs an auction's end ("sold", "expired" or "cancelled") from data
--- { item, count, price, buyer }, and adds it to the posts it came from.
+-- { item, count, price, buyer }, and adds it to the posts it came from (if
+-- they haven't been deleted).
 local function End(result, data, id)
 	local matched = Matching(id, NameOf(data.item))
 	local first = matched[1]
@@ -119,12 +121,15 @@ local function End(result, data, id)
 	data.count = data.count or first and math.ceil(first.left / math.max(#first.ids, 1)) or 1
 	local left = data.count
 	for _, open in ipairs(matched) do
-		local post, n = PostOf(open), math.min(left, open.left)
+		local n = math.min(left, open.left)
 		if n > 0 then
-			post[result] = (post[result] or 0) + n
+			local post = PostOf(open)
+			if post then
+				post[result] = (post[result] or 0) + n
+			end
 			open.left, left = open.left - n, left - n
-			data.posted = data.posted or post.time
-			data.item = data.item and data.item:find("|H") and data.item or post.item
+			data.posted = data.posted or open.posted
+			data.item = data.item and data.item:find("|H") and data.item or open.item
 		end
 		if id and Has(open.ids, id) then
 			table.remove(open.ids, Has(open.ids, id))
