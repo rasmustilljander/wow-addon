@@ -222,7 +222,7 @@ local function ReceivedHow(how)
 		return how
 	end
 	if ns.Recent("questdone", 3) then return "quest" end
-	if ns.open.mail then return "mail" end
+	if ns.open.mail then return ns.AuctionMailHow() or "mail" end
 	if ns.open.trade then return "trade" end
 	return how
 end
@@ -278,6 +278,8 @@ ns.On("CHAT_MSG_LOOT", function(text)
 			elseif how == "created" then
 				-- Use.lua adds the materials it took.
 				ns.Fire("TL_CREATED", e)
+			elseif how == "returned" then
+				ns.AuctionReturned(item, count)
 			end
 			ns.Add(count, "received", how)
 			return

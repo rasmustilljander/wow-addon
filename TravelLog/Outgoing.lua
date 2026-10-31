@@ -1,6 +1,6 @@
--- Items that leave your bags: handed over in a trade, sent by mail, put up
--- for auction or destroyed, and items moved to and from the guild bank.
--- Money that goes with them is the money ledger's.
+-- Items that leave your bags: handed over in a trade, sent by mail or
+-- destroyed, and items moved to and from the guild bank. Auctions are in
+-- Auctions.lua; money that goes with them is the money ledger's.
 local _, ns = ...
 
 -- Counts can come back as nil or 0 for single items.
@@ -83,50 +83,6 @@ ns.On("MAIL_SEND_SUCCESS", function()
 end)
 ns.On("MAIL_FAILED", function()
 	mailing = nil
-end)
-
---------------------------------------------------------------------------------
--- Auctions
---------------------------------------------------------------------------------
-
-local posting -- the auction being posted: { item, count, bid, buyout }
-
--- A post that needs confirming comes again as ConfirmPost*. Either way it's
--- recorded once the auction exists. The money it costs is its deposit.
-local function Post(location, _, quantity, bid, buyout)
-	ns.Mark("deposit")
-	local item = C_Item.DoesItemExist(location) and ns.Clean(C_Item.GetItemLink(location))
-	posting = item and { item = item, count = Count(quantity), bid = ns.Clean(bid), buyout = ns.Clean(buyout) } or nil
-end
-
--- Commodities have one price per item.
-local function PostCommodity(location, duration, quantity, unitPrice)
-	unitPrice, quantity = ns.Clean(unitPrice), ns.Clean(quantity)
-	Post(location, duration, quantity, nil, unitPrice and quantity and unitPrice * quantity)
-end
-
-if C_AuctionHouse then
-	for name, fn in pairs({ PostItem = Post, ConfirmPostItem = Post,
-		PostCommodity = PostCommodity, ConfirmPostCommodity = PostCommodity }) do
-		if C_AuctionHouse[name] then
-			hooksecurefunc(C_AuctionHouse, name, fn)
-		end
-	end
-end
-
--- Posting several stacks of an item creates an auction for each; the first
--- records them all.
-ns.On("AUCTION_HOUSE_AUCTION_CREATED", function()
-	if posting then
-		ns.Log("post", posting)
-		ns.Add(posting.count, "given", "auction")
-	end
-	posting = nil
-end)
-ns.On("TL_CLOSE", function(context)
-	if context == "auction" then
-		posting = nil
-	end
 end)
 
 --------------------------------------------------------------------------------

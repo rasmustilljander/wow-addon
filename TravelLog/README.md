@@ -24,6 +24,7 @@ Every entry is stamped with time, zone, subzone, map ID and map coordinates.
 | **Rolls** | Group loot rolls you lost or passed on: your choice and roll, and who won with what. |
 | **Items used** | Potions, food, bandages, reagents and ammo you use up, with the spell when the client shows it; the materials each craft took; what each boss fight used. |
 | **Items out** | Items you trade, mail, put up for auction (with bid and buyout) or destroy. |
+| **Auctions** | How each auction you post ends: sold (price and buyer), expired or cancelled, linked to its post. Items back from the auction house are `returned`; items won are bought at auction. |
 | **Guild bank** | Items you put in and take out, one entry per visit. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason (see `money` [below](#entry-fields)). Trades and mail name the other player. |
@@ -56,7 +57,7 @@ First looted 2026-10-02 from Defias Thug, Westfall
 Got 3 times
 ```
 
-It counts items looted, received (roll wins, quest rewards, crafts, mail, trades) and bought.
+It counts items looted, received (roll wins, quest rewards, crafts, mail, trades) and bought (at auction too), not items back from an auction.
 
 ## Automatic screenshots
 
@@ -117,6 +118,7 @@ TravelLogCharDB = {
       zone = "Elwynn Forest", subzone = "Goldshire", map = 1429, x = 42.1, y = 65.3,   -- where you logged in
       zoneEnd = "Stormwind City", subzoneEnd = "Old Town", mapEnd = 1453, xEnd = 75.2, yEnd = 61.8 },  -- and out
   },
+  auctions = { { posted = 1760000000, item = "|cff...|h[Copper Ore]|h|r", left = 5, ids = { 203 } } },  -- open posts: the post's time and item, items not yet ended, auction IDs
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ..., failed = ... } },  -- last time of each
   skills = { [129] = 75 },               -- skill ID -> rank
   talents = { [7001] = { [101] = 3 } },  -- loadout ID -> talent node ID -> rank
@@ -140,14 +142,15 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | --- | --- |
 | `area` | `first`: `true` on your first visit to the subzone (or zone) |
 | `loot` | `source` (name), `sourceType` (`Creature`, `GameObject`, `Item`, `Fishing`, ...), `sourceID`, `via` (the spell, e.g. Herb Gathering, Pick Pocket), `items`, `money`; with TravelLog_Nodes, `lastHere` (when the spot was last looted) and `lastBy` (the alt who did) |
-| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll` or `received`); `roll` for a won roll, `sender` from mail, `partner` from a trade, `materials` (an item list) for a craft |
+| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll`, `auction` (won), `returned` (from an auction that didn't sell) or `received`); `roll` for a won roll, `sender` from mail, `partner` from a trade, `materials` (an item list) for a craft |
 | `use` | `item`, `count`, and `spell` and `spellID` of your cast that used it, when seen. The same item used the same way within 30 s of the last adds to the entry, if nothing was logged in between. |
 | `roll` | `item`, `choice` (`need`, `offspec`, `transmog`, `greed` or `pass`), `roll` (none for a pass), `winner` and `winnerRoll` (none when everyone passed) |
 | `buy`, `sell`, `buyback` | `item`, `count`, `price`, `vendor`; `otherCurrency` (`true`) for a `buy` priced in items or currency |
 | `repair` | `price`, `vendor`, `guildBank` (`true` when the guild paid) |
 | `give` | A trade: `items`, `partner` |
 | `send` | Mail: `items`, `recipient` |
-| `post` | An auction: `item`, `count`, `bid`, `buyout` (a commodity has only `buyout`, for the whole stack) |
+| `post` | An auction: `item`, `count`, `bid`, `buyout` (a commodity has only `buyout`, for the whole stack); `sold`, `expired` and `cancelled`: how many of its items ended each way so far |
+| `auction` | An auction ended: `result` (`sold`, `expired` or `cancelled`), `item`, `count`, `posted` (its post's `time`; none without one); for a sale, `price` (before the house's cut) and `buyer` |
 | `destroy` | `item`, `count` |
 | `guildbank` | `deposited` and `withdrawn` (item lists), `guild` |
 | `money` | `amount` (negative when spent), `balance`, `reason`: `loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction` (buys, and sales paid by mail), `deposit` (auction deposit), `bankslot`, `bank` (account bank), `guildbank`, `barber`, `respec` (talent reset), `stable` (stable slot) or `other`. `partner`, `sender` or `recipient` for trades and mail, `item` for an auction sale. |
@@ -219,6 +222,13 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - Destroyed items count only when picked up from your bags or gear first, so a gamepad delete doesn't.
 - Guild bank moves are what your bags gain or lose within 10 s of a guild bank click: equipping or destroying an item in those seconds counts as a move, and an item held on the cursor longer is missed. Moves between tabs aren't logged.
 - Item tooltips read only this character's log and match by item ID, so another random enchantment counts as the same item. Buybacks and guild bank withdrawals don't count.
+
+**Auctions**
+
+- A sale ends when you take its money from the mail, an expiry when you take the item back, so mail left unopened ends nothing. A cancel ends at the auction house.
+- Sales and expiries go to the oldest open post of that item, by name; a cancel to the post with its auction ID. One without a post (posted before install) is logged without `posted`.
+- Expired, cancelled and won mails are known by their subject ("Auction expired: ...").
+- A cancel whose auction isn't in the auction house's list counts an equal share of what's left of its post.
 
 **Money and vendors**
 

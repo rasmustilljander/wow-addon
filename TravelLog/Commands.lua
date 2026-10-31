@@ -120,6 +120,12 @@ function ns.UsedText(st)
 	return ("%s, %s of them in crafts"):format(Count((used.items or 0) + (used.crafting or 0)), Count(used.crafting))
 end
 
+-- How auctioned items ended: "15 sold, 5 expired, 1 cancelled".
+function ns.AuctionsText(st)
+	local a = st.auctions or {}
+	return ("%s sold, %s expired, %s cancelled"):format(Count(a.sold), Count(a.expired), Count(a.cancelled))
+end
+
 -- Items moved to and from the guild bank: "4 deposited, 2 withdrawn".
 function ns.GuildBankText(st)
 	local g = st.guildBank or {}
@@ -351,6 +357,7 @@ local function ShowStats(arg)
 	ns.Print("Rolls: %s", ns.RollsText(st))
 	ns.Print("Items out: %s", ns.GivenText(st))
 	ns.Print("Items used: %s", ns.UsedText(st))
+	ns.Print("Auctioned items: %s", ns.AuctionsText(st))
 	ns.Print("Guild bank items: %s", ns.GuildBankText(st))
 	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
@@ -459,6 +466,8 @@ local function PetText(e)
 	return ("your %s%s"):format(e.level and "level " .. e.level .. " " or "", e.family or "pet")
 end
 
+local AUCTION_ENDS = { sold = "Sold at auction:", expired = "Auction expired:", cancelled = "Cancelled auction:" }
+
 local DESCRIBE = {
 	area = function(e)
 		return (e.first and "First visit to %s" or "Entered %s"):format(e.subzone or e.zone or "?")
@@ -501,7 +510,17 @@ local DESCRIBE = {
 		local text = ("Posted %s at auction"):format(Item(e.item, e.count))
 		if e.buyout then text = ("%s, buyout %s"):format(text, ns.MoneyText(e.buyout)) end
 		if e.bid then text = ("%s, bid %s"):format(text, ns.MoneyText(e.bid)) end
-		return text
+		local ended = {}
+		for _, result in ipairs({ "sold", "expired", "cancelled" }) do
+			if e[result] then ended[#ended + 1] = ("%d %s"):format(e[result], result) end
+		end
+		return #ended > 0 and ("%s: %s"):format(text, table.concat(ended, ", ")) or text
+	end,
+	auction = function(e)
+		local text = ("%s %s"):format(AUCTION_ENDS[e.result] or "Auction ended:", Item(e.item, e.count))
+		if e.price then text = ("%s for %s"):format(text, ns.MoneyText(e.price)) end
+		if e.buyer then text = ("%s to %s"):format(text, e.buyer) end
+		return e.posted and ("%s (posted %s before)"):format(text, ns.Ago(e.posted, e.time)) or text
 	end,
 	destroy = function(e) return ("Destroyed %s"):format(Item(e.item, e.count)) end,
 	guildbank = function(e)
@@ -783,7 +802,7 @@ local LOG_GROUP = {
 	restleave = "Travel", screenshot = "Travel", note = "Travel",
 	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot", use = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
-	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade", guildbank = "Trade",
+	give = "Trade", send = "Trade", post = "Trade", auction = "Trade", bankslot = "Trade", guildbank = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
@@ -799,7 +818,7 @@ local LOG_GROUP = {
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
-	post = "Auction", destroy = "Destroyed", use = "Used", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
+	post = "Auction", auction = "Auction ended", destroy = "Destroyed", use = "Used", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
 	flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
