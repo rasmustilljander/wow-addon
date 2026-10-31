@@ -1,7 +1,7 @@
 -- Hunter pets: a beast tamed (the first one marked), a tame cut short by
 -- moving or an interrupt, pets called or dismissed, other channels, a secret
--- name; level-ups, abandoning and the stable; the log, History, stats and a
--- reload.
+-- name; level-ups, deaths and revives, abandoning and the stable; the log,
+-- History, stats and a reload.
 M.player.class = "HUNTER"
 M.level = 10
 local ns = M.Login()
@@ -136,7 +136,7 @@ local totals = M.descendants(ns.window)
 for i, r in ipairs(totals) do
 	if r.kind == "FontString" and r:GetText() == "Pets" then line = totals[i + 1]:GetText() end
 end
-check(line == "3 tamed, 0 levels gained, 0 abandoned", "pet total: " .. tostring(line))
+check(line == "3 tamed, 0 levels gained, 0 deaths, 0 abandoned", "pet total: " .. tostring(line))
 
 -- Kept across a reload.
 ns = M.Reload()
@@ -227,13 +227,66 @@ M.fire("PET_STABLE_CLOSED")
 C_StableInfo.SetPetSlot(1, 2)
 check(count("petstable") == 2, "stable closed: not logged")
 
--- A pet that isn't a hunter's: a warlock's demon levels with its master.
+-- Deaths: the pet showing as dead, or the game's UNIT_DIED for its GUID,
+-- logged once however many times it's seen.
+M.units.pet = fang
+M.fire("UNIT_PET", "player")
+fang.dead = true
+M.fire("UNIT_HEALTH", "pet")
+local d = last("petdeath")
+check(count("petdeath") == 1 and d.name == "Fang" and d.level == 13 and d.family == "Wolf", "pet death logged")
+check(d.zone == "Elwynn Forest", "death stamped with where")
+check(ns.Describe(d) == "Fang (level 13 Wolf) died", "described: " .. ns.Describe(d))
+M.fire("UNIT_DIED", fang.guid)
+M.fire("UNIT_HEALTH", "pet")
+M.units.pet = nil
+M.fire("UNIT_PET", "player")
+check(count("petdeath") == 1, "one death logged once")
+
+-- Revive Pet brings back the pet that died.
+M.cast(982)
+fang.dead = false
+M.units.pet = fang
+M.fire("UNIT_PET", "player")
+local r = last("petrevive")
+check(count("petrevive") == 1 and r.name == "Fang" and r.level == 13 and r.family == "Wolf", "revive logged")
+check(ns.Describe(r) == "Revived Fang (level 13 Wolf)", "described: " .. ns.Describe(r))
+
+-- Dying again and gone at once: UNIT_DIED for its GUID is enough. Other
+-- units dying, and a pet dismissed, aren't pet deaths.
+M.units.pet = nil
+M.fire("UNIT_PET", "player")
+M.fire("UNIT_DIED", fang.guid)
+check(count("petdeath") == 2, "UNIT_DIED for the pet logged")
+M.fire("UNIT_DIED", "Creature-0-1-0-1-525-0003")
+M.fire("UNIT_DIED", nil)
+check(count("petdeath") == 2, "other deaths ignored")
+M.units.pet = { name = "Wolf", guid = "Pet-0-1-0-1-525-0010", level = 22, family = "Wolf", pet = true }
+M.fire("UNIT_PET", "player")
+M.units.pet = nil
+M.fire("UNIT_PET", "player")
+check(count("petdeath") == 2, "dismissed pet: no death")
+-- A revive by another rank's ID, with a pet the log never saw die.
+M.spellNames[982], M.spellNames[9999] = "Revive Pet", "Revive Pet"
+M.cast(9999)
+M.units.pet = { name = "Wolf", guid = "Pet-0-1-0-1-525-0011", level = 22, family = "Wolf", pet = true }
+M.fire("UNIT_PET", "player")
+check(count("petrevive") == 2 and ns.Describe(last("petrevive")) == "Revived your pet", "unknown pet revived: "
+	.. ns.Describe(last("petrevive")))
+check(ns.stats.petDeaths == 2, "pet deaths counted")
+
+-- A pet that isn't a hunter's: a warlock's demon levels with its master,
+-- and its deaths aren't logged.
 M.player.class = "WARLOCK"
 M.units.pet = { name = "Imp", guid = "Pet-0-1-0-1-416-0009", level = 20, family = "Imp", pet = true }
 M.fire("UNIT_PET", "player")
 M.units.pet.level = 21
 M.fire("UNIT_LEVEL", "pet")
 check(count("petlevel") == 5, "demon level not logged")
+M.units.pet.dead = true
+M.fire("UNIT_HEALTH", "pet")
+M.fire("UNIT_DIED", M.units.pet.guid)
+check(count("petdeath") == 2, "demon death not logged")
 M.player.class = "HUNTER"
 
 -- History, /tl log, /tl stats and the Totals row.
@@ -241,25 +294,29 @@ check(ns.LogGroup(p) == "Progress" and ns.LogTypeLabel(p) == "Pet level", "level
 check(ns.LogGroup(a) == "Progress" and ns.LogTypeLabel(a) == "Pet abandoned", "abandon group and label")
 check(ns.LogGroup(st) == "Progress" and ns.LogTypeLabel(st) == "Pet stabled"
 	and ns.LogGroup(un) == "Progress" and ns.LogTypeLabel(un) == "Pet unstabled", "stable groups and labels")
+check(ns.LogGroup(d) == "Progress" and ns.LogTypeLabel(d) == "Pet death"
+	and ns.LogGroup(r) == "Progress" and ns.LogTypeLabel(r) == "Pet revived", "death and revive groups and labels")
 check(ns.LogMatches(a, "pet abandoned fang", "Progress") and ns.LogMatches(un, "unstabled cat"), "History search")
 M.out = {}
 SlashCmdList.TRAVELLOG("log 20 pet")
 out = table.concat(M.out, "\n")
 check(out:find("Fang reached level 11 (Wolf)", 1, true) and out:find("Abandoned Fang", 1, true)
-	and out:find("Stabled your level 22 Wolf", 1, true), "/tl log: " .. out)
+	and out:find("Stabled your level 22 Wolf", 1, true) and out:find("Fang (level 13 Wolf) died", 1, true)
+	and out:find("Revived Fang", 1, true), "/tl log: " .. out)
 M.out = {}
 SlashCmdList.TRAVELLOG("stats")
 line = nil
 for _, text in ipairs(M.out) do line = line or text:match("Spells learned .*") end
-check(line and line:find("pets tamed 3, pet levels 5, pets abandoned 1", 1, true), "stats line: " .. tostring(line))
+check(line and line:find("pets tamed 3, pet levels 5, pet deaths 2, pets abandoned 1", 1, true), "stats line: " .. tostring(line))
 SlashCmdList.TRAVELLOG("")
 totals = M.descendants(ns.window)
 line = nil
 for i, r in ipairs(totals) do
 	if r.kind == "FontString" and r:GetText() == "Pets" then line = totals[i + 1]:GetText() end
 end
-check(line == "3 tamed, 5 levels gained, 1 abandoned", "pet totals row: " .. tostring(line))
+check(line == "3 tamed, 5 levels gained, 2 deaths, 1 abandoned", "pet totals row: " .. tostring(line))
 
 ns = M.Reload()
 check(count("petlevel") == 5 and count("petabandon") == 1 and count("petstable") == 2 and count("petunstable") == 2
-	and ns.stats.petLevels == 5 and ns.stats.petAbandons == 1, "pet entries kept after reload")
+	and count("petdeath") == 2 and count("petrevive") == 2
+	and ns.stats.petLevels == 5 and ns.stats.petAbandons == 1 and ns.stats.petDeaths == 2, "pet entries kept after reload")
