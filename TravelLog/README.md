@@ -22,14 +22,16 @@ Every entry is stamped with time, zone, subzone, map ID and map coordinates.
 | **Loot** | Corpses, pickpockets, chests, herbs, ore, fishing and containers: items, coins and source (name, NPC or object ID, and the spell for herbs, ore, chests, skinning and Pick Pocket). |
 | **Other items** | Quest rewards, crafts, roll wins (with your roll), trades, mail, and other items that arrive without a loot window. |
 | **Rolls** | Group loot rolls you lost or passed on: your choice and roll, and who won with what. |
+| **Items used** | Potions, food, bandages, reagents and ammo you use up, with the spell when the client shows it; the materials each craft took; what each boss fight used. |
 | **Items out** | Items you trade, mail, put up for auction (with bid and buyout) or destroy. |
+| **Auctions** | How each auction you post ends: sold (price and buyer), expired or cancelled, linked to its post. Items back from the auction house are `returned`; items won are bought at auction. |
 | **Guild bank** | Items you put in and take out, one entry per visit. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
 | **Money** | Every gold change with a reason (see `money` [below](#entry-fields)). Trades and mail name the other player. |
 | **Travel** | Zone and subzone changes (first visits marked); time per zone, and how much of it in combat, dead, AFK, flying and grouped (totals only); flights; hearthstones and other teleports; summons; boat and zeppelin rides; dungeons and raids (time inside, bosses killed and wiped on); instance resets and new lockouts; resting in inns and cities; hearthstone binds; screenshots ([some automatic](#automatic-screenshots)); notes you add with `/tl note`. |
 | **Life** | Deaths (killer, spell and damage, or drowning, fatigue, a fall, fire, lava or slime); spirit releases; revivals (how, time dead, durability lost); level-ups (time the level took, health, power, base stats, item level and what the level gave); quests accepted, completed, abandoned and failed; kills that gave XP; boss kills and wipes; discoveries; world buffs (Rallying Cry, Warchief's Blessing, Spirit of Zandalar, Songflower, the Dire Maul tribute, Sayge's fortunes, Boon of Blackfathom); guilds joined, left or kicked from, and rank changes. |
 | **PvP** | Duels, battlegrounds (result, length and your scoreboard line), honorable kills, honor awards and your PvP rank going up or down. |
-| **Progress** | Spells and recipes learned (rank, trainer, cost); new skills and every 25 skill points; talent points spent and reset; flight paths found; reputation standings, and reputation gained and lost per faction (totals only); the first ride on each mount; beasts tamed, your hunter pet's level-ups, abandoning and stabling; the first time you wear each piece of gear (not shirts or tabards) and each bag; new permanent enchants on worn gear; Legacy Challenges (Forever's achievements). |
+| **Progress** | Spells and recipes learned (rank, trainer, cost); new skills and every 25 skill points; talent points spent and reset; flight paths found; reputation standings, and reputation gained and lost per faction (totals only); the first ride on each mount; beasts tamed, your hunter pet's level-ups, deaths, revives, abandoning and stabling; the first time you wear each piece of gear (not shirts or tabards) and each bag; new permanent enchants on worn gear; Legacy Challenges (Forever's achievements). |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, experience gained (and its rested bonus) and time AFK. |
 
 ## Window
@@ -39,8 +41,10 @@ Pick TravelLog from the minimap's addons dropdown, or type `/tl`.
 - **Totals**: Travel, Loot (money in and out by reason), Life and Log. Reputation and time by zone show the top three here and all in `/tl stats`, which also splits each zone's time by state: `Elwynn Forest 6m (combat 1m, AFK 2m, grouped 3m)`. **Character**'s `<` and `>` step through your characters, [friends'](../TravelLog_Share/) characters and all of yours added up (a place several visited counts once; friends aren't added). Time played, log entries and the Kills and Group rows show only for the character you're on.
 - **Settings**: the companions' map options; Path's trail, fade, curves and interval; whether gold and XP per hour leave out AFK time and whether each level-up says in chat what it gave (both on by default); [automatic screenshots](#automatic-screenshots).
 - **History**, newest first:
-  - **Events**: filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search types, descriptions, names, places, dates and saved fields. Try `death`, `revival`, `level` or `note`.
+  - **Events**: filter by Travel (notes too), Loot, Trade, Life (PvP and guilds too) or Progress, or search types, descriptions, names, places, dates and saved fields. Try `death`, `revival`, `level` or `note`. Right-click an entry to delete it, or to edit a note (Enter saves, Escape cancels).
   - **Sessions**: length, time AFK, levels, start and end place, money and XP gained (per hour after 10 minutes; AFK time left out by default), quests done and failed, XP kills and deaths. Hover one for XP by source.
+  - **Levels**: time played at each level, when you reached it, quests done and failed, XP kills, deaths, money gained or spent, and the zone with most events. Hover one for XP by source, discoveries, what the level gave and its top three zones.
+- **Next level** (top of Levels, and in Totals): XP to go and how long at your XP per hour, e.g. `1,400 xp to go (50%), about 1h 0m at 1,400 xp/h`. The rate is from your latest sessions, whole ones back to 2 hours of play, AFK left out by default; it shows after 10 minutes.
   - **Kills**, with [TravelLog_Kills](../TravelLog_Kills/README.md#window).
 - **NPCs**, **Players**, **Colors** and **Friends** tabs come with [TravelLog_NPCs](../TravelLog_NPCs/README.md#window), [TravelLog_Group](../TravelLog_Group/README.md#window), [TravelLog_Path](../TravelLog_Path/README.md#colors) and [TravelLog_Share](../TravelLog_Share/README.md#the-friends-tab).
 
@@ -53,7 +57,7 @@ First looted 2026-10-02 from Defias Thug, Westfall
 Got 3 times
 ```
 
-It counts items looted, received (roll wins, quest rewards, crafts, mail, trades) and bought.
+It counts items looted, received (roll wins, quest rewards, crafts, mail, trades) and bought (at auction too), not items back from an auction.
 
 ## Automatic screenshots
 
@@ -74,8 +78,10 @@ None is taken within 1 s of another, so a level-up and a challenge together give
 | --- | --- |
 | `/tl` | Open or close the window |
 | `/tl stats [all\|name]` | Totals for this character, all of yours added up, or another or a friend's (`Name` or `Name-Realm`) |
-| `/tl log [n] [search]` | The last n matching events (default 15), e.g. `/tl log 20 death` |
+| `/tl log [n] [search]` | The last n matching events (default 15), e.g. `/tl log 20 death`, each with its `#` |
 | `/tl note <text>` | Add a note to the log |
+| `/tl edit <#> <text>` | Change a note's text |
+| `/tl delete <#>` | Delete one entry; asks for `/tl delete <#> confirm` first |
 | `/tl sessions [n]` | The last n sessions (default 10), with XP by source |
 | `/tl screenshots [level\|boss\|first\|achievement on\|off]` | Show or change automatic screenshots |
 | `/tl forget <name> confirm` | Delete another of your characters (`Name` or `Name-Realm`) from the account-wide files: its totals, its path and its share of looted nodes. Its per-character files (under `<Realm>/<Character>/`) stay; delete them by hand. If it logs in again, its totals start from zero. |
@@ -92,7 +98,7 @@ WoW saves only on logout or `/reload`, so a crash loses everything since. `/relo
 | `SavedVariables/TravelLog.lua` | `TravelLogDB`: `settings` (the companions' too, and the window's `point`) and `chars["Name-Realm"]`, each character's profile and totals (`stats`) |
 | `<Realm>/<Character>/SavedVariables/TravelLog.lua` | `TravelLogCharDB`: that character's log, sessions and what TravelLog compares against (below) |
 
-Companions' files are described in their READMEs. Nothing is pruned: the log and sessions stay until `/tl wipe confirm`.
+Companions' files are described in their READMEs. Nothing is pruned: the log and sessions stay until you delete entries or `/tl wipe confirm`. Deleting an entry leaves totals as they were, except the notes count; Nodes keeps its spots.
 
 Time by zone is in `stats.zoneTime[zone]` (seconds), and by state in `stats.zoneStateTime.<state>[zone]`, states being `combat`, `dead`, `afk`, `flight` and `group`.
 
@@ -113,6 +119,7 @@ TravelLogCharDB = {
       zone = "Elwynn Forest", subzone = "Goldshire", map = 1429, x = 42.1, y = 65.3,   -- where you logged in
       zoneEnd = "Stormwind City", subzoneEnd = "Old Town", mapEnd = 1453, xEnd = 75.2, yEnd = 61.8 },  -- and out
   },
+  auctions = { { posted = 1760000000, item = "|cff...|h[Copper Ore]|h|r", left = 5, ids = { 203 } } },  -- open posts: the post's time and item, items not yet ended, auction IDs
   quests = { [54] = { title = "Report to Goldshire", accepted = ..., done = ..., abandoned = ..., failed = ... } },  -- last time of each
   skills = { [129] = 75 },               -- skill ID -> rank
   talents = { [7001] = { [101] = 3 } },  -- loadout ID -> talent node ID -> rank
@@ -136,13 +143,15 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | --- | --- |
 | `area` | `first`: `true` on your first visit to the subzone (or zone) |
 | `loot` | `source` (name), `sourceType` (`Creature`, `GameObject`, `Item`, `Fishing`, ...), `sourceID`, `via` (the spell, e.g. Herb Gathering, Pick Pocket), `items`, `money`; with TravelLog_Nodes, `lastHere` (when the spot was last looted) and `lastBy` (the alt who did) |
-| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll` or `received`); `roll` for a won roll, `sender` from mail, `partner` from a trade |
+| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll`, `auction` (won), `returned` (from an auction that didn't sell) or `received`); `roll` for a won roll, `sender` from mail, `partner` from a trade, `materials` (an item list) for a craft |
+| `use` | `item`, `count`, and `spell` and `spellID` of your cast that used it, when seen. The same item used the same way within 30 s of the last adds to the entry, if nothing was logged in between. |
 | `roll` | `item`, `choice` (`need`, `offspec`, `transmog`, `greed` or `pass`), `roll` (none for a pass), `winner` and `winnerRoll` (none when everyone passed) |
 | `buy`, `sell`, `buyback` | `item`, `count`, `price`, `vendor`; `otherCurrency` (`true`) for a `buy` priced in items or currency |
 | `repair` | `price`, `vendor`, `guildBank` (`true` when the guild paid) |
 | `give` | A trade: `items`, `partner` |
 | `send` | Mail: `items`, `recipient` |
-| `post` | An auction: `item`, `count`, `bid`, `buyout` (a commodity has only `buyout`, for the whole stack) |
+| `post` | An auction: `item`, `count`, `bid`, `buyout` (a commodity has only `buyout`, for the whole stack); `sold`, `expired` and `cancelled`: how many of its items ended each way so far |
+| `auction` | An auction ended: `result` (`sold`, `expired` or `cancelled`), `item`, `count`, `posted` (its post's `time`; none without one); for a sale, `price` (before the house's cut) and `buyer` |
 | `destroy` | `item`, `count` |
 | `guildbank` | `deposited` and `withdrawn` (item lists), `guild` |
 | `money` | `amount` (negative when spent), `balance`, `reason`: `loot`, `vendor`, `flight`, `quest`, `training`, `mail`, `cod`, `trade`, `auction` (buys, and sales paid by mail), `deposit` (auction deposit), `bankslot`, `bank` (account bank), `guildbank`, `barber`, `respec` (talent reset), `stable` (stable slot) or `other`. `partner`, `sender` or `recipient` for trades and mail, `item` for an auction sale. |
@@ -157,7 +166,7 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | `instanceleave` | `name`, `kind`, `seconds` inside; `kills` and `wipes` when any |
 | `instancereset` | `name`; `failed` when it didn't work: `inside` (players still inside), `offline` (party members offline) or `zoning` (players entering) |
 | `lockout` | `name`, `kind` (`dungeon` or `raid`), `difficulty`, `size`, `lockout` (its ID), `resets` (a `time` value) |
-| `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` (from the pull, when seen), `instance` |
+| `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` (from the pull, when seen), `instance`, `used` (items used during the fight, when any) |
 | `bind` | `place`: where your hearthstone is now set |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `note` | `text` |
@@ -182,7 +191,7 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | `talentreset` | `points` taken back, `spent` (points still spent), `level` |
 | `tame` | `name`, `id` (creature ID), `level`, `family`; `pet` (the pet's name when it differs); `first` (`true`: your first pet) |
 | `petlevel` | `name`, `family`, `level` reached |
-| `petabandon`, `petstable`, `petunstable` | `name`, `level`, `family` |
+| `petdeath`, `petrevive`, `petabandon`, `petstable`, `petunstable` | `name`, `level`, `family` |
 | `achievement` | A Legacy Challenge: `id`, `name`, `points`, `category`, `reward` (e.g. a title), `already` (`true`: another character earned it first), `guild` (`true` for a guild one) |
 | `duel` | `opponent`, `result` (`won`, `lost` or `interrupted`: no winner), `fled` (the loser ran), `challenger` (`you` or `opponent`) |
 | `battleground` | `name`, `result` (`won`, `lost`, `draw` or `left`: before the end), `seconds`; from your scoreboard line, `killingBlows`, `honorableKills`, `deaths`, `honor` |
@@ -206,11 +215,21 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - A loot window combining several corpses is credited to the first one.
 - Objects are named from the cast that opened them; one opened without a cast (some quest crates) has only its object ID.
 - Lost and passed rolls come from the group loot history, and only if TravelLog saw them undecided, so one decided during a reload is missed.
-- Items used up (potions, food, reagents) aren't recorded.
+- Used items are what your bags lose with no vendor, trade, mail, auction or bank window open, not within 2 s of a destroy or 5 s of a quest turn-in or abandon, and not gear or bags (ammo counts). A cast of yours in the 1.5 s before counts them even with a window open, and names the spell; where the client hides casts, there's no spell.
+- So an item leaving some other way (expiring, taken by an NPC) counts as used, and more than 3 different items gone at once without a cast don't count.
+- A craft's materials go on its `receive` entry when its "You create" line comes within 1 s of them; where that line is hidden (dungeons), they're `use` entries.
+- A boss fight's `used` counts from its pull, across a reload, so a fight whose pull wasn't seen has none.
 - Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
 - Destroyed items count only when picked up from your bags or gear first, so a gamepad delete doesn't.
 - Guild bank moves are what your bags gain or lose within 10 s of a guild bank click: equipping or destroying an item in those seconds counts as a move, and an item held on the cursor longer is missed. Moves between tabs aren't logged.
 - Item tooltips read only this character's log and match by item ID, so another random enchantment counts as the same item. Buybacks and guild bank withdrawals don't count.
+
+**Auctions**
+
+- A sale ends when you take its money from the mail, an expiry when you take the item back, so mail left unopened ends nothing. A cancel ends at the auction house.
+- Sales and expiries go to the oldest open post of that item, by name; a cancel to the post with its auction ID. One without a post (posted before install) is logged without `posted`.
+- Expired, cancelled and won mails are known by their subject ("Auction expired: ...").
+- A cancel whose auction isn't in the auction house's list counts an equal share of what's left of its post.
 
 **Money and vendors**
 
@@ -242,6 +261,7 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - Durability lost needs a reading from before the death, so a revival after a reload while dead has none.
 - A failed quest is noticed at the next quest log update and logged once per time you take it: not again after a reload, and abandoning it then is a `questabandon`. One failed offline is logged when first seen. Only a timer running out is told apart, and a failed quest the server removes at once isn't seen.
 - Kills count only when they give XP, since this client has no combat log for addons. [TravelLog_Kills](../TravelLog_Kills/) records every kill.
+- The Levels view counts what's in the log, so the level you installed at counts only from then; its time played is whole. The next-level estimate assumes your recent rate holds and doesn't count rested XP ahead.
 - XP by source splits the XP bar's gain into quests, kills, discoveries, rested and other (the rest, including kills and discoveries hidden in dungeons). Totals count from the oldest session that recorded XP.
 - Rested is counted from the rested pool going down (two pool points per bonus XP), not while logged out, at max level or when the pool can't be read. It assumes a kill's chat line includes the bonus, as Classic's did, so rested is taken out of kills, or out of other beyond the kills chat showed.
 - AFK time is when the game marks you AFK (`/afk`, or idle long enough), so idle minutes before that count as active. A change the client hides (dungeons) is missed.
@@ -256,6 +276,7 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - Talent points count when applied, not when placed. Points spent before install, or on the other spec before you first switch to it, are remembered, not logged. Re-spent points count again in the total. A reset is logged without its cost.
 - No event says a tame worked: it's a Tame Beast channel that runs its full length, then a pet appearing within 5 s. The beast is your target when the channel began.
 - Pet level-ups are seen only while the pet is out. A level gained while the client hides the pet's level or GUID (dungeons) is logged when they show again, if the pet is still out.
+- A pet death is the game's `UNIT_DIED` for the hunter pet last out, or that pet showing as dead; each is logged once. A revive is a Revive Pet cast that goes through; it names the pet that died, or the one out, if known.
 - An abandon is the game's abandon call for the pet that's out, followed by the pet going within 5 s, so a pet dismissed or killed then after a failed abandon counts too. Abandoning a pet that isn't out isn't logged.
 - Stabling is seen only while the stable window is open. Moving a pet between stable slots isn't logged.
 - Gear and bags count from the first login: what you wear then is remembered, not logged. Both are kept by item ID, so a second copy, or another random enchantment, isn't logged again. Only your own bag slots count; Forever's bank has tabs, not bag slots.
@@ -270,4 +291,4 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 
 **Other**
 
-- A note can't be edited or deleted on its own.
+- An entry's `#` is its place in the log, oldest first, so deleting one renumbers those after it. A confirm for an entry that has since moved asks again.

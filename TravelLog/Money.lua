@@ -19,7 +19,7 @@ ns.MONEY_REASONS = {
 --------------------------------------------------------------------------------
 
 local slot  -- the bank slot being bought: { bank, slot }
-local sale  -- the auction sale whose mail money was just taken: { item }
+local sale  -- the auction sale whose mail money was just taken: { item, count, price, buyer }
 
 -- On Forever the bank's bag slots are bank tabs, bought for each bank.
 if C_Bank and C_Bank.PurchaseBankTab then
@@ -62,8 +62,9 @@ local function TookMail(index)
 	end
 end
 local function TookMoney(index)
-	local invoiceType, item = GetInboxInvoiceInfo(index)
-	sale = ns.Clean(invoiceType) == "seller" and { item = ns.Clean(item) } or nil
+	local invoiceType, item, buyer, bid = GetInboxInvoiceInfo(index)
+	sale = ns.Clean(invoiceType) == "seller" and { item = ns.Clean(item), buyer = ns.Clean(buyer), price = ns.Clean(bid),
+		count = ns.Clean((select(11, GetInboxInvoiceInfo(index)))) } or nil
 	ns.Mark("mailmoney")
 end
 hooksecurefunc("TakeInboxItem", TookMail)
@@ -120,10 +121,14 @@ ns.On("PLAYER_MONEY", function()
 		return
 	end
 	local data = { amount = delta, reason = reason, balance = money }
-	if reason == "auction" and ns.open.mail then
-		data.item = sale.item
+	local sold = reason == "auction" and ns.open.mail and sale
+	if sold then
+		data.item, sale = sold.item, nil
 	end
 	ns.Log("money", ns.WithCounterpart(data, reason))
+	if sold then
+		ns.AuctionSold(sold)
+	end
 
 	-- A bank slot also gets its own entry, once.
 	if reason == "bankslot" and slot then

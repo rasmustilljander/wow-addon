@@ -128,6 +128,9 @@ FACTION_STANDING_INCREASED = "Reputation with %s increased by %d."
 FACTION_STANDING_DECREASED = "Reputation with %s decreased by %d."
 ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
 ERR_TRADE_COMPLETE = "Trade complete."
+AUCTION_EXPIRED_MAIL_SUBJECT = "Auction expired: %s"
+AUCTION_REMOVED_MAIL_SUBJECT = "Auction canceled: %s"
+AUCTION_WON_MAIL_SUBJECT = "Auction won: %s"
 DUEL_WINNER_KNOCKOUT = "%1$s has defeated %2$s in a duel"
 DUEL_WINNER_RETREAT = "%2$s has fled from %1$s in a duel"
 COMBATLOG_HONORGAIN = "%s dies (Honorable Kill: %s). You gain %d Honor."
@@ -208,7 +211,7 @@ PLAYER_GUILD_UPDATE GUILD_ROSTER_UPDATE GUILD_RANKS_UPDATE GUILD_INVITE_REQUEST
 ACHIEVEMENT_EARNED ENCOUNTER_START ENCOUNTER_END PLAYER_UPDATE_RESTING PLAYER_FLAGS_CHANGED
 PLAYER_ENTER_COMBAT PLAYER_LEAVE_COMBAT START_AUTOREPEAT_SPELL STOP_AUTOREPEAT_SPELL UNIT_AURA
 UPDATE_INSTANCE_INFO BOSS_KILL
-UNIT_LEVEL UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED
+UNIT_LEVEL UNIT_HEALTH UNIT_PET_EXPERIENCE PET_STABLE_SHOW PET_STABLE_UPDATE PET_STABLE_CLOSED
 UNIT_INVENTORY_CHANGED BAG_CONTAINER_UPDATE UPDATE_EXHAUSTION]]):gmatch("%S+") do
 	M.KNOWN_EVENTS[e] = true
 end
@@ -1060,7 +1063,7 @@ function C_Traits.GetGroupDisplayInfoByTreeID(treeID)
 end
 -- Bags: M.bags["bag:slot"] is an item link, or { link, count, locked }.
 -- M.bagSlots[bag] is each bag's size and M.items[itemID] = { quality, price,
--- icon, noValue, level, uncached } what the client knows about an item
+-- icon, noValue, level, equipLoc, uncached } what the client knows about an item
 -- (uncached: GetItemInfo returns nothing yet).
 NUM_BAG_SLOTS, NUM_TOTAL_EQUIPPED_BAG_SLOTS = 4, 5
 M.bagSlots, M.items = { [0] = 16 }, {}
@@ -1258,7 +1261,8 @@ function C_Item.GetItemLink(loc) local e = BagItem(loc.bagID .. ":" .. loc.slotI
 function C_Item.GetStackCount(loc) return BagItem(loc.bagID .. ":" .. loc.slotIndex).count or 1 end
 function C_Item.GetItemInfoInstant(item)
 	local id = tonumber(item) or LinkID(item)
-	return id, "Junk", "Junk", "", (M.items[id] or {}).icon or 134400, 15, 0
+	local it = M.items[id] or {}
+	return id, "Junk", "Junk", it.equipLoc or "", it.icon or 134400, 15, 0
 end
 -- The guild bank: M.guildBankItems["tab:slot"] is an item link or { link,
 -- count }, M.guildBankTabs how many tabs the guild has, M.guildBankTab the
@@ -1385,8 +1389,8 @@ function M.lootAll(take)
 	M.fire("LOOT_CLOSED")
 end
 
--- Mail. M.inbox = { { sender, money, cod, invoice, items = { { link, count, currency }, ... } }, ... },
--- invoice being an auction house mail's { type, item, player } ("seller" for a sale);
+-- Mail. M.inbox = { { sender, subject, money, cod, invoice, items = { { link, count, currency }, ... } }, ... },
+-- invoice being an auction house mail's { type, item, player, bid, count } ("seller" for a sale);
 -- M.sendItems[i] = { link, count } are the attachments of the mail being
 -- written, and SendMail puts { to, items } in M.sentMail. Taking money or
 -- items does nothing: as in the game, the result arrives later as events.
@@ -1398,7 +1402,10 @@ function GetInboxHeaderInfo(i)
 end
 function GetInboxInvoiceInfo(i)
 	local inv = M.inbox[i].invoice
-	if inv then return inv.type, inv.item, inv.player, inv.bid or 0, inv.buyout or 0, inv.deposit or 0, inv.consignment or 0 end
+	if inv then
+		return inv.type, inv.item, inv.player, inv.bid or 0, inv.buyout or 0, inv.deposit or 0, inv.consignment or 0,
+			0, nil, nil, inv.count
+	end
 end
 function TakeInboxMoney(i) assert(M.inbox[i]) end
 function TakeInboxItem(i, a) assert(M.inbox[i] and a) end
@@ -1436,6 +1443,9 @@ C_AuctionHouse = {}
 function C_AuctionHouse.QueryOwnedAuctions(sorts) assert(type(sorts) == "table"); M.ownedQueries = M.ownedQueries + 1 end
 function C_AuctionHouse.HasFullOwnedAuctionResults() return true end
 function C_AuctionHouse.GetOwnedAuctions() return M.ownedAuctions end
+-- Cancelling puts the ID in M.cancels; the test fires AUCTION_CANCELED.
+M.cancels = {}
+function C_AuctionHouse.CancelAuction(id) assert(type(id) == "number"); M.cancels[#M.cancels + 1] = id end
 -- Posting: what was posted goes in M.posts ({ fn, item, duration, quantity,
 -- ... }); M.postWarning makes a post need confirming. The auction exists
 -- once the test fires AUCTION_HOUSE_AUCTION_CREATED.

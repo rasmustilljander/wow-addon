@@ -7,7 +7,7 @@ local MIN_QUALITY = Enum and Enum.ItemQuality and Enum.ItemQuality.Rare or 3
 -- How a receive entry's item came, as in "First won ...".
 local HOW = {
 	loot = "looted", roll = "won", created = "made", quest = "got from a quest",
-	mail = "got by mail", trade = "got in a trade", received = "received",
+	mail = "got by mail", trade = "got in a trade", auction = "bought at auction", received = "received",
 }
 
 -- Item ID -> { first = the earliest entry, times = entries }. Built from the
@@ -31,6 +31,10 @@ local function Got(item, e)
 	end
 end
 
+ns.On("TL_LOG_CHANGED", function()
+	index, indexed = {}, 0
+end)
+
 -- The first entry and the number of times you got an item, by item ID.
 function ns.ItemHistory(itemID)
 	local log = ns.char.log
@@ -40,7 +44,7 @@ function ns.ItemHistory(itemID)
 			for _, it in ipairs(e.items or {}) do
 				Got(it.item, e)
 			end
-		elseif e.type == "receive" or e.type == "buy" then
+		elseif (e.type == "receive" and e.how ~= "returned") or e.type == "buy" then
 			Got(e.item, e)
 		end
 	end

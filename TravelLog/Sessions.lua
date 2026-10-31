@@ -114,6 +114,35 @@ ns.On("PLAYER_LOGOUT", function()
 	end
 end)
 
+-- XP per hour over your latest play, for the next-level estimate: whole
+-- sessions, newest first, until they add up to RATE_WINDOW seconds (AFK left
+-- out by the setting). Returns the rate and the seconds it's from, or nothing
+-- before RATE_AFTER seconds or without XP.
+local RATE_WINDOW = 7200
+
+function ns.XPRate()
+	local now, xp, seconds = time(), 0, 0
+	local sessions = ns.char.sessions
+	for i = #sessions, 1, -1 do
+		local s = sessions[i]
+		local current = s == ns.session
+		local stop = current and now or s.stop
+		if stop then
+			local length = stop - s.start
+			if ns.settings.ratesSkipAFK then
+				length = length - (s.afk or 0) - (current and afkSince and now - afkSince or 0)
+			end
+			xp, seconds = xp + (s.xp or 0), seconds + math.max(length, 0)
+			if seconds >= RATE_WINDOW then
+				break
+			end
+		end
+	end
+	if seconds >= RATE_AFTER and xp > 0 then
+		return xp / seconds * 3600, seconds
+	end
+end
+
 ns.AddSetting("General", "Leave AFK time out of gold and XP per hour", function()
 	return ns.settings.ratesSkipAFK
 end, function(on)

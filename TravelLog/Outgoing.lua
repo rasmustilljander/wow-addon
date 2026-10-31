@@ -1,6 +1,6 @@
--- Items that leave your bags: handed over in a trade, sent by mail, put up
--- for auction or destroyed, and items moved to and from the guild bank.
--- Money that goes with them is the money ledger's.
+-- Items that leave your bags: handed over in a trade, sent by mail or
+-- destroyed, and items moved to and from the guild bank. Auctions are in
+-- Auctions.lua; money that goes with them is the money ledger's.
 local _, ns = ...
 
 -- Counts can come back as nil or 0 for single items.
@@ -86,50 +86,6 @@ ns.On("MAIL_FAILED", function()
 end)
 
 --------------------------------------------------------------------------------
--- Auctions
---------------------------------------------------------------------------------
-
-local posting -- the auction being posted: { item, count, bid, buyout }
-
--- A post that needs confirming comes again as ConfirmPost*. Either way it's
--- recorded once the auction exists. The money it costs is its deposit.
-local function Post(location, _, quantity, bid, buyout)
-	ns.Mark("deposit")
-	local item = C_Item.DoesItemExist(location) and ns.Clean(C_Item.GetItemLink(location))
-	posting = item and { item = item, count = Count(quantity), bid = ns.Clean(bid), buyout = ns.Clean(buyout) } or nil
-end
-
--- Commodities have one price per item.
-local function PostCommodity(location, duration, quantity, unitPrice)
-	unitPrice, quantity = ns.Clean(unitPrice), ns.Clean(quantity)
-	Post(location, duration, quantity, nil, unitPrice and quantity and unitPrice * quantity)
-end
-
-if C_AuctionHouse then
-	for name, fn in pairs({ PostItem = Post, ConfirmPostItem = Post,
-		PostCommodity = PostCommodity, ConfirmPostCommodity = PostCommodity }) do
-		if C_AuctionHouse[name] then
-			hooksecurefunc(C_AuctionHouse, name, fn)
-		end
-	end
-end
-
--- Posting several stacks of an item creates an auction for each; the first
--- records them all.
-ns.On("AUCTION_HOUSE_AUCTION_CREATED", function()
-	if posting then
-		ns.Log("post", posting)
-		ns.Add(posting.count, "given", "auction")
-	end
-	posting = nil
-end)
-ns.On("TL_CLOSE", function(context)
-	if context == "auction" then
-		posting = nil
-	end
-end)
-
---------------------------------------------------------------------------------
 -- Destroyed items
 --------------------------------------------------------------------------------
 
@@ -161,6 +117,7 @@ hooksecurefunc("DeleteCursorItem", function()
 	-- confirmation. The accepted second call clears it; a cancellation goes
 	-- through ClearCursor above.
 	if held and not GetCursorInfo() and ns.char then
+		ns.Mark("destroy")
 		ns.Log("destroy", held)
 		ns.Add(held.count, "given", "destroy")
 	end
@@ -218,22 +175,11 @@ local function AddGrowth(into, from, to)
 	end
 end
 
--- By name, so the order is the same every time.
-local function List(counts)
-	local items = {}
-	for link, n in pairs(counts) do
-		items[#items + 1] = { item = link, count = n }
-	end
-	local function Name(it) return it.item:match("%[(.-)%]") or it.item end
-	table.sort(items, function(a, b) return Name(a) < Name(b) end)
-	return #items > 0 and items or nil
-end
-
 local function LeaveGuildBank()
 	if not moved then
 		return
 	end
-	local deposited, withdrawn = List(moved.deposited), List(moved.withdrawn)
+	local deposited, withdrawn = ns.ItemList(moved.deposited), ns.ItemList(moved.withdrawn)
 	bagCounts, moved = nil, nil
 	if deposited or withdrawn then
 		ns.Log("guildbank", { deposited = deposited, withdrawn = withdrawn, guild = ns.char.guild and ns.char.guild.name })

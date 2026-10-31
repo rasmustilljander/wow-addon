@@ -188,7 +188,7 @@ check(TravelLogKillsDB.mobs["Kobold Worker"].count == 7 and #TravelLogKillsDB.pl
 -- shows the zones it died in.
 check(Run("window") == "", "/kills window")
 local w = M.ns("TravelLog").window
-local page = w.pages[3].views[3] -- after Events and Sessions
+local page = w.pages[3].views[4] -- after Events, Sessions and Levels
 check(w:IsShown() and w.selectedTab == 3 and page:IsShown() and not w.pages[3].views[1]:IsShown(),
 	"opens on History's Kills view")
 -- The shown rows of a list, as "name count".

@@ -619,6 +619,8 @@ if C_QuestLog.SetAbandonQuest and C_QuestLog.GetAbandonQuest and C_QuestLog.Aban
 	end)
 	hooksecurefunc(C_QuestLog, "AbandonQuest", function()
 		abandoned = abandoning
+		-- Its quest items leave your bags; they aren't used up.
+		ns.Mark("questabandon")
 	end)
 end
 

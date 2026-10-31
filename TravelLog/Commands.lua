@@ -114,6 +114,18 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Items used up: "34, 12 of them in crafts".
+function ns.UsedText(st)
+	local used = (st or ns.stats).used or {}
+	return ("%s, %s of them in crafts"):format(Count((used.items or 0) + (used.crafting or 0)), Count(used.crafting))
+end
+
+-- How auctioned items ended: "15 sold, 5 expired, 1 cancelled".
+function ns.AuctionsText(st)
+	local a = st.auctions or {}
+	return ("%s sold, %s expired, %s cancelled"):format(Count(a.sold), Count(a.expired), Count(a.cancelled))
+end
+
 -- Items moved to and from the guild bank: "4 deposited, 2 withdrawn".
 function ns.GuildBankText(st)
 	local g = st.guildBank or {}
@@ -344,6 +356,8 @@ local function ShowStats(arg)
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 	ns.Print("Rolls: %s", ns.RollsText(st))
 	ns.Print("Items out: %s", ns.GivenText(st))
+	ns.Print("Items used: %s", ns.UsedText(st))
+	ns.Print("Auctioned items: %s", ns.AuctionsText(st))
 	ns.Print("Guild bank items: %s", ns.GuildBankText(st))
 	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
@@ -368,9 +382,9 @@ local function ShowStats(arg)
 		Count(st.instanceResets), Count(st.lockouts),
 		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots), Count(st.notes))
 	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, pet levels %s, pets abandoned %s, new gear %s, bags %s, enchants %s",
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, pet levels %s, pet deaths %s, pets abandoned %s, new gear %s, bags %s, enchants %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
-		Count(st.tames), Count(st.petLevels), Count(st.petAbandons), Count(st.gear), Count(st.bags), Count(st.enchants))
+		Count(st.tames), Count(st.petLevels), Count(st.petDeaths), Count(st.petAbandons), Count(st.gear), Count(st.bags), Count(st.enchants))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
 	ns.Print("World buffs: %s", Count(st.worldBuffs))
 	ns.Print("Reputation: %s", ns.ReputationText(st))
@@ -452,6 +466,8 @@ local function PetText(e)
 	return ("your %s%s"):format(e.level and "level " .. e.level .. " " or "", e.family or "pet")
 end
 
+local AUCTION_ENDS = { sold = "Sold at auction:", expired = "Auction expired:", cancelled = "Cancelled auction:" }
+
 local DESCRIBE = {
 	area = function(e)
 		return (e.first and "First visit to %s" or "Entered %s"):format(e.subzone or e.zone or "?")
@@ -471,7 +487,12 @@ local DESCRIBE = {
 	receive = function(e)
 		local how = e.roll and ("won with a roll of %d"):format(e.roll) or e.how or "?"
 		local from = e.partner or e.sender
-		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from and " from " .. from or "")
+		from = from and " from " .. from or e.materials and " from " .. Items(e.materials) or ""
+		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from)
+	end,
+	use = function(e)
+		local text = "Used " .. Item(e.item, e.count)
+		return e.spell and ("%s (%s)"):format(text, e.spell) or text
 	end,
 	roll = function(e)
 		local mine = e.roll and ("%s %d"):format(e.choice, e.roll) or e.choice or "?"
@@ -489,7 +510,17 @@ local DESCRIBE = {
 		local text = ("Posted %s at auction"):format(Item(e.item, e.count))
 		if e.buyout then text = ("%s, buyout %s"):format(text, ns.MoneyText(e.buyout)) end
 		if e.bid then text = ("%s, bid %s"):format(text, ns.MoneyText(e.bid)) end
-		return text
+		local ended = {}
+		for _, result in ipairs({ "sold", "expired", "cancelled" }) do
+			if e[result] then ended[#ended + 1] = ("%d %s"):format(e[result], result) end
+		end
+		return #ended > 0 and ("%s: %s"):format(text, table.concat(ended, ", ")) or text
+	end,
+	auction = function(e)
+		local text = ("%s %s"):format(AUCTION_ENDS[e.result] or "Auction ended:", Item(e.item, e.count))
+		if e.price then text = ("%s for %s"):format(text, ns.MoneyText(e.price)) end
+		if e.buyer then text = ("%s to %s"):format(text, e.buyer) end
+		return e.posted and ("%s (posted %s before)"):format(text, ns.Ago(e.posted, e.time)) or text
 	end,
 	destroy = function(e) return ("Destroyed %s"):format(Item(e.item, e.count)) end,
 	guildbank = function(e)
@@ -554,7 +585,8 @@ local DESCRIBE = {
 		local about = {}
 		if e.difficulty then about[#about + 1] = e.difficulty end
 		if e.size then about[#about + 1] = e.size .. " players" end
-		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
+		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
+		return e.used and ("%s; used %s"):format(text, Items(e.used)) or text
 	end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	rest = function(e) return ("Started resting in %s"):format(e.subzone or e.zone or "?") end,
@@ -712,6 +744,8 @@ local DESCRIBE = {
 		local text = (("%s reached level %d"):format(PetName(e), e.level or 0):gsub("^%l", string.upper))
 		return e.family and e.name ~= e.family and ("%s (%s)"):format(text, e.family) or text
 	end,
+	petdeath = function(e) return (("%s died"):format(PetText(e)):gsub("^%l", string.upper)) end,
+	petrevive = function(e) return "Revived " .. PetText(e) end,
 	petabandon = function(e) return "Abandoned " .. PetText(e) end,
 	petstable = function(e) return "Stabled " .. PetText(e) end,
 	petunstable = function(e) return ("Took %s out of the stable"):format(PetText(e)) end,
@@ -766,9 +800,9 @@ local LOG_GROUP = {
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
 	instance = "Travel", instanceleave = "Travel", instancereset = "Travel", lockout = "Travel", rest = "Travel",
 	restleave = "Travel", screenshot = "Travel", note = "Travel",
-	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
+	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot", use = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
-	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade", guildbank = "Trade",
+	give = "Trade", send = "Trade", post = "Trade", auction = "Trade", bankslot = "Trade", guildbank = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
 	questdone = "Life", questabandon = "Life", questfail = "Life", kill = "Life", discover = "Life",
 	boss = "Life", duel = "Life", honorkill = "Life", honor = "Life", pvprank = "Life", battleground = "Life",
@@ -778,12 +812,13 @@ local LOG_GROUP = {
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
 	enchant = "Progress", bag = "Progress",
 	petlevel = "Progress", petabandon = "Progress", petstable = "Progress", petunstable = "Progress",
+	petdeath = "Progress", petrevive = "Progress",
 	achievement = "Progress",
 }
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
-	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
+	post = "Auction", auction = "Auction ended", destroy = "Destroyed", use = "Used", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
 	flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",
@@ -799,6 +834,7 @@ local LOG_LABEL = {
 	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", tame = "Pet tamed", equip = "Gear", enchant = "Enchant", bag = "Bag",
 	achievement = "Legacy Challenge",
+	petdeath = "Pet death", petrevive = "Pet revived",
 	petlevel = "Pet level", petabandon = "Pet abandoned", petstable = "Pet stabled", petunstable = "Pet unstabled",
 }
 
@@ -865,12 +901,11 @@ local function ShowLog(arg)
 	end
 	local limit = tonumber(number) or 15
 	query = query or (number and "" or arg)
-	local found = {}
+	local found = {} -- log positions, newest first
 	if limit > 0 then
 		for i = #ns.char.log, 1, -1 do
-			local e = ns.char.log[i]
-			if ns.LogMatches(e, query) then
-				found[#found + 1] = e
+			if ns.LogMatches(ns.char.log[i], query) then
+				found[#found + 1] = i
 				if #found >= limit then break end
 			end
 		end
@@ -881,9 +916,29 @@ local function ShowLog(arg)
 		ns.Print("Last %d events matching \"%s\":", #found, query)
 	end
 	for i = #found, 1, -1 do
-		local text, where = ns.Describe(found[i])
-		print(("  %s  %s  |cff999999%s|r"):format(date("%m-%d %H:%M", found[i].time), text, where))
+		local e = ns.char.log[found[i]]
+		local text, where = ns.Describe(e)
+		print(("  |cff999999#%d|r  %s  %s  |cff999999%s|r"):format(found[i], date("%m-%d %H:%M", e.time), text, where))
 	end
+end
+
+-- Log entry n as typed ("12" or "#12"), or nil and a message saying why not.
+local function Entry(n)
+	n = tonumber((n or ""):match("^#?(%d+)$"))
+	if not n then
+		return nil
+	end
+	local e = ns.char.log[n]
+	if not e then
+		ns.Print("no entry #%d: the log has %s (see /tl log)", n, Count(#ns.char.log))
+		return false
+	end
+	return e, n
+end
+
+local function EntryText(e, n)
+	local text, where = ns.Describe(e)
+	return ("#%d %s  %s, %s"):format(n, date("%Y-%m-%d %H:%M", e.time), text, where)
 end
 
 --------------------------------------------------------------------------------
@@ -898,6 +953,48 @@ ns.Command("note", "note <text> - add a note to the log, stamped with the time a
 	ns.Log("note", { text = text })
 	ns.Add(1, "notes")
 	ns.Print("note added: %s", text)
+end)
+
+--------------------------------------------------------------------------------
+-- /tl edit, /tl delete
+--------------------------------------------------------------------------------
+
+ns.Command("edit", "edit <#> <text> - change a note's text (# from /tl log)", function(_, text)
+	local n, new = text:match("^(%S+)%s+(.+)$")
+	local e, i = Entry(n)
+	if e == nil then
+		return false
+	elseif not e then
+		return
+	elseif e.type ~= "note" then
+		ns.Print("#%d isn't a note; only notes can be edited", i)
+		return
+	end
+	e.text = new
+	ns.version = ns.version + 1
+	ns.Print("note changed: %s", new)
+end)
+
+-- The entry the last "/tl delete <#>" asked about, so the confirm can't
+-- delete another one that took its number since.
+local asked
+
+ns.Command("delete", "delete <#> - delete one entry (# from /tl log); asks first", function(arg)
+	local n, confirm = arg:match("^(%S+)%s*(.-)$")
+	local e, i = Entry(n)
+	if e == nil or (confirm ~= "" and confirm ~= "confirm") then
+		return false
+	elseif not e then
+		return
+	end
+	if confirm == "" or asked ~= e then
+		asked = e
+		ns.Print("delete %s? Type /tl delete %d confirm", EntryText(e, i), i)
+		return
+	end
+	asked = nil
+	ns.Remove(e)
+	ns.Print("deleted %s", EntryText(e, i))
 end)
 
 --------------------------------------------------------------------------------
