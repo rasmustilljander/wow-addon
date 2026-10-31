@@ -92,6 +92,18 @@ function ns.IsMe(name)
 	return name:match("^[^%-]+") == UnitName("player")
 end
 
+-- Item link -> count as a list of { item, count }, by name so the order is
+-- the same every time; nil when empty.
+function ns.ItemList(counts)
+	local items = {}
+	for link, n in pairs(counts) do
+		items[#items + 1] = { item = link, count = n }
+	end
+	local function Name(it) return it.item:match("%[(.-)%]") or it.item end
+	table.sort(items, function(a, b) return Name(a) < Name(b) end)
+	return #items > 0 and items or nil
+end
+
 -- Adds n to a (possibly nested) counter in this character's stats, e.g.
 -- ns.Add(1, "jumps") or ns.Add(12.5, "distance", "mount").
 function ns.Add(n, ...)

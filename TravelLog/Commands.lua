@@ -114,6 +114,12 @@ function ns.GivenText(st)
 		Count(given.trade), Count(given.mail), Count(given.auction), Count(given.destroy))
 end
 
+-- Items used up: "34, 12 of them in crafts".
+function ns.UsedText(st)
+	local used = (st or ns.stats).used or {}
+	return ("%s, %s of them in crafts"):format(Count((used.items or 0) + (used.crafting or 0)), Count(used.crafting))
+end
+
 -- Items moved to and from the guild bank: "4 deposited, 2 withdrawn".
 function ns.GuildBankText(st)
 	local g = st.guildBank or {}
@@ -344,6 +350,7 @@ local function ShowStats(arg)
 		ns.MoneyText((v.spent or 0) + (v.repairCost or 0)), ns.MoneyText(v.earned))
 	ns.Print("Rolls: %s", ns.RollsText(st))
 	ns.Print("Items out: %s", ns.GivenText(st))
+	ns.Print("Items used: %s", ns.UsedText(st))
 	ns.Print("Guild bank items: %s", ns.GuildBankText(st))
 	ns.Print("Money in: %s", ns.MoneyByReason(st, "gained"))
 	ns.Print("Money out: %s", ns.MoneyByReason(st, "spent"))
@@ -471,7 +478,12 @@ local DESCRIBE = {
 	receive = function(e)
 		local how = e.roll and ("won with a roll of %d"):format(e.roll) or e.how or "?"
 		local from = e.partner or e.sender
-		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from and " from " .. from or "")
+		from = from and " from " .. from or e.materials and " from " .. Items(e.materials) or ""
+		return ("Received %s (%s%s)"):format(Item(e.item, e.count), how, from)
+	end,
+	use = function(e)
+		local text = "Used " .. Item(e.item, e.count)
+		return e.spell and ("%s (%s)"):format(text, e.spell) or text
 	end,
 	roll = function(e)
 		local mine = e.roll and ("%s %d"):format(e.choice, e.roll) or e.choice or "?"
@@ -554,7 +566,8 @@ local DESCRIBE = {
 		local about = {}
 		if e.difficulty then about[#about + 1] = e.difficulty end
 		if e.size then about[#about + 1] = e.size .. " players" end
-		return #about > 0 and ("%s (%s)"):format(text, table.concat(about, ", ")) or text
+		if #about > 0 then text = ("%s (%s)"):format(text, table.concat(about, ", ")) end
+		return e.used and ("%s; used %s"):format(text, Items(e.used)) or text
 	end,
 	bind = function(e) return ("Hearthstone set to %s"):format(e.place or "?") end,
 	rest = function(e) return ("Started resting in %s"):format(e.subzone or e.zone or "?") end,
@@ -768,7 +781,7 @@ local LOG_GROUP = {
 	teleport = "Travel", summon = "Travel", board = "Travel", disembark = "Travel",
 	instance = "Travel", instanceleave = "Travel", instancereset = "Travel", lockout = "Travel", rest = "Travel",
 	restleave = "Travel", screenshot = "Travel", note = "Travel",
-	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot",
+	loot = "Loot", receive = "Loot", roll = "Loot", destroy = "Loot", use = "Loot",
 	buy = "Trade", sell = "Trade", buyback = "Trade", repair = "Trade", money = "Trade",
 	give = "Trade", send = "Trade", post = "Trade", bankslot = "Trade", guildbank = "Trade",
 	death = "Life", release = "Life", revive = "Life", level = "Life", quest = "Life",
@@ -786,7 +799,7 @@ local LOG_GROUP = {
 local LOG_LABEL = {
 	area = "Area", loot = "Loot", receive = "Item", roll = "Roll", buy = "Purchase", sell = "Sale",
 	buyback = "Buyback", repair = "Repair", give = "Given", send = "Mail sent",
-	post = "Auction", destroy = "Destroyed", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
+	post = "Auction", destroy = "Destroyed", use = "Used", money = "Money", bankslot = "Bank slot", guildbank = "Guild bank",
 	flight = "Flight",
 	landed = "Landing", hearth = "Hearth", bind = "Hearth bind", teleport = "Teleport",
 	summon = "Summon", board = "Boarding", disembark = "Arrival", instance = "Instance",

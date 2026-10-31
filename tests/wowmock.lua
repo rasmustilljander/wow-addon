@@ -1060,7 +1060,7 @@ function C_Traits.GetGroupDisplayInfoByTreeID(treeID)
 end
 -- Bags: M.bags["bag:slot"] is an item link, or { link, count, locked }.
 -- M.bagSlots[bag] is each bag's size and M.items[itemID] = { quality, price,
--- icon, noValue, level, uncached } what the client knows about an item
+-- icon, noValue, level, equipLoc, uncached } what the client knows about an item
 -- (uncached: GetItemInfo returns nothing yet).
 NUM_BAG_SLOTS, NUM_TOTAL_EQUIPPED_BAG_SLOTS = 4, 5
 M.bagSlots, M.items = { [0] = 16 }, {}
@@ -1258,7 +1258,8 @@ function C_Item.GetItemLink(loc) local e = BagItem(loc.bagID .. ":" .. loc.slotI
 function C_Item.GetStackCount(loc) return BagItem(loc.bagID .. ":" .. loc.slotIndex).count or 1 end
 function C_Item.GetItemInfoInstant(item)
 	local id = tonumber(item) or LinkID(item)
-	return id, "Junk", "Junk", "", (M.items[id] or {}).icon or 134400, 15, 0
+	local it = M.items[id] or {}
+	return id, "Junk", "Junk", it.equipLoc or "", it.icon or 134400, 15, 0
 end
 -- The guild bank: M.guildBankItems["tab:slot"] is an item link or { link,
 -- count }, M.guildBankTabs how many tabs the guild has, M.guildBankTab the

@@ -22,6 +22,7 @@ Every entry is stamped with time, zone, subzone, map ID and map coordinates.
 | **Loot** | Corpses, pickpockets, chests, herbs, ore, fishing and containers: items, coins and source (name, NPC or object ID, and the spell for herbs, ore, chests, skinning and Pick Pocket). |
 | **Other items** | Quest rewards, crafts, roll wins (with your roll), trades, mail, and other items that arrive without a loot window. |
 | **Rolls** | Group loot rolls you lost or passed on: your choice and roll, and who won with what. |
+| **Items used** | Potions, food, bandages, reagents and ammo you use up, with the spell when the client shows it; the materials each craft took; what each boss fight used. |
 | **Items out** | Items you trade, mail, put up for auction (with bid and buyout) or destroy. |
 | **Guild bank** | Items you put in and take out, one entry per visit. |
 | **Vendors** | Purchases with price, sales, buybacks and repairs, with the vendor's name. |
@@ -139,7 +140,8 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | --- | --- |
 | `area` | `first`: `true` on your first visit to the subzone (or zone) |
 | `loot` | `source` (name), `sourceType` (`Creature`, `GameObject`, `Item`, `Fishing`, ...), `sourceID`, `via` (the spell, e.g. Herb Gathering, Pick Pocket), `items`, `money`; with TravelLog_Nodes, `lastHere` (when the spot was last looted) and `lastBy` (the alt who did) |
-| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll` or `received`); `roll` for a won roll, `sender` from mail, `partner` from a trade |
+| `receive` | `item`, `count`, `how` (`loot`, `created`, `quest`, `mail`, `trade`, `roll` or `received`); `roll` for a won roll, `sender` from mail, `partner` from a trade, `materials` (an item list) for a craft |
+| `use` | `item`, `count`, and `spell` and `spellID` of your cast that used it, when seen. The same item used the same way within 30 s of the last adds to the entry, if nothing was logged in between. |
 | `roll` | `item`, `choice` (`need`, `offspec`, `transmog`, `greed` or `pass`), `roll` (none for a pass), `winner` and `winnerRoll` (none when everyone passed) |
 | `buy`, `sell`, `buyback` | `item`, `count`, `price`, `vendor`; `otherCurrency` (`true`) for a `buy` priced in items or currency |
 | `repair` | `price`, `vendor`, `guildBank` (`true` when the guild paid) |
@@ -160,7 +162,7 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | `instanceleave` | `name`, `kind`, `seconds` inside; `kills` and `wipes` when any |
 | `instancereset` | `name`; `failed` when it didn't work: `inside` (players still inside), `offline` (party members offline) or `zoning` (players entering) |
 | `lockout` | `name`, `kind` (`dungeon` or `raid`), `difficulty`, `size`, `lockout` (its ID), `resets` (a `time` value) |
-| `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` (from the pull, when seen), `instance` |
+| `boss` | `name` and `id` of the encounter, `result` (`kill` or `wipe`), `difficulty`, `size` (group size), `seconds` (from the pull, when seen), `instance`, `used` (items used during the fight, when any) |
 | `bind` | `place`: where your hearthstone is now set |
 | `restleave` | `seconds` resting, `rested` (your rested XP pool as you leave, if any) |
 | `note` | `text` |
@@ -209,7 +211,10 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - A loot window combining several corpses is credited to the first one.
 - Objects are named from the cast that opened them; one opened without a cast (some quest crates) has only its object ID.
 - Lost and passed rolls come from the group loot history, and only if TravelLog saw them undecided, so one decided during a reload is missed.
-- Items used up (potions, food, reagents) aren't recorded.
+- Used items are what your bags lose with no vendor, trade, mail, auction or bank window open, not within 2 s of a destroy or 5 s of a quest turn-in or abandon, and not gear or bags (ammo counts). A cast of yours in the 1.5 s before counts them even with a window open, and names the spell; where the client hides casts, there's no spell.
+- So an item leaving some other way (expiring, taken by an NPC) counts as used, and more than 3 different items gone at once without a cast don't count.
+- A craft's materials go on its `receive` entry when its "You create" line comes within 1 s of them; where that line is hidden (dungeons), they're `use` entries.
+- A boss fight's `used` counts from its pull, across a reload, so a fight whose pull wasn't seen has none.
 - Mailed items are saved by item ID, so their link has no random enchantment ("of the Bear").
 - Destroyed items count only when picked up from your bags or gear first, so a gamepad delete doesn't.
 - Guild bank moves are what your bags gain or lose within 10 s of a guild bank click: equipping or destroying an item in those seconds counts as a move, and an item held on the cursor longer is missed. Moves between tabs aren't logged.
