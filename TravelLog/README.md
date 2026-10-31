@@ -29,7 +29,7 @@ Every entry is stamped with time, zone, subzone, map ID and map coordinates.
 | **Travel** | Zone and subzone changes (first visits marked); time per zone, and how much of it in combat, dead, AFK, flying and grouped (totals only); flights; hearthstones and other teleports; summons; boat and zeppelin rides; dungeons and raids (time inside, bosses killed and wiped on); instance resets and new lockouts; resting in inns and cities; hearthstone binds; screenshots ([some automatic](#automatic-screenshots)); notes you add with `/tl note`. |
 | **Life** | Deaths (killer, spell and damage, or drowning, fatigue, a fall, fire, lava or slime); spirit releases; revivals (how, time dead, durability lost); level-ups (time the level took, health, power, base stats, item level and what the level gave); quests accepted, completed, abandoned and failed; kills that gave XP; boss kills and wipes; discoveries; world buffs (Rallying Cry, Warchief's Blessing, Spirit of Zandalar, Songflower, the Dire Maul tribute, Sayge's fortunes, Boon of Blackfathom); guilds joined, left or kicked from, and rank changes. |
 | **PvP** | Duels, battlegrounds (result, length and your scoreboard line), honorable kills, honor awards and your PvP rank going up or down. |
-| **Progress** | Spells and recipes learned (rank, trainer, cost); new skills and every 25 skill points; talent points spent and reset; flight paths found; reputation standings, and reputation gained and lost per faction (totals only); the first ride on each mount; beasts tamed, your hunter pet's level-ups, abandoning and stabling; the first time you wear each piece of gear (not shirts or tabards) and each bag; new permanent enchants on worn gear; Legacy Challenges (Forever's achievements). |
+| **Progress** | Spells and recipes learned (rank, trainer, cost); new skills and every 25 skill points; talent points spent and reset; flight paths found; reputation standings, and reputation gained and lost per faction (totals only); the first ride on each mount; beasts tamed, your hunter pet's level-ups, deaths, revives, abandoning and stabling; the first time you wear each piece of gear (not shirts or tabards) and each bag; new permanent enchants on worn gear; Legacy Challenges (Forever's achievements). |
 | **Sessions** | Each login or reload: start and end (time and place), level, money, experience gained (and its rested bonus) and time AFK. |
 
 ## Window
@@ -183,7 +183,7 @@ Every entry has `type`, `time` and the place stamp (`zone`, `subzone`, `map`, `x
 | `talentreset` | `points` taken back, `spent` (points still spent), `level` |
 | `tame` | `name`, `id` (creature ID), `level`, `family`; `pet` (the pet's name when it differs); `first` (`true`: your first pet) |
 | `petlevel` | `name`, `family`, `level` reached |
-| `petabandon`, `petstable`, `petunstable` | `name`, `level`, `family` |
+| `petdeath`, `petrevive`, `petabandon`, `petstable`, `petunstable` | `name`, `level`, `family` |
 | `achievement` | A Legacy Challenge: `id`, `name`, `points`, `category`, `reward` (e.g. a title), `already` (`true`: another character earned it first), `guild` (`true` for a guild one) |
 | `duel` | `opponent`, `result` (`won`, `lost` or `interrupted`: no winner), `fled` (the loser ran), `challenger` (`you` or `opponent`) |
 | `battleground` | `name`, `result` (`won`, `lost`, `draw` or `left`: before the end), `seconds`; from your scoreboard line, `killingBlows`, `honorableKills`, `deaths`, `honor` |
@@ -257,6 +257,7 @@ Untested in the live game; written against the Forever 1.60.1 UI source and test
 - Talent points count when applied, not when placed. Points spent before install, or on the other spec before you first switch to it, are remembered, not logged. Re-spent points count again in the total. A reset is logged without its cost.
 - No event says a tame worked: it's a Tame Beast channel that runs its full length, then a pet appearing within 5 s. The beast is your target when the channel began.
 - Pet level-ups are seen only while the pet is out. A level gained while the client hides the pet's level or GUID (dungeons) is logged when they show again, if the pet is still out.
+- A pet death is the game's `UNIT_DIED` for the hunter pet last out, or that pet showing as dead; each is logged once. A revive is a Revive Pet cast that goes through; it names the pet that died, or the one out, if known.
 - An abandon is the game's abandon call for the pet that's out, followed by the pet going within 5 s, so a pet dismissed or killed then after a failed abandon counts too. Abandoning a pet that isn't out isn't logged.
 - Stabling is seen only while the stable window is open. Moving a pet between stable slots isn't logged.
 - Gear and bags count from the first login: what you wear then is remembered, not logged. Both are kept by item ID, so a second copy, or another random enchantment, isn't logged again. Only your own bag slots count; Forever's bank has tabs, not bag slots.

@@ -368,9 +368,9 @@ local function ShowStats(arg)
 		Count(st.instanceResets), Count(st.lockouts),
 		Count(st.rests), ns.Duration(st.restTime or 0), Count(st.screenshots), Count(st.notes))
 	ns.Print("Time by zone: %s", ns.ZoneTimeText(st))
-	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, pet levels %s, pets abandoned %s, new gear %s, bags %s, enchants %s",
+	ns.Print("Spells learned %s, new skills %s, skill points %s, talent points %s, flight paths found %s, mounts %s, pets tamed %s, pet levels %s, pet deaths %s, pets abandoned %s, new gear %s, bags %s, enchants %s",
 		Count(st.spells), Count(st.skills), Count(st.skillups), Count(st.talents), Count(st.flightPaths), Count(st.mounts),
-		Count(st.tames), Count(st.petLevels), Count(st.petAbandons), Count(st.gear), Count(st.bags), Count(st.enchants))
+		Count(st.tames), Count(st.petLevels), Count(st.petDeaths), Count(st.petAbandons), Count(st.gear), Count(st.bags), Count(st.enchants))
 	ns.Print("Legacy Challenges: %s", ns.ChallengesText(st))
 	ns.Print("World buffs: %s", Count(st.worldBuffs))
 	ns.Print("Reputation: %s", ns.ReputationText(st))
@@ -712,6 +712,8 @@ local DESCRIBE = {
 		local text = (("%s reached level %d"):format(PetName(e), e.level or 0):gsub("^%l", string.upper))
 		return e.family and e.name ~= e.family and ("%s (%s)"):format(text, e.family) or text
 	end,
+	petdeath = function(e) return (("%s died"):format(PetText(e)):gsub("^%l", string.upper)) end,
+	petrevive = function(e) return "Revived " .. PetText(e) end,
 	petabandon = function(e) return "Abandoned " .. PetText(e) end,
 	petstable = function(e) return "Stabled " .. PetText(e) end,
 	petunstable = function(e) return ("Took %s out of the stable"):format(PetText(e)) end,
@@ -778,6 +780,7 @@ local LOG_GROUP = {
 	standing = "Progress", mount = "Progress", tame = "Progress", equip = "Progress",
 	enchant = "Progress", bag = "Progress",
 	petlevel = "Progress", petabandon = "Progress", petstable = "Progress", petunstable = "Progress",
+	petdeath = "Progress", petrevive = "Progress",
 	achievement = "Progress",
 }
 local LOG_LABEL = {
@@ -799,6 +802,7 @@ local LOG_LABEL = {
 	taxipath = "Flight path", standing = "Reputation",
 	mount = "Mount", tame = "Pet tamed", equip = "Gear", enchant = "Enchant", bag = "Bag",
 	achievement = "Legacy Challenge",
+	petdeath = "Pet death", petrevive = "Pet revived",
 	petlevel = "Pet level", petabandon = "Pet abandoned", petstable = "Pet stabled", petunstable = "Pet unstabled",
 }
 
